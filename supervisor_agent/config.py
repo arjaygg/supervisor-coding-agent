@@ -1,4 +1,5 @@
-from pydantic import BaseSettings, Field
+from pydantic import Field  
+from pydantic_settings import BaseSettings
 from typing import List
 
 
@@ -15,7 +16,7 @@ class Settings(BaseSettings):
     
     # Claude Configuration
     claude_cli_path: str = Field(default="claude", env="CLAUDE_CLI_PATH")
-    claude_api_keys: List[str] = Field(..., env="CLAUDE_API_KEYS")
+    claude_api_keys: str = Field(..., env="CLAUDE_API_KEYS")
     claude_quota_limit_per_agent: int = Field(default=1000, env="CLAUDE_QUOTA_LIMIT_PER_AGENT")
     claude_quota_reset_hours: int = Field(default=24, env="CLAUDE_QUOTA_RESET_HOURS")
     
@@ -45,9 +46,7 @@ class Settings(BaseSettings):
         
     @property
     def claude_api_keys_list(self) -> List[str]:
-        if isinstance(self.claude_api_keys, str):
-            return [key.strip() for key in self.claude_api_keys.split(",")]
-        return self.claude_api_keys
+        return [key.strip() for key in self.claude_api_keys.split(",")]
 
 
 settings = Settings()
