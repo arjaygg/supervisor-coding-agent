@@ -1,6 +1,7 @@
 <script lang="ts">
   import '../app.css';
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import { websocket } from '$lib/stores/websocket';
   import { tasks } from '$lib/stores/tasks';
   
@@ -67,7 +68,3 @@
     </div>
   </nav>
 </div>
-
-<script>
-  import { page } from '$app/stores';
-</script>

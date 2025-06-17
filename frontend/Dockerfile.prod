@@ -7,21 +7,21 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install all dependencies (including dev dependencies needed for build)
+RUN npm ci && npm cache clean --force
 
-# Copy source code
-COPY . .
-
-# Build arguments
+# Build arguments (must be before COPY to use in build)
 ARG NODE_ENV=production
 ARG VITE_API_URL=http://localhost:8000
 ARG VITE_WS_URL=ws://localhost:8000
 
-# Set environment variables
+# Set environment variables for build
 ENV NODE_ENV=$NODE_ENV
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
+
+# Copy source code
+COPY . .
 
 # Build the application
 RUN npm run build
@@ -34,23 +34,23 @@ RUN npm install -g serve
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+    adduser -S nodejs -u 1001
 
 # Set working directory
 WORKDIR /app
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nextjs:nodejs /app/build ./build
+COPY --from=builder --chown=nodejs:nodejs /app/build ./build
 
 # Switch to non-root user
-USER nextjs
+USER nodejs
 
 # Expose port
 EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000 || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
 
 # Start the application
 CMD ["serve", "-s", "build", "-l", "3000"]

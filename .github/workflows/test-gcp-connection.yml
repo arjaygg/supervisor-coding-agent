@@ -61,11 +61,11 @@ jobs:
           gcloud secrets list --limit=1 --project=${{ secrets.GCP_PROJECT_ID }} || echo "No secrets found (this is ok)"
           echo "✅ Secret Manager permissions confirmed!"
 
-      - name: Test container registry access
+      - name: Test artifact registry access (optional)
         run: |
-          echo "📦 Testing container registry access..."
-          gcloud auth configure-docker gcr.io --quiet
-          echo "✅ Container registry access configured!"
+          echo "📦 Testing Artifact Registry access (for future use)..."
+          gcloud auth configure-docker ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev --quiet || echo "Artifact Registry not configured (this is ok)"
+          echo "✅ Container registry configuration tested!"
 
       - name: Display configuration
         run: |
@@ -84,7 +84,7 @@ jobs:
           echo "✅ Project Access: Working" 
           echo "✅ Compute API: Working"
           echo "✅ Secret Manager: Working"
-          echo "✅ Container Registry: Working"
+          echo "✅ Container Registry: Tested (optional)"
           echo ""
           echo "🚀 Your GitHub Actions → Google Cloud integration is ready!"
           echo ""

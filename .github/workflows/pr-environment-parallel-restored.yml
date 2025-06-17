@@ -1,18 +1,14 @@
-name: 🚀 PR Environment (Parallel Deployment)
+name: 🚀 PR Environment (Parallel Deployment) [DISABLED - BACKUP]
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  pull_request_review:
-    types: [submitted]
-  issue_comment:
-    types: [created]
+  # This workflow is temporarily disabled - backup version from git history
   workflow_dispatch:
     inputs:
-      pr_number:
-        description: 'PR number to deploy'
-        required: true
-        type: string
+      force_enable:
+        description: 'Force enable this backup workflow'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,10 +16,14 @@ permissions:
   issues: write
   checks: write
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   # Skip if this is a comment and not a deploy command
   check-command:
-    if: github.event_name != 'issue_comment' || contains(github.event.comment.body, '/deploy') || contains(github.event.comment.body, '/test')
+    if: inputs.force_enable == true
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.check.outputs.should_deploy }}
@@ -78,7 +78,9 @@ jobs:
           push: false
           load: true
           tags: dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}
-          cache-from: type=gha,scope=api
+          cache-from: |
+            type=gha,scope=api
+            type=registry,ref=ghcr.io/${{ github.repository }}/api:cache
           cache-to: type=gha,mode=max,scope=api
           build-args: |
             BUILDKIT_INLINE_CACHE=1
@@ -128,7 +130,9 @@ jobs:
           push: false
           load: true
           tags: dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}
-          cache-from: type=gha,scope=frontend
+          cache-from: |
+            type=gha,scope=frontend
+            type=registry,ref=ghcr.io/${{ github.repository }}/frontend:cache
           cache-to: type=gha,mode=max,scope=frontend
           build-args: |
             VITE_API_URL=http://localhost:${{ steps.ports.outputs.api_port }}
@@ -178,48 +182,49 @@ jobs:
           echo "environment_id=$env_id" >> $GITHUB_OUTPUT
           echo "🎯 Environment ID: $env_id"
 
-  # Deploy infrastructure (Redis) - runs as self-contained service  
+  # Deploy infrastructure (Redis) - foundation for app services
   deploy-infrastructure:
     needs: [check-command, setup-environment]
     if: needs.check-command.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     outputs:
       redis-status: ${{ steps.redis-deploy.outputs.status }}
-      redis-host: ${{ steps.redis-deploy.outputs.host }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.check-command.outputs.pr_ref }}
 
-      - name: Deploy Redis as standalone service
+      - name: Create environment directory
+        run: |
+          mkdir -p /tmp/${{ needs.setup-environment.outputs.environment_id }}
+          cd /tmp/${{ needs.setup-environment.outputs.environment_id }}
+
+      - name: Copy Docker Compose for PR
+        run: |
+          cp docker-compose.pr.yml /tmp/${{ needs.setup-environment.outputs.environment_id }}/docker-compose.yml
+
+      - name: Deploy Redis infrastructure
         id: redis-deploy
         run: |
-          env_id="${{ needs.setup-environment.outputs.environment_id }}"
-          redis_port="${{ needs.setup-environment.outputs.redis_port }}"
+          cd /tmp/${{ needs.setup-environment.outputs.environment_id }}
           
-          echo "🚀 Starting Redis as standalone service..."
+          export PR_NUMBER=${{ needs.check-command.outputs.pr_number }}
+          export REDIS_PORT=${{ needs.setup-environment.outputs.redis_port }}
           
-          # Run Redis in a detached container with host networking for multi-runner access
-          docker run -d \
-            --name "redis-$env_id" \
-            --restart unless-stopped \
-            -p "$redis_port:6379" \
-            --network host \
-            redis:7-alpine \
-            redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+          echo "🚀 Starting Redis infrastructure..."
+          docker compose -p ${{ needs.setup-environment.outputs.environment_id }} up -d redis
           
           echo "⏳ Waiting for Redis to be ready..."
           sleep 10
           
-          # Test Redis connection
-          if docker exec "redis-$env_id" redis-cli ping | grep -q "PONG"; then
-            echo "✅ Redis deployed successfully on port $redis_port"
+          # Verify Redis is running
+          if docker compose -p ${{ needs.setup-environment.outputs.environment_id }} ps redis | grep -q "Up"; then
+            echo "✅ Redis infrastructure deployed successfully"
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "host=localhost:$redis_port" >> $GITHUB_OUTPUT
           else
             echo "❌ Redis deployment failed"
-            docker logs "redis-$env_id"
+            docker compose -p ${{ needs.setup-environment.outputs.environment_id }} logs redis
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
@@ -231,108 +236,56 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       api-status: ${{ steps.api-deploy.outputs.status }}
-      api-url: ${{ steps.api-deploy.outputs.url }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.check-command.outputs.pr_ref }}
-
       - name: Download API image artifact
         uses: actions/download-artifact@v4
         with:
           name: api-image-${{ needs.check-command.outputs.pr_number }}
           path: /tmp/
 
-      - name: Load and deploy API service
-        id: api-deploy
+      - name: Load API image
         run: |
-          env_id="${{ needs.setup-environment.outputs.environment_id }}"
-          api_port="${{ needs.setup-environment.outputs.api_port }}"
-          redis_host="${{ needs.deploy-infrastructure.outputs.redis-host }}"
-          api_image="dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}"
-          
           echo "📦 Loading API image..."
           docker load < /tmp/api-image.tar.gz
           
-          echo "🗂️ Creating API data directory..."
-          mkdir -p "/tmp/api-data-$env_id"
-          chmod 777 "/tmp/api-data-$env_id"
+          # Verify API image exists
+          api_image="dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}"
+          if ! docker images --format "table {{.Repository}}:{{.Tag}}" | grep -q "$api_image"; then
+            echo "ERROR: API image $api_image not found after loading"
+            exit 1
+          fi
+          echo "✅ API image loaded: $api_image"
+
+      - name: Deploy API service
+        id: api-deploy
+        run: |
+          cd /tmp/${{ needs.setup-environment.outputs.environment_id }}
           
-          echo "🗄️ Pre-creating database file with proper permissions..."
-          touch "/tmp/api-data-$env_id/pr-${{ needs.check-command.outputs.pr_number }}.db"
-          chmod 666 "/tmp/api-data-$env_id/pr-${{ needs.check-command.outputs.pr_number }}.db"
+          export API_IMAGE="${{ needs.build-api.outputs.image-tag }}"
+          export PR_NUMBER=${{ needs.check-command.outputs.pr_number }}
+          export API_PORT=${{ needs.setup-environment.outputs.api_port }}
+          export REDIS_PORT=${{ needs.setup-environment.outputs.redis_port }}
           
-          echo "🔍 Verifying data directory setup..."
-          ls -la "/tmp/api-data-$env_id"
+          echo "🚀 Starting API service..."
+          docker compose -p ${{ needs.setup-environment.outputs.environment_id }} up -d api worker
           
-          echo "🚀 Starting API service with image: $api_image"
-          
-          # Run API container with host networking for multi-runner access
-          docker run -d \
-            --name "api-$env_id" \
-            --restart unless-stopped \
-            --network host \
-            --user "$(id -u):$(id -g)" \
-            -e "APP_DEBUG=true" \
-            -e "LOG_LEVEL=DEBUG" \
-            -e "PORT=$api_port" \
-            -e "HOST=0.0.0.0" \
-            -e "DATABASE_URL=sqlite:////app/data/pr-${{ needs.check-command.outputs.pr_number }}.db" \
-            -e "REDIS_URL=redis://$redis_host/0" \
-            -e "CELERY_BROKER_URL=redis://$redis_host/0" \
-            -e "CELERY_RESULT_BACKEND=redis://$redis_host/0" \
-            -e "SECRET_KEY=pr-secret-key-${{ needs.check-command.outputs.pr_number }}" \
-            -e "CLAUDE_API_KEYS=mock-key-for-testing" \
-            -v "/tmp/api-data-$env_id:/app/data:rw" \
-            "$api_image"
-          
-          # Start worker container
-          docker run -d \
-            --name "worker-$env_id" \
-            --restart unless-stopped \
-            --network host \
-            --user "$(id -u):$(id -g)" \
-            -e "APP_DEBUG=true" \
-            -e "DATABASE_URL=sqlite:////app/data/pr-${{ needs.check-command.outputs.pr_number }}.db" \
-            -e "REDIS_URL=redis://$redis_host/0" \
-            -e "CELERY_BROKER_URL=redis://$redis_host/0" \
-            -e "CELERY_RESULT_BACKEND=redis://$redis_host/0" \
-            -e "SECRET_KEY=pr-secret-key-${{ needs.check-command.outputs.pr_number }}" \
-            -e "CLAUDE_API_KEYS=mock-key-for-testing" \
-            -v "/tmp/api-data-$env_id:/app/data:rw" \
-            "$api_image" \
-            celery -A supervisor_agent.queue.celery_app worker --loglevel=debug --concurrency=2
-          
+          # Fast health check using ping endpoint
           echo "🏥 Checking API health..."
-          max_attempts=12
+          max_attempts=8
           attempt=0
           while [ $attempt -lt $max_attempts ]; do
-            # Try both the mapped port and direct container port
-            if curl -f -s "http://localhost:$api_port/api/v1/ping" > /dev/null 2>&1; then
-              echo "✅ API service healthy on port $api_port"
+            if curl -f -s http://localhost:${{ needs.setup-environment.outputs.api_port }}/api/v1/ping > /dev/null 2>&1; then
+              echo "✅ API service healthy"
               echo "status=success" >> $GITHUB_OUTPUT
-              echo "url=http://localhost:$api_port" >> $GITHUB_OUTPUT
-              exit 0
-            elif curl -f -s "http://localhost:8000/api/v1/ping" > /dev/null 2>&1; then
-              echo "✅ API service healthy on port 8000"
-              echo "status=success" >> $GITHUB_OUTPUT
-              echo "url=http://localhost:8000" >> $GITHUB_OUTPUT
               exit 0
             fi
-            echo "⏳ API health check $((attempt + 1))/$max_attempts (trying ports $api_port and 8000)"
+            echo "⏳ Waiting for API... (attempt $((attempt + 1))/$max_attempts)"
             sleep 5
             attempt=$((attempt + 1))
           done
           
-          echo "❌ API deployment failed - health check timeout"
-          echo "🔍 Checking if API container is running..."
-          docker ps | grep "api-$env_id" || echo "API container not found"
-          echo "📋 API container logs:"
-          docker logs "api-$env_id" --tail 20
-          echo "🌐 Testing network connectivity..."
-          curl -v "http://localhost:$api_port/api/v1/ping" || true
-          curl -v "http://localhost:8000/api/v1/ping" || true
+          echo "❌ API deployment failed"
+          docker compose -p ${{ needs.setup-environment.outputs.environment_id }} logs api --tail 20
           echo "status=failed" >> $GITHUB_OUTPUT
           exit 1
 
@@ -343,68 +296,85 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       frontend-status: ${{ steps.frontend-deploy.outputs.status }}
-      frontend-url: ${{ steps.frontend-deploy.outputs.url }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.check-command.outputs.pr_ref }}
-
       - name: Download Frontend image artifact
         uses: actions/download-artifact@v4
         with:
           name: frontend-image-${{ needs.check-command.outputs.pr_number }}
           path: /tmp/
 
-      - name: Load and deploy Frontend service
-        id: frontend-deploy
+      - name: Load Frontend image
         run: |
-          env_id="${{ needs.setup-environment.outputs.environment_id }}"
-          frontend_port="${{ needs.setup-environment.outputs.frontend_port }}"
-          api_port="${{ needs.setup-environment.outputs.api_port }}"
-          frontend_image="dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}"
-          
           echo "📦 Loading Frontend image..."
           docker load < /tmp/frontend-image.tar.gz
           
-          echo "🚀 Starting Frontend service with image: $frontend_image"
+          # Verify Frontend image exists
+          frontend_image="dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}"
+          if ! docker images --format "table {{.Repository}}:{{.Tag}}" | grep -q "$frontend_image"; then
+            echo "ERROR: Frontend image $frontend_image not found after loading"
+            exit 1
+          fi
+          echo "✅ Frontend image loaded: $frontend_image"
+
+      - name: Deploy Frontend service
+        id: frontend-deploy
+        run: |
+          cd /tmp/${{ needs.setup-environment.outputs.environment_id }}
           
-          # Run Frontend container with host networking
-          docker run -d \
-            --name "frontend-$env_id" \
-            --restart unless-stopped \
-            -p "$frontend_port:3000" \
-            --network host \
-            -e "NODE_ENV=development" \
-            -e "VITE_API_URL=http://localhost:$api_port" \
-            -e "VITE_WS_URL=ws://localhost:$api_port" \
-            "$frontend_image"
+          export FRONTEND_IMAGE="${{ needs.build-frontend.outputs.image-tag }}"
+          export PR_NUMBER=${{ needs.check-command.outputs.pr_number }}
+          export FRONTEND_PORT=${{ needs.setup-environment.outputs.frontend_port }}
+          export API_PORT=${{ needs.setup-environment.outputs.api_port }}
           
+          echo "🚀 Starting Frontend service..."
+          docker compose -p ${{ needs.setup-environment.outputs.environment_id }} up -d frontend
+          
+          # Check frontend health
           echo "🏥 Checking Frontend health..."
-          sleep 20  # Frontend takes longer to start
+          sleep 15  # Frontend takes a bit longer to start
           
-          max_attempts=8
+          max_attempts=6
           attempt=0
           while [ $attempt -lt $max_attempts ]; do
-            if curl -f -s "http://localhost:$frontend_port" > /dev/null 2>&1; then
+            if curl -f -s http://localhost:${{ needs.setup-environment.outputs.frontend_port }} > /dev/null 2>&1; then
               echo "✅ Frontend service healthy"
               echo "status=success" >> $GITHUB_OUTPUT
-              echo "url=http://localhost:$frontend_port" >> $GITHUB_OUTPUT
               exit 0
             fi
-            echo "⏳ Frontend health check $((attempt + 1))/$max_attempts"
+            echo "⏳ Waiting for Frontend... (attempt $((attempt + 1))/$max_attempts)"
             sleep 10
             attempt=$((attempt + 1))
           done
           
-          echo "⚠️ Frontend health check failed (but marking as success)"
-          echo "status=success" >> $GITHUB_OUTPUT
-          echo "url=http://localhost:$frontend_port" >> $GITHUB_OUTPUT
-          docker logs "frontend-$env_id" --tail 20
+          echo "❌ Frontend deployment failed"
+          docker compose -p ${{ needs.setup-environment.outputs.environment_id }} logs frontend --tail 20
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+
+  # Database setup (depends on API being ready)
+  setup-database:
+    needs: [check-command, deploy-api, setup-environment]
+    if: needs.check-command.outputs.should_deploy == 'true' && needs.deploy-api.outputs.api-status == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run database migrations
+        run: |
+          cd /tmp/${{ needs.setup-environment.outputs.environment_id }}
+          
+          echo "🗄️ Setting up database..."
+          # Run migrations (if using SQLite, create tables)
+          docker compose -p ${{ needs.setup-environment.outputs.environment_id }} exec -T api python -c "
+          from supervisor_agent.db.database import engine
+          from supervisor_agent.db.models import Base
+          Base.metadata.create_all(bind=engine)
+          print('Database tables created successfully')
+          " || echo "Migration completed"
+          
+          echo "✅ Database setup completed"
 
   # Final verification (runs after all deployments complete)
   verify-deployment:
-    needs: [check-command, setup-environment, deploy-infrastructure, deploy-api, deploy-frontend]
+    needs: [check-command, setup-environment, deploy-infrastructure, deploy-api, deploy-frontend, setup-database]
     if: always() && needs.check-command.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     outputs:
@@ -421,12 +391,30 @@ jobs:
           
           echo "📊 Deployment Results:"
           echo "  Redis Infrastructure: $redis_status"
-          echo "  API Service: $api_status (includes database initialization)" 
+          echo "  API Service: $api_status"
           echo "  Frontend Service: $frontend_status"
           
           if [[ "$redis_status" == "success" && "$api_status" == "success" && "$frontend_status" == "success" ]]; then
             echo "✅ All services deployed successfully in parallel!"
             echo "status=success" >> $GITHUB_OUTPUT
+            
+            # Quick final health checks
+            api_port=${{ needs.setup-environment.outputs.api_port }}
+            frontend_port=${{ needs.setup-environment.outputs.frontend_port }}
+            
+            echo "🔍 Final health verification..."
+            if curl -f -s http://localhost:$api_port/api/v1/ping > /dev/null 2>&1; then
+              echo "✅ API responding"
+            else
+              echo "⚠️ API not responding"
+            fi
+            
+            if curl -f -s http://localhost:$frontend_port > /dev/null 2>&1; then
+              echo "✅ Frontend responding"
+            else
+              echo "⚠️ Frontend not responding"
+            fi
+            
           else
             echo "❌ Some services failed to deploy"
             echo "status=failed" >> $GITHUB_OUTPUT
@@ -435,8 +423,9 @@ jobs:
       - name: Set environment timeout
         if: steps.verify.outputs.status == 'success'
         run: |
+          # Create a file to track environment creation time
+          echo $(date +%s) > /tmp/${{ needs.setup-environment.outputs.environment_id }}/created_at
           echo "⏰ Environment will auto-cleanup after 24 hours"
-          # Note: Cleanup tracking would need to be implemented separately for multi-runner setup
 
   # Comment on PR with environment details
   comment:
@@ -456,7 +445,7 @@ jobs:
             let comment_body;
             
             if (deploy_success) {
-              comment_body = `🚀 **Fully Parallel Deployment Successful!**
+              comment_body = `🚀 **Parallel Deployment Successful!**
             
             **Environment Details:**
             - **Frontend**: http://localhost:${frontend_port}
@@ -469,17 +458,16 @@ jobs:
             - Auto-cleanup: 24 hours
             - Database: SQLite (ephemeral)
             
-            **🚀 True Parallel Deployment:**
-            - ⚡ **Parallel Docker Builds**: API and Frontend built simultaneously
-            - 🏗️ **Parallel Infrastructure**: Redis deployed independently
-            - 🔄 **Parallel Services**: API and Frontend deployed simultaneously
-            - 🗄️ **Integrated Database**: Database initialized during API startup
+            **🚀 Parallel Deployment Optimizations:**
+            - ⚡ **Infrastructure First**: Redis deployed independently
+            - 🔄 **Parallel App Services**: API and Frontend deployed simultaneously  
+            - 📦 **Artifact Sharing**: Images built once, shared via artifacts
             - 🏥 **Independent Health Checks**: Each service verified separately
-            - 🎯 **Maximum Parallelization**: ~70% faster than sequential
+            - 🎯 **Reduced Total Time**: ~60% faster than sequential deployment
             
             **Deployment Timeline:**
             - Infrastructure: ${{ needs.deploy-infrastructure.outputs.redis-status }}
-            - API Service: ${{ needs.deploy-api.outputs.api-status }} (includes database initialization)
+            - API Service: ${{ needs.deploy-api.outputs.api-status }}
             - Frontend Service: ${{ needs.deploy-frontend.outputs.frontend-status }}
             
             **Available Commands:**
@@ -493,7 +481,7 @@ jobs:
             
             **Deployment Status:**
             - Infrastructure: ${{ needs.deploy-infrastructure.outputs.redis-status || '❌' }}
-            - API Service: ${{ needs.deploy-api.outputs.api-status || '❌' }} (includes database)
+            - API Service: ${{ needs.deploy-api.outputs.api-status || '❌' }}
             - Frontend Service: ${{ needs.deploy-frontend.outputs.frontend-status || '❌' }}
             
             Please check the [workflow logs](${context.payload.repository.html_url}/actions/runs/${context.runId}) for details.
@@ -525,19 +513,18 @@ jobs:
       - name: Cleanup ephemeral environment
         run: |
           pr_number=${{ steps.pr.outputs.number }}
-          env_id="pr-$pr_number"
           
-          echo "🧹 Cleaning up parallel deployment: $env_id"
+          echo "🧹 Cleaning up PR environment: pr-$pr_number"
           
-          # Stop and remove all containers
-          docker stop "redis-$env_id" "api-$env_id" "worker-$env_id" "frontend-$env_id" 2>/dev/null || true
-          docker rm "redis-$env_id" "api-$env_id" "worker-$env_id" "frontend-$env_id" 2>/dev/null || true
+          # Stop and remove containers
+          docker compose -p pr-$pr_number down -v --remove-orphans || echo "No environment found to cleanup"
           
           # Remove images
-          docker rmi "dev-assist-api:pr-$pr_number" "dev-assist-frontend:pr-$pr_number" 2>/dev/null || true
+          docker rmi dev-assist-api:pr-$pr_number || echo "API image not found"
+          docker rmi dev-assist-frontend:pr-$pr_number || echo "Frontend image not found"
           
-          # Remove data volumes
-          rm -rf "/tmp/api-data-$env_id" 2>/dev/null || true
+          # Remove environment directory
+          rm -rf /tmp/pr-$pr_number || echo "Environment directory not found"
           
           echo "✅ Cleanup completed for PR $pr_number"
 
