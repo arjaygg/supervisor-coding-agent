@@ -23,7 +23,7 @@ services:
       - MOCK_EXTERNAL_SERVICES=true
       - PYTHONPATH=/app
     volumes:
-      - pr_data_${PR_NUMBER:-0}:/tmp
+      - pr_data:/tmp
     depends_on:
       redis:
         condition: service_healthy
@@ -58,7 +58,7 @@ services:
       - MOCK_EXTERNAL_SERVICES=true
       - PYTHONPATH=/app
     volumes:
-      - pr_data_${PR_NUMBER:-0}:/tmp
+      - pr_data:/tmp
     depends_on:
       redis:
         condition: service_healthy
@@ -78,7 +78,7 @@ services:
       - "${REDIS_PORT:-6379}:6379"
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
-      - pr_redis_${PR_NUMBER:-0}:/data
+      - pr_redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -131,7 +131,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - PYTHONPATH=/app
     volumes:
-      - pr_data_${PR_NUMBER:-0}:/tmp
+      - pr_data:/tmp
       - ./scripts:/scripts:ro
     depends_on:
       - api
@@ -148,12 +148,12 @@ services:
 
 # Named volumes for PR-specific data
 volumes:
-  pr_data_${PR_NUMBER:-0}:
+  pr_data:
     name: pr-${PR_NUMBER:-0}-data
     labels:
       - "pr.number=${PR_NUMBER:-0}"
       - "pr.environment=ephemeral"
-  pr_redis_${PR_NUMBER:-0}:
+  pr_redis:
     name: pr-${PR_NUMBER:-0}-redis
     labels:
       - "pr.number=${PR_NUMBER:-0}"
