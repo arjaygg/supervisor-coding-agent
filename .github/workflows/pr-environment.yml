@@ -137,6 +137,18 @@ jobs:
         with:
           ref: ${{ needs.check-command.outputs.pr_ref }}
 
+      - name: Calculate ports
+        id: calculate-ports
+        run: |
+          pr_num=${{ needs.check-command.outputs.pr_number }}
+          api_port=$((8000 + (pr_num % 100)))
+          frontend_port=$((3000 + (pr_num % 100)))
+          redis_port=$((6379 + (pr_num % 100)))
+          echo "api_port=$api_port" >> $GITHUB_OUTPUT
+          echo "frontend_port=$frontend_port" >> $GITHUB_OUTPUT
+          echo "redis_port=$redis_port" >> $GITHUB_OUTPUT
+          echo "API Port: $api_port, Frontend Port: $frontend_port, Redis Port: $redis_port"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -173,7 +185,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VITE_API_URL=http://localhost:${{ 8000 + (needs.check-command.outputs.pr_number % 100) }}
+            VITE_API_URL=http://localhost:${{ steps.calculate-ports.outputs.api_port }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
