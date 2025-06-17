@@ -56,7 +56,8 @@
       "Bash(gcloud iam workload-identity-pools providers describe:*)",
       "Bash(rg:*)",
       "Bash(gh pr close:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }
