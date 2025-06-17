@@ -57,7 +57,7 @@ jobs:
                   pull_number: pr_number
                 });
                 
-                pr_ref = pr.head.sha;
+                pr_ref = pr.state === 'merged' ? pr.merge_commit_sha : pr.head.sha;
                 pr_branch = pr.head.ref;
                 
                 core.setOutput('should_promote', 'true');
@@ -119,9 +119,9 @@ jobs:
                 pull_number: pr_number
               });
               
-              // Check if PR is open
-              if (pr.state !== 'open') {
-                validationErrors.push(`PR #${pr_number} is ${pr.state}, not open`);
+              // Check if PR is open or merged
+              if (pr.state !== 'open' && pr.state !== 'merged') {
+                validationErrors.push(`PR #${pr_number} is ${pr.state}, must be open or merged`);
               }
               
               // Check if PR is approved (unless force deploy)
