@@ -263,6 +263,17 @@ jobs:
           echo "📦 Loading API image..."
           docker load < /tmp/api-image.tar.gz
           
+          echo "🗂️ Creating API data directory..."
+          mkdir -p "/tmp/api-data-$env_id"
+          chmod 755 "/tmp/api-data-$env_id"
+          
+          echo "🗄️ Pre-creating database file..."
+          touch "/tmp/api-data-$env_id/pr-${{ needs.check-command.outputs.pr_number }}.db"
+          chmod 664 "/tmp/api-data-$env_id/pr-${{ needs.check-command.outputs.pr_number }}.db"
+          
+          echo "🔍 Verifying data directory setup..."
+          ls -la "/tmp/api-data-$env_id"
+          
           echo "🚀 Starting API service with image: $api_image"
           
           # Run API container with host networking for multi-runner access
