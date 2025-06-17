@@ -27,7 +27,7 @@ class TaskResponse(BaseModel):
     assigned_agent_id: Optional[str]
     retry_count: int
     error_message: Optional[str]
-    
+
     model_config = {"from_attributes": True}
 
 
@@ -47,7 +47,7 @@ class TaskSessionResponse(BaseModel):
     result: Optional[Dict[str, Any]]
     created_at: datetime
     execution_time_seconds: Optional[int]
-    
+
     model_config = {"from_attributes": True}
 
 
@@ -72,7 +72,7 @@ class AgentResponse(BaseModel):
     is_active: bool
     last_used_at: Optional[datetime]
     created_at: datetime
-    
+
     model_config = {"from_attributes": True}
 
 
@@ -96,7 +96,7 @@ class AuditLogResponse(BaseModel):
     timestamp: datetime
     ip_address: Optional[str]
     user_agent: Optional[str]
-    
+
     model_config = {"from_attributes": True}
 
 
@@ -118,7 +118,7 @@ class CostTrackingEntryCreate(BaseModel):
     estimated_cost_usd: str
     model_used: Optional[str] = None
     execution_time_ms: int
-    
+
     model_config = {"protected_namespaces": ()}
 
 
@@ -133,7 +133,7 @@ class CostTrackingEntryResponse(BaseModel):
     model_used: Optional[str]
     execution_time_ms: int
     timestamp: datetime
-    
+
     model_config = {"from_attributes": True, "protected_namespaces": ()}
 
 
@@ -157,7 +157,7 @@ class UsageMetricsResponse(BaseModel):
     avg_response_time_ms: int
     success_rate: str
     timestamp: datetime
-    
+
     model_config = {"from_attributes": True}
 
 

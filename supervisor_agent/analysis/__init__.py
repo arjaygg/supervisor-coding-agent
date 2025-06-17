@@ -6,7 +6,7 @@ Designed for AI model consumption with structured insights and recommendations.
 
 Main components:
 - SCC Analyzer: Code metrics, complexity, and language analysis
-- Semgrep Analyzer: Security and code quality analysis  
+- Semgrep Analyzer: Security and code quality analysis
 - Static Analysis Pipeline: Unified analysis with AI-ready outputs
 
 Key features:
@@ -22,7 +22,7 @@ from .scc_analyzer import (
     FileMetrics,
     AnalysisResult as SCCAnalysisResult,
     analyze_repository_quick,
-    get_code_quality_score
+    get_code_quality_score,
 )
 
 from .semgrep_analyzer import (
@@ -32,7 +32,7 @@ from .semgrep_analyzer import (
     FindingCategory,
     AnalysisResult as SemgrepAnalysisResult,
     analyze_repository_security,
-    get_vulnerability_summary
+    get_vulnerability_summary,
 )
 
 from .static_analysis_pipeline import (
@@ -41,32 +41,30 @@ from .static_analysis_pipeline import (
     UnifiedInsights,
     PipelineMetrics,
     quick_repository_analysis,
-    get_ai_analysis_context
+    get_ai_analysis_context,
 )
 
 __all__ = [
     # SCC Analyzer
     "SCCAnalyzer",
-    "CodeMetrics", 
+    "CodeMetrics",
     "FileMetrics",
     "SCCAnalysisResult",
     "analyze_repository_quick",
     "get_code_quality_score",
-    
     # Semgrep Analyzer
     "SemgrepAnalyzer",
     "Finding",
-    "SeverityLevel", 
+    "SeverityLevel",
     "FindingCategory",
     "SemgrepAnalysisResult",
     "analyze_repository_security",
     "get_vulnerability_summary",
-    
     # Pipeline
     "StaticAnalysisPipeline",
     "PipelineResult",
     "UnifiedInsights",
-    "PipelineMetrics", 
+    "PipelineMetrics",
     "quick_repository_analysis",
-    "get_ai_analysis_context"
+    "get_ai_analysis_context",
 ]

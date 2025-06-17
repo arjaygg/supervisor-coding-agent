@@ -28,7 +28,7 @@ def test_get_tasks(test_client, sample_task_data):
     # Create a task first
     create_response = test_client.post("/api/v1/tasks", json=sample_task_data)
     assert create_response.status_code == 200
-    
+
     # Get tasks
     response = test_client.get("/api/v1/tasks")
     assert response.status_code == 200
@@ -42,7 +42,7 @@ def test_get_task_by_id(test_client, sample_task_data):
     # Create a task
     create_response = test_client.post("/api/v1/tasks", json=sample_task_data)
     task_id = create_response.json()["id"]
-    
+
     # Get the task
     response = test_client.get(f"/api/v1/tasks/{task_id}")
     assert response.status_code == 200
@@ -60,7 +60,7 @@ def test_task_stats(test_client, sample_task_data):
     """Test task statistics endpoint"""
     # Create a task first
     test_client.post("/api/v1/tasks", json=sample_task_data)
-    
+
     response = test_client.get("/api/v1/tasks/stats/summary")
     assert response.status_code == 200
     data = response.json()
@@ -90,7 +90,7 @@ def test_audit_logs(test_client, sample_task_data):
     """Test audit logs endpoint"""
     # Create a task to generate audit logs
     test_client.post("/api/v1/tasks", json=sample_task_data)
-    
+
     response = test_client.get("/api/v1/audit-logs")
     assert response.status_code == 200
     data = response.json()

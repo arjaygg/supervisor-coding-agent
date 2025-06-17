@@ -17,24 +17,26 @@ class ClaudeAgentWrapper:
         self.agent_id = agent_id
         self.api_key = api_key
         self.cli_path = settings.claude_cli_path
-    
-    async def execute_task(self, task: Task, shared_memory: Dict[str, Any], db_session = None) -> Dict[str, Any]:
+
+    async def execute_task(
+        self, task: Task, shared_memory: Dict[str, Any], db_session=None
+    ) -> Dict[str, Any]:
         start_time = datetime.utcnow()
         prompt = None
         result = None
-        
+
         try:
             prompt = self._build_prompt(task, shared_memory)
-            
+
             logger.info(f"Executing task {task.id} with agent {self.agent_id}")
-            
+
             # Invoke Claude CLI via subprocess
             result = await self._run_claude_cli(prompt)
-            
+
             end_time = datetime.utcnow()
             execution_time = int((end_time - start_time).total_seconds())
             execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
-            
+
             # Track cost and usage if database session is provided
             if db_session:
                 try:
@@ -45,26 +47,28 @@ class ClaudeAgentWrapper:
                         prompt=prompt,
                         response=result,
                         execution_time_ms=execution_time_ms,
-                        context=shared_memory
+                        context=shared_memory,
                     )
                 except Exception as cost_error:
-                    logger.warning(f"Failed to track cost for task {task.id}: {str(cost_error)}")
-            
+                    logger.warning(
+                        f"Failed to track cost for task {task.id}: {str(cost_error)}"
+                    )
+
             return {
                 "success": True,
                 "result": result,
                 "execution_time": execution_time,
                 "execution_time_ms": execution_time_ms,
-                "prompt": prompt
+                "prompt": prompt,
             }
-            
+
         except Exception as e:
             end_time = datetime.utcnow()
             execution_time = int((end_time - start_time).total_seconds())
             execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
-            
+
             logger.error(f"Task {task.id} failed with agent {self.agent_id}: {str(e)}")
-            
+
             # Track failed execution cost if database session is provided
             if db_session and prompt:
                 try:
@@ -75,34 +79,38 @@ class ClaudeAgentWrapper:
                         prompt=prompt,
                         response="",  # Empty response for failed tasks
                         execution_time_ms=execution_time_ms,
-                        context=shared_memory
+                        context=shared_memory,
                     )
                 except Exception as cost_error:
-                    logger.warning(f"Failed to track cost for failed task {task.id}: {str(cost_error)}")
-            
+                    logger.warning(
+                        f"Failed to track cost for failed task {task.id}: {str(cost_error)}"
+                    )
+
             return {
                 "success": False,
                 "error": str(e),
                 "execution_time": execution_time,
                 "execution_time_ms": execution_time_ms,
-                "prompt": prompt if prompt else None
+                "prompt": prompt if prompt else None,
             }
-    
+
     def _build_prompt(self, task: Task, shared_memory: Dict[str, Any]) -> str:
         task_type = task.type
         payload = task.payload
-        
+
         # Extract the enum value if it's an enum, otherwise use string directly
-        task_type_str = task_type.value if hasattr(task_type, 'value') else str(task_type)
+        task_type_str = (
+            task_type.value if hasattr(task_type, "value") else str(task_type)
+        )
         base_prompt = f"Task Type: {task_type_str}\n\n"
-        
+
         # Add shared memory context if available
         if shared_memory:
             base_prompt += "Shared Context:\n"
             for key, value in shared_memory.items():
                 base_prompt += f"- {key}: {value}\n"
             base_prompt += "\n"
-        
+
         # Build task-specific prompts
         if task_type == "PR_REVIEW":
             return base_prompt + self._build_pr_review_prompt(payload)
@@ -118,7 +126,7 @@ class ClaudeAgentWrapper:
             return base_prompt + self._build_feature_prompt(payload)
         else:
             return base_prompt + f"Task Details: {json.dumps(payload, indent=2)}"
-    
+
     def _build_pr_review_prompt(self, payload: Dict[str, Any]) -> str:
         return f"""Please review the following pull request:
 
@@ -134,7 +142,7 @@ Please provide:
 3. Suggestions for improvement
 4. Security considerations
 5. Performance implications"""
-    
+
     def _build_issue_summary_prompt(self, payload: Dict[str, Any]) -> str:
         return f"""Please analyze and summarize the following issue:
 
@@ -149,7 +157,7 @@ Please provide:
 3. Complexity estimation
 4. Required resources
 5. Priority recommendation"""
-    
+
     def _build_code_analysis_prompt(self, payload: Dict[str, Any]) -> str:
         return f"""Please analyze the following code:
 
@@ -163,7 +171,7 @@ Please provide:
 3. Performance optimizations
 4. Best practices suggestions
 5. Refactoring recommendations"""
-    
+
     def _build_refactor_prompt(self, payload: Dict[str, Any]) -> str:
         return f"""Please refactor the following code:
 
@@ -176,7 +184,7 @@ Please provide:
 2. Explanation of changes
 3. Benefits of the refactoring
 4. Testing recommendations"""
-    
+
     def _build_bug_fix_prompt(self, payload: Dict[str, Any]) -> str:
         return f"""Please help fix the following bug:
 
@@ -190,7 +198,7 @@ Please provide:
 2. Proposed fix
 3. Code changes needed
 4. Testing strategy"""
-    
+
     def _build_feature_prompt(self, payload: Dict[str, Any]) -> str:
         return f"""Please help implement the following feature:
 
@@ -204,18 +212,19 @@ Please provide:
 3. Required changes
 4. Testing recommendations
 5. Potential challenges"""
-    
+
     async def _run_claude_cli(self, prompt: str) -> str:
         try:
             # Set environment variable for API key, inheriting current environment
             import os
+
             env = os.environ.copy()
             env["ANTHROPIC_API_KEY"] = self.api_key
-            
+
             # Construct Claude CLI command
             # Using stdin for prompt to handle large prompts and special characters
             command = [self.cli_path]
-            
+
             # Run Claude CLI with the prompt via stdin
             process = subprocess.run(
                 command,
@@ -223,15 +232,19 @@ Please provide:
                 capture_output=True,
                 text=True,
                 env=env,
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
             )
-            
+
             if process.returncode != 0:
-                error_msg = process.stderr.strip() if process.stderr else "Unknown error"
-                raise Exception(f"Claude CLI failed with return code {process.returncode}: {error_msg}")
-            
+                error_msg = (
+                    process.stderr.strip() if process.stderr else "Unknown error"
+                )
+                raise Exception(
+                    f"Claude CLI failed with return code {process.returncode}: {error_msg}"
+                )
+
             return process.stdout.strip()
-            
+
         except subprocess.TimeoutExpired:
             raise Exception("Claude CLI execution timed out")
         except FileNotFoundError:
@@ -244,19 +257,19 @@ class AgentManager:
     def __init__(self):
         self.agents: Dict[str, ClaudeAgentWrapper] = {}
         self._initialize_agents()
-    
+
     def _initialize_agents(self):
         api_keys = settings.claude_api_keys_list
-        
+
         for i, api_key in enumerate(api_keys):
             agent_id = f"claude-agent-{i+1}"
             self.agents[agent_id] = ClaudeAgentWrapper(agent_id, api_key)
-            
+
             logger.info(f"Initialized agent {agent_id}")
-    
+
     def get_agent(self, agent_id: str) -> Optional[ClaudeAgentWrapper]:
         return self.agents.get(agent_id)
-    
+
     def get_available_agent_ids(self) -> list[str]:
         return list(self.agents.keys())
 
