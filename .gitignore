@@ -190,3 +190,6 @@ tmp/
 # Local configuration
 config.local.py
 settings.local.py
+
+# Claude Code local settings
+.claude/settings.local.json
