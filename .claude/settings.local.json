@@ -39,7 +39,11 @@
       "Bash(rm:*)",
       "Bash(python -m pytest supervisor_agent/tests/test_websocket.py -v)",
       "Bash(npm test)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(python -m pytest supervisor_agent/tests/test_subscription_intelligence.py -v)",
+      "Bash(python -m pytest supervisor_agent/tests/test_subscription_integration.py -v)",
+      "Bash(python -m pytest supervisor_agent/tests/test_subscription_integration.py::TestIntelligentTaskProcessor::test_process_task_new_request -v)",
+      "Bash(python -m pytest supervisor_agent/tests/test_static_analysis.py -x --tb=short -q)"
     ],
     "deny": []
   }

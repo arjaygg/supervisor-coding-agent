@@ -100,12 +100,10 @@ class IntelligentTaskProcessor:
             )
             
             # Track cache hits
-            if self.subscription_intelligence.deduplicator.cache.get(
-                self.subscription_intelligence.deduplicator.RequestHash.generate(request)
-            ):
-                cache_entry = self.subscription_intelligence.deduplicator.cache[
-                    self.subscription_intelligence.deduplicator.RequestHash.generate(request)
-                ]
+            from supervisor_agent.core.subscription_intelligence import RequestHash
+            request_hash = RequestHash.generate(request)
+            if request_hash in self.subscription_intelligence.deduplicator.cache:
+                cache_entry = self.subscription_intelligence.deduplicator.cache[request_hash]
                 if cache_entry.hit_count > 0:
                     self.processing_stats["cache_hits"] += 1
             
