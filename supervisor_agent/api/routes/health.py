@@ -234,6 +234,19 @@ async def get_metrics(db: Session = Depends(get_db)):
         metrics["supervisor_agent_agents_total"] = quota_status["total_agents"]
         metrics["supervisor_agent_agents_available"] = quota_status["available_agents"]
         
+        # Cost and usage metrics
+        try:
+            cost_summary = crud.CostTrackingCRUD.get_cost_summary(db)
+            metrics["supervisor_agent_total_cost_usd"] = float(cost_summary["total_cost_usd"])
+            metrics["supervisor_agent_total_tokens"] = cost_summary["total_tokens"]
+            metrics["supervisor_agent_total_requests"] = cost_summary["total_requests"]
+            metrics["supervisor_agent_avg_cost_per_request"] = float(cost_summary["avg_cost_per_request"])
+        except Exception as cost_error:
+            logger.warning(f"Failed to get cost metrics: {str(cost_error)}")
+            metrics["supervisor_agent_total_cost_usd"] = 0.0
+            metrics["supervisor_agent_total_tokens"] = 0
+            metrics["supervisor_agent_total_requests"] = 0
+        
         return metrics
         
     except Exception as e:

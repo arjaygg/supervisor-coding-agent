@@ -85,3 +85,41 @@ class AuditLog(Base):
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     ip_address = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
+
+
+class CostTrackingEntry(Base):
+    __tablename__ = "cost_tracking"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    prompt_tokens = Column(Integer, nullable=False, default=0)
+    completion_tokens = Column(Integer, nullable=False, default=0)
+    total_tokens = Column(Integer, nullable=False, default=0)
+    estimated_cost_usd = Column(String, nullable=False, default="0.00")  # Store as string for precision
+    model_used = Column(String, nullable=True)
+    execution_time_ms = Column(Integer, nullable=False, default=0)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    task = relationship("Task", backref="cost_entries")
+    agent = relationship("Agent", backref="cost_entries")
+
+
+class UsageMetrics(Base):
+    __tablename__ = "usage_metrics"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    metric_type = Column(String, nullable=False)  # 'daily', 'hourly', 'agent'
+    metric_key = Column(String, nullable=False)   # date, hour, agent_id
+    total_requests = Column(Integer, nullable=False, default=0)
+    total_tokens = Column(Integer, nullable=False, default=0)
+    total_cost_usd = Column(String, nullable=False, default="0.00")
+    avg_response_time_ms = Column(Integer, nullable=False, default=0)
+    success_rate = Column(String, nullable=False, default="100.00")  # Percentage as string
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Composite index for efficient queries
+    __table_args__ = (
+        {'extend_existing': True}
+    )

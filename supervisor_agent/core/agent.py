@@ -6,6 +6,7 @@ from datetime import datetime
 from supervisor_agent.config import settings
 from supervisor_agent.db.models import Task, TaskSession, Agent
 from supervisor_agent.db.crud import TaskSessionCRUD, AgentCRUD
+from supervisor_agent.core.cost_tracker import cost_tracker
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,8 +18,10 @@ class ClaudeAgentWrapper:
         self.api_key = api_key
         self.cli_path = settings.claude_cli_path
     
-    async def execute_task(self, task: Task, shared_memory: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute_task(self, task: Task, shared_memory: Dict[str, Any], db_session = None) -> Dict[str, Any]:
         start_time = datetime.utcnow()
+        prompt = None
+        result = None
         
         try:
             prompt = self._build_prompt(task, shared_memory)
@@ -28,24 +31,61 @@ class ClaudeAgentWrapper:
             # Invoke Claude CLI via subprocess
             result = await self._run_claude_cli(prompt)
             
-            execution_time = int((datetime.utcnow() - start_time).total_seconds())
+            end_time = datetime.utcnow()
+            execution_time = int((end_time - start_time).total_seconds())
+            execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Track cost and usage if database session is provided
+            if db_session:
+                try:
+                    cost_tracker.track_task_execution(
+                        db=db_session,
+                        task_id=task.id,
+                        agent_id=self.agent_id,
+                        prompt=prompt,
+                        response=result,
+                        execution_time_ms=execution_time_ms,
+                        context=shared_memory
+                    )
+                except Exception as cost_error:
+                    logger.warning(f"Failed to track cost for task {task.id}: {str(cost_error)}")
             
             return {
                 "success": True,
                 "result": result,
                 "execution_time": execution_time,
+                "execution_time_ms": execution_time_ms,
                 "prompt": prompt
             }
             
         except Exception as e:
-            execution_time = int((datetime.utcnow() - start_time).total_seconds())
+            end_time = datetime.utcnow()
+            execution_time = int((end_time - start_time).total_seconds())
+            execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            
             logger.error(f"Task {task.id} failed with agent {self.agent_id}: {str(e)}")
+            
+            # Track failed execution cost if database session is provided
+            if db_session and prompt:
+                try:
+                    cost_tracker.track_task_execution(
+                        db=db_session,
+                        task_id=task.id,
+                        agent_id=self.agent_id,
+                        prompt=prompt,
+                        response="",  # Empty response for failed tasks
+                        execution_time_ms=execution_time_ms,
+                        context=shared_memory
+                    )
+                except Exception as cost_error:
+                    logger.warning(f"Failed to track cost for failed task {task.id}: {str(cost_error)}")
             
             return {
                 "success": False,
                 "error": str(e),
                 "execution_time": execution_time,
-                "prompt": prompt if 'prompt' in locals() else None
+                "execution_time_ms": execution_time_ms,
+                "prompt": prompt if prompt else None
             }
     
     def _build_prompt(self, task: Task, shared_memory: Dict[str, Any]) -> str:

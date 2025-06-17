@@ -6,6 +6,7 @@ import logging
 from supervisor_agent.config import settings
 from supervisor_agent.api.routes.tasks import router as tasks_router
 from supervisor_agent.api.routes.health import router as health_router
+from supervisor_agent.api.routes.analytics import router as analytics_router
 from supervisor_agent.db.database import engine
 from supervisor_agent.db.models import Base
 from supervisor_agent.core.quota import quota_manager
@@ -57,6 +58,7 @@ app.add_middleware(
 # Include routers
 app.include_router(tasks_router, prefix="/api/v1", tags=["tasks"])
 app.include_router(health_router, prefix="/api/v1", tags=["health"])
+app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
 
 
 @app.exception_handler(Exception)

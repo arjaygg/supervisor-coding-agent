@@ -28,8 +28,7 @@ class TaskResponse(BaseModel):
     retry_count: int
     error_message: Optional[str]
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class TaskSessionCreate(BaseModel):
@@ -49,8 +48,7 @@ class TaskSessionResponse(BaseModel):
     created_at: datetime
     execution_time_seconds: Optional[int]
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class AgentCreate(BaseModel):
@@ -75,8 +73,7 @@ class AgentResponse(BaseModel):
     last_used_at: Optional[datetime]
     created_at: datetime
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class AuditLogCreate(BaseModel):
@@ -100,8 +97,7 @@ class AuditLogResponse(BaseModel):
     ip_address: Optional[str]
     user_agent: Optional[str]
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class HealthResponse(BaseModel):
@@ -111,3 +107,74 @@ class HealthResponse(BaseModel):
     database: bool
     redis: bool
     agents_active: int
+
+
+class CostTrackingEntryCreate(BaseModel):
+    task_id: int
+    agent_id: str
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_cost_usd: str
+    model_used: Optional[str] = None
+    execution_time_ms: int
+    
+    model_config = {"protected_namespaces": ()}
+
+
+class CostTrackingEntryResponse(BaseModel):
+    id: int
+    task_id: int
+    agent_id: str
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_cost_usd: str
+    model_used: Optional[str]
+    execution_time_ms: int
+    timestamp: datetime
+    
+    model_config = {"from_attributes": True, "protected_namespaces": ()}
+
+
+class UsageMetricsCreate(BaseModel):
+    metric_type: str
+    metric_key: str
+    total_requests: int
+    total_tokens: int
+    total_cost_usd: str
+    avg_response_time_ms: int
+    success_rate: str
+
+
+class UsageMetricsResponse(BaseModel):
+    id: int
+    metric_type: str
+    metric_key: str
+    total_requests: int
+    total_tokens: int
+    total_cost_usd: str
+    avg_response_time_ms: int
+    success_rate: str
+    timestamp: datetime
+    
+    model_config = {"from_attributes": True}
+
+
+class CostSummaryResponse(BaseModel):
+    total_cost_usd: str
+    total_tokens: int
+    total_requests: int
+    avg_cost_per_request: str
+    avg_tokens_per_request: float
+    cost_by_agent: Dict[str, str]
+    cost_by_task_type: Dict[str, str]
+    daily_breakdown: List[Dict[str, Any]]
+
+
+class UsageAnalyticsResponse(BaseModel):
+    time_period: str
+    summary: CostSummaryResponse
+    trends: Dict[str, List[Dict[str, Any]]]
+    top_agents: List[Dict[str, Any]]
+    cost_efficiency: Dict[str, Any]
