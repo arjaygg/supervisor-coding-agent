@@ -258,11 +258,12 @@ jobs:
           env_id="${{ needs.setup-environment.outputs.environment_id }}"
           api_port="${{ needs.setup-environment.outputs.api_port }}"
           redis_host="${{ needs.deploy-infrastructure.outputs.redis-host }}"
+          api_image="dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}"
           
           echo "📦 Loading API image..."
           docker load < /tmp/api-image.tar.gz
           
-          echo "🚀 Starting API service..."
+          echo "🚀 Starting API service with image: $api_image"
           
           # Run API container with host networking for multi-runner access
           docker run -d \
@@ -277,7 +278,7 @@ jobs:
             -e "SECRET_KEY=pr-secret-key-${{ needs.check-command.outputs.pr_number }}" \
             -e "CLAUDE_API_KEYS=mock-key-for-testing" \
             -v "/tmp/api-data-$env_id:/app/data" \
-            "${{ needs.build-api.outputs.image-tag }}"
+            "$api_image"
           
           # Start worker container
           docker run -d \
@@ -290,7 +291,7 @@ jobs:
             -e "SECRET_KEY=pr-secret-key-${{ needs.check-command.outputs.pr_number }}" \
             -e "CLAUDE_API_KEYS=mock-key-for-testing" \
             -v "/tmp/api-data-$env_id:/app/data" \
-            "${{ needs.build-api.outputs.image-tag }}" \
+            "$api_image" \
             celery -A supervisor_agent.queue.celery_app worker --loglevel=debug --concurrency=2
           
           echo "🏥 Checking API health..."
@@ -339,11 +340,12 @@ jobs:
           env_id="${{ needs.setup-environment.outputs.environment_id }}"
           frontend_port="${{ needs.setup-environment.outputs.frontend_port }}"
           api_port="${{ needs.setup-environment.outputs.api_port }}"
+          frontend_image="dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}"
           
           echo "📦 Loading Frontend image..."
           docker load < /tmp/frontend-image.tar.gz
           
-          echo "🚀 Starting Frontend service..."
+          echo "🚀 Starting Frontend service with image: $frontend_image"
           
           # Run Frontend container with host networking
           docker run -d \
@@ -354,7 +356,7 @@ jobs:
             -e "NODE_ENV=development" \
             -e "VITE_API_URL=http://localhost:$api_port" \
             -e "VITE_WS_URL=ws://localhost:$api_port" \
-            "${{ needs.build-frontend.outputs.image-tag }}"
+            "$frontend_image"
           
           echo "🏥 Checking Frontend health..."
           sleep 20  # Frontend takes longer to start
