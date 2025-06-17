@@ -1,0 +1,58 @@
+# Traefik Configuration - Cost-Optimized for Development
+# Minimal resource usage while providing automatic HTTPS and service discovery
+
+# Global Configuration
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# Entry Points
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entrypoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+
+# Providers
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: "default"
+    watch: true
+
+# Certificate Resolvers (Let's Encrypt)
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: ${LETSENCRYPT_EMAIL}
+      storage: /acme.json
+      httpChallenge:
+        entryPoint: web
+
+# API and Dashboard (localhost only for security)
+api:
+  dashboard: true
+  insecure: true  # Only accessible via localhost:8080
+
+# Logging (minimal for resource efficiency)
+log:
+  level: WARN
+
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: json
+
+# Ping endpoint for health checks
+ping: {}
+
+# Metrics (lightweight)
+metrics:
+  prometheus:
+    addEntryPointsLabels: false
+    addServicesLabels: false

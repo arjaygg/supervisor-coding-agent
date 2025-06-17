@@ -57,7 +57,14 @@
       "Bash(rg:*)",
       "Bash(gh pr close:*)",
       "Bash(sed:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git checkout:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }

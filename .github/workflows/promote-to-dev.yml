@@ -244,67 +244,111 @@ jobs:
           echo "PR_BRANCH=${{ needs.check-promote-command.outputs.pr_branch }}" >> $GITHUB_ENV
           echo "DEPLOY_TIMESTAMP=$(date -Iseconds)" >> $GITHUB_ENV
 
-      - name: Build production images for development
+      - name: Build and push images to Google Container Registry
         run: |
-          # Build API image
-          docker build -t dev-assist-api:dev-${{ needs.check-promote-command.outputs.pr_number }} .
+          # Configure Docker for GCR
+          gcloud auth configure-docker --quiet
           
-          # Build frontend image (from project root with frontend Dockerfile)
-          docker build -f frontend/Dockerfile.prod -t dev-assist-frontend:dev-${{ needs.check-promote-command.outputs.pr_number }} \
+          # Build and tag API image
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:latest \
+            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:pr-${{ needs.check-promote-command.outputs.pr_number }} .
+          
+          # Build and tag frontend image
+          docker build -f frontend/Dockerfile.prod \
+            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:latest \
+            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:pr-${{ needs.check-promote-command.outputs.pr_number }} \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
             --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
           
-          # Save images for deployment
-          docker save dev-assist-api:dev-${{ needs.check-promote-command.outputs.pr_number }} | gzip > /tmp/dev-api-image.tar.gz
-          docker save dev-assist-frontend:dev-${{ needs.check-promote-command.outputs.pr_number }} | gzip > /tmp/dev-frontend-image.tar.gz
+          # Push images to GCR
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:latest
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:pr-${{ needs.check-promote-command.outputs.pr_number }}
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:latest  
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:pr-${{ needs.check-promote-command.outputs.pr_number }}
           
-          echo "✅ Built and saved development images"
+          echo "✅ Images built and pushed to Google Container Registry"
 
       - name: Deploy to development environment
         run: |
           echo "🚀 Deploying to development environment..."
           
-          # Load development images
-          docker load < /tmp/dev-api-image.tar.gz
-          docker load < /tmp/dev-frontend-image.tar.gz
+          # Ensure VM is running
+          VM_STATUS=$(gcloud compute instances describe ${{ secrets.DEV_VM_NAME }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --format="value(status)" || echo "NOT_FOUND")
           
-          # In a real scenario, this would:
-          # 1. SSH to development server or use cloud deployment APIs
-          # 2. Transfer image files to development server
-          # 3. Load images on development server
-          # 4. Update docker-compose configuration with new image tags
-          # 5. Perform rolling update
-          # 6. Run database migrations
-          # 7. Verify deployment health
+          if [[ "$VM_STATUS" == "TERMINATED" ]]; then
+            echo "Starting development VM..."
+            gcloud compute instances start ${{ secrets.DEV_VM_NAME }} \
+              --zone=${{ secrets.GCP_ZONE }} \
+              --project=${{ secrets.GCP_PROJECT_ID }}
+            
+            echo "Waiting for VM to be ready..."
+            sleep 60
+          fi
           
-          # For demonstration, we'll simulate the process
-          echo "Deployment steps:"
-          echo "1. ✅ Transferred container images to development server"
-          echo "2. ✅ Loaded new images on development server"
-          echo "3. ✅ Updated development configuration"
-          echo "4. ✅ Performed rolling update"
-          echo "5. ✅ Applied database migrations"
-          echo "6. ✅ Verified service health"
+          # Get VM external IP
+          VM_IP=$(gcloud compute instances describe ${{ secrets.DEV_VM_NAME }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --format="value(networkInterfaces[0].accessConfigs[0].natIP)")
+          
+          echo "VM IP: $VM_IP"
+          
+          # Deploy via SSH
+          echo "Deploying application..."
+          gcloud compute ssh ${{ secrets.DEV_VM_NAME }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --command "
+              cd /opt/dev-assist && \
+              export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
+              export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }} && \
+              docker-compose -f docker-compose.prod.yml pull && \
+              docker-compose -f docker-compose.prod.yml up -d --remove-orphans && \
+              echo '✅ Deployment completed successfully'
+            "
           
           # Set deployment metadata
           echo "DEPLOYMENT_URL=https://${{ env.DEV_ENVIRONMENT_URL }}" >> $GITHUB_ENV
+          echo "VM_IP=$VM_IP" >> $GITHUB_ENV
 
       - name: Run post-deployment tests
         run: |
           echo "🧪 Running post-deployment validation..."
           
-          # Simulate health checks and integration tests
-          echo "Health checks:"
-          echo "  ✅ API health check"
-          echo "  ✅ Database connectivity"
-          echo "  ✅ Redis connectivity"
-          echo "  ✅ Frontend loading"
+          # Wait for services to be ready
+          echo "Waiting for services to start..."
+          sleep 30
           
-          echo "Integration tests:"
-          echo "  ✅ User authentication flow"
-          echo "  ✅ API endpoint tests"
-          echo "  ✅ WebSocket connectivity"
-          echo "  ✅ Background task processing"
+          # Health check API
+          echo "Testing API health..."
+          if curl -f -s "http://${{ env.VM_IP }}:8000/api/v1/healthz" > /dev/null; then
+            echo "  ✅ API health check passed"
+          else
+            echo "  ❌ API health check failed"
+            exit 1
+          fi
+          
+          # Test frontend
+          echo "Testing frontend..."
+          if curl -f -s "http://${{ env.VM_IP }}:3000" > /dev/null; then
+            echo "  ✅ Frontend loading"
+          else
+            echo "  ❌ Frontend failed to load"
+            exit 1
+          fi
+          
+          # Test Traefik dashboard
+          echo "Testing Traefik dashboard..."
+          if curl -f -s "http://${{ env.VM_IP }}:8080" > /dev/null; then
+            echo "  ✅ Traefik dashboard accessible"
+          else
+            echo "  ⚠️  Traefik dashboard not accessible (may be normal)"
+          fi
+          
+          echo "✅ Basic health checks completed successfully"
 
       - name: Update environment state
         run: |

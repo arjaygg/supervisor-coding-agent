@@ -1,7 +1,7 @@
 version: '3.8'
 
 # Production Docker Compose Configuration
-# Optimized for Google Cloud VM deployment with enhanced security and performance
+# Optimized for cost-efficient Google Cloud VM deployment (f1-micro friendly)
 
 services:
   # PostgreSQL Database - Production Configuration
@@ -13,8 +13,8 @@ services:
       POSTGRES_USER: supervisor
       POSTGRES_PASSWORD: supervisor_pass
       POSTGRES_MAX_CONNECTIONS: 200
-      POSTGRES_SHARED_BUFFERS: 256MB
-      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_SHARED_BUFFERS: 32MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 128MB
     ports:
       - "127.0.0.1:5432:5432"  # Bind to localhost only
     volumes:
@@ -25,18 +25,18 @@ services:
       postgres
       -c shared_preload_libraries=pg_stat_statements
       -c pg_stat_statements.track=all
-      -c max_connections=200
-      -c shared_buffers=256MB
-      -c effective_cache_size=1GB
-      -c maintenance_work_mem=64MB
+      -c max_connections=50
+      -c shared_buffers=32MB
+      -c effective_cache_size=128MB
+      -c maintenance_work_mem=16MB
       -c checkpoint_completion_target=0.9
-      -c wal_buffers=16MB
-      -c default_statistics_target=100
+      -c wal_buffers=4MB
+      -c default_statistics_target=50
       -c random_page_cost=1.1
-      -c effective_io_concurrency=200
-      -c work_mem=4MB
-      -c min_wal_size=1GB
-      -c max_wal_size=4GB
+      -c effective_io_concurrency=100
+      -c work_mem=2MB
+      -c min_wal_size=128MB
+      -c max_wal_size=512MB
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U supervisor -d supervisor_agent"]
       interval: 10s
@@ -46,11 +46,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
-          cpus: '1.0'
+          memory: 256M
+          cpus: '0.4'
         reservations:
-          memory: 512M
-          cpus: '0.5'
+          memory: 128M
+          cpus: '0.2'
     security_opt:
       - no-new-privileges:true
     logging:
@@ -78,11 +78,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
-          cpus: '0.5'
+          memory: 64M
+          cpus: '0.2'
         reservations:
-          memory: 256M
-          cpus: '0.25'
+          memory: 32M
+          cpus: '0.1'
     security_opt:
       - no-new-privileges:true
     logging:
@@ -93,14 +93,16 @@ services:
 
   # Main API Application - Production Configuration
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - BUILDKIT_INLINE_CACHE=1
+    image: gcr.io/${GCP_PROJECT_ID}/dev-assist-api:latest
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8000:8000"  # Bind to localhost only
+    expose:
+      - "8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
     environment:
       - DATABASE_URL=postgresql://supervisor:supervisor_pass@postgres:5432/supervisor_agent
       - REDIS_URL=redis://redis:6379/0
@@ -128,11 +130,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
+          memory: 384M
           cpus: '0.5'
+        reservations:
+          memory: 192M
+          cpus: '0.3'
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -149,17 +151,13 @@ services:
 
   # Celery Worker - Production Configuration
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - BUILDKIT_INLINE_CACHE=1
+    image: gcr.io/${GCP_PROJECT_ID}/dev-assist-api:latest
     restart: unless-stopped
     command: >
       celery -A supervisor_agent.queue.celery_app worker
       --loglevel=info
-      --concurrency=4
-      --max-tasks-per-child=1000
+      --concurrency=1
+      --max-tasks-per-child=500
       --time-limit=3600
       --soft-time-limit=3300
       --prefetch-multiplier=1
@@ -187,17 +185,17 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
-          cpus: '2.0'
+          memory: 256M
+          cpus: '0.3'
         reservations:
-          memory: 1G
-          cpus: '1.0'
+          memory: 128M
+          cpus: '0.2'
       restart_policy:
         condition: on-failure
         delay: 5s
         max_attempts: 3
         window: 120s
-      replicas: 2
+      replicas: 1
     security_opt:
       - no-new-privileges:true
     user: "app:app"
@@ -215,11 +213,7 @@ services:
 
   # Celery Beat (Scheduler) - Production Configuration
   beat:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - BUILDKIT_INLINE_CACHE=1
+    image: gcr.io/${GCP_PROJECT_ID}/dev-assist-api:latest
     restart: unless-stopped
     command: >
       celery -A supervisor_agent.queue.celery_app beat
@@ -268,16 +262,16 @@ services:
 
   # Frontend Application - Production Build
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod
-      args:
-        - NODE_ENV=production
-        - VITE_API_URL=http://localhost:8000
-        - VITE_WS_URL=ws://localhost:8000
+    image: gcr.io/${GCP_PROJECT_ID}/dev-assist-frontend:latest
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:3000:3000"  # Bind to localhost only
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN_NAME}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     environment:
       - NODE_ENV=production
     depends_on:
@@ -285,11 +279,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
-          cpus: '0.5'
+          memory: 128M
+          cpus: '0.3'
         reservations:
-          memory: 256M
-          cpus: '0.25'
+          memory: 64M
+          cpus: '0.1'
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -310,98 +304,72 @@ services:
       start_period: 30s
 
   # Nginx Reverse Proxy (Internal)
-  nginx:
-    image: nginx:alpine
+  # Traefik - Dynamic reverse proxy with automatic service discovery
+  traefik:
+    image: traefik:alpine
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
+      - "127.0.0.1:8080:8080"  # Dashboard (localhost only)
     volumes:
-      - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./deployment/nginx/conf.d:/etc/nginx/conf.d
-      - ./deployment/nginx/ssl:/etc/nginx/ssl
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - api
-      - frontend
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./deployment/traefik/traefik.yml:/traefik.yml:ro
+      - ./deployment/traefik/acme.json:/acme.json
+      - traefik_data:/data
+    command:
+      - --configfile=/traefik.yml
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: '0.25'
-        reservations:
-          memory: 128M
+          memory: 48M
           cpus: '0.1'
+        reservations:
+          memory: 24M
+          cpus: '0.05'
     security_opt:
       - no-new-privileges:true
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "5"
+        max-size: "5m"
+        max-file: "3"
     healthcheck:
-      test: ["CMD", "nginx", "-t"]
+      test: ["CMD", "traefik", "healthcheck"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
 
-  # Monitoring and Observability
-  prometheus:
-    image: prom/prometheus:latest
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:9090:9090"
-    volumes:
-      - ./deployment/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=15d'
-      - '--web.enable-lifecycle'
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
-    security_opt:
-      - no-new-privileges:true
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+  # Monitoring services disabled for cost-optimized development environment
+  # Uncomment below for full production monitoring (requires more resources)
+  
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:9090:9090"
+  #   volumes:
+  #     - ./deployment/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - prometheus_data:/prometheus
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 256M
+  #         cpus: '0.25'
 
-  # Log aggregation
-  loki:
-    image: grafana/loki:latest
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:3100:3100"
-    volumes:
-      - ./deployment/loki/loki-config.yml:/etc/loki/local-config.yaml
-      - loki_data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
-    security_opt:
-      - no-new-privileges:true
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+  # loki:
+  #   image: grafana/loki:latest
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:3100:3100"
+  #   volumes:
+  #     - ./deployment/loki/loki-config.yml:/etc/loki/local-config.yaml
+  #     - loki_data:/loki
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 256M
+  #         cpus: '0.25'
 
 # Named volumes for persistent data
 volumes:
@@ -415,12 +383,13 @@ volumes:
     driver: local
   beat_data:
     driver: local
-  nginx_logs:
+  traefik_data:
     driver: local
-  prometheus_data:
-    driver: local
-  loki_data:
-    driver: local
+  # Monitoring volumes (disabled for cost optimization)
+  # prometheus_data:
+  #   driver: local
+  # loki_data:
+  #   driver: local
 
 # Networks
 networks:
