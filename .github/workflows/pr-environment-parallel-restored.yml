@@ -1,18 +1,14 @@
-name: 🚀 PR Environment (Parallel Deployment)
+name: 🚀 PR Environment (Parallel Deployment) [DISABLED - BACKUP]
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  pull_request_review:
-    types: [submitted]
-  issue_comment:
-    types: [created]
+  # This workflow is temporarily disabled - backup version from git history
   workflow_dispatch:
     inputs:
-      pr_number:
-        description: 'PR number to deploy'
-        required: true
-        type: string
+      force_enable:
+        description: 'Force enable this backup workflow'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -27,7 +23,7 @@ env:
 jobs:
   # Skip if this is a comment and not a deploy command
   check-command:
-    if: github.event_name != 'issue_comment' || contains(github.event.comment.body, '/deploy') || contains(github.event.comment.body, '/test')
+    if: inputs.force_enable == true
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.check.outputs.should_deploy }}
