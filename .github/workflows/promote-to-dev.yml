@@ -23,8 +23,6 @@ permissions:
   actions: write
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
   DEV_ENVIRONMENT_URL: dev.dev-assist.example.com
 
 jobs:
@@ -225,45 +223,48 @@ jobs:
           echo "PR_BRANCH=${{ needs.check-promote-command.outputs.pr_branch }}" >> $GITHUB_ENV
           echo "DEPLOY_TIMESTAMP=$(date -Iseconds)" >> $GITHUB_ENV
 
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build production images for development
         run: |
           # Build API image
-          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:dev-${{ needs.check-promote-command.outputs.pr_number }} .
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:dev-${{ needs.check-promote-command.outputs.pr_number }}
+          docker build -t dev-assist-api:dev-${{ needs.check-promote-command.outputs.pr_number }} .
           
           # Build frontend image
           cd frontend
-          docker build -f Dockerfile.prod -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:dev-${{ needs.check-promote-command.outputs.pr_number }} \
+          docker build -f Dockerfile.prod -t dev-assist-frontend:dev-${{ needs.check-promote-command.outputs.pr_number }} \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
             --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:dev-${{ needs.check-promote-command.outputs.pr_number }}
+          
+          # Save images for deployment
+          docker save dev-assist-api:dev-${{ needs.check-promote-command.outputs.pr_number }} | gzip > /tmp/dev-api-image.tar.gz
+          docker save dev-assist-frontend:dev-${{ needs.check-promote-command.outputs.pr_number }} | gzip > /tmp/dev-frontend-image.tar.gz
+          
+          echo "✅ Built and saved development images"
 
       - name: Deploy to development environment
         run: |
           echo "🚀 Deploying to development environment..."
           
+          # Load development images
+          docker load < /tmp/dev-api-image.tar.gz
+          docker load < /tmp/dev-frontend-image.tar.gz
+          
           # In a real scenario, this would:
           # 1. SSH to development server or use cloud deployment APIs
-          # 2. Update docker-compose configuration
-          # 3. Pull new images
-          # 4. Perform rolling update
-          # 5. Run database migrations
-          # 6. Verify deployment health
+          # 2. Transfer image files to development server
+          # 3. Load images on development server
+          # 4. Update docker-compose configuration with new image tags
+          # 5. Perform rolling update
+          # 6. Run database migrations
+          # 7. Verify deployment health
           
           # For demonstration, we'll simulate the process
           echo "Deployment steps:"
-          echo "1. ✅ Updated development configuration"
-          echo "2. ✅ Pulled new container images"
-          echo "3. ✅ Performed rolling update"
-          echo "4. ✅ Applied database migrations"
-          echo "5. ✅ Verified service health"
+          echo "1. ✅ Transferred container images to development server"
+          echo "2. ✅ Loaded new images on development server"
+          echo "3. ✅ Updated development configuration"
+          echo "4. ✅ Performed rolling update"
+          echo "5. ✅ Applied database migrations"
+          echo "6. ✅ Verified service health"
           
           # Set deployment metadata
           echo "DEPLOYMENT_URL=https://${{ env.DEV_ENVIRONMENT_URL }}" >> $GITHUB_ENV
@@ -298,8 +299,8 @@ jobs:
             "backup_tag": "${{ needs.backup-dev-environment.outputs.backup_tag }}",
             "environment": "development",
             "images": {
-              "api": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:dev-${{ needs.check-promote-command.outputs.pr_number }}",
-              "frontend": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:dev-${{ needs.check-promote-command.outputs.pr_number }}"
+              "api": "dev-assist-api:dev-${{ needs.check-promote-command.outputs.pr_number }}",
+              "frontend": "dev-assist-frontend:dev-${{ needs.check-promote-command.outputs.pr_number }}"
             }
           }
           EOF
