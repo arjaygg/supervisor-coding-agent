@@ -55,7 +55,8 @@
       "Bash(gcloud iam service-accounts add-iam-policy-binding:*)",
       "Bash(gcloud iam workload-identity-pools providers describe:*)",
       "Bash(rg:*)",
-      "Bash(gh pr close:*)"
+      "Bash(gh pr close:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

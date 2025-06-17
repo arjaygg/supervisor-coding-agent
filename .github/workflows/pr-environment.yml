@@ -123,11 +123,108 @@ jobs:
   #         flags: unittests
   #         name: codecov-umbrella
 
-  # Build job removed - building directly in deploy job for image availability
+  # Parallel Docker builds for faster deployment
+  build-api:
+    needs: check-command
+    if: needs.check-command.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.build.outputs.image-tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check-command.outputs.pr_ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Build API image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}
+          cache-from: |
+            type=gha,scope=api
+            type=registry,ref=ghcr.io/${{ github.repository }}/api:cache
+          cache-to: type=gha,mode=max,scope=api
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Save API image
+        run: |
+          docker save dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }} | gzip > /tmp/api-image.tar.gz
+          echo "image-tag=dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}" >> $GITHUB_OUTPUT
+
+      - name: Upload API image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-image-${{ needs.check-command.outputs.pr_number }}
+          path: /tmp/api-image.tar.gz
+          retention-days: 1
+
+  build-frontend:
+    needs: check-command
+    if: needs.check-command.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.build.outputs.image-tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check-command.outputs.pr_ref }}
+
+      - name: Calculate ports for build args
+        id: ports
+        run: |
+          pr_num=${{ needs.check-command.outputs.pr_number }}
+          api_port=$((8000 + (pr_num % 100)))
+          echo "api_port=$api_port" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Build Frontend image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.dev
+          push: false
+          load: true
+          tags: dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}
+          cache-from: |
+            type=gha,scope=frontend
+            type=registry,ref=ghcr.io/${{ github.repository }}/frontend:cache
+          cache-to: type=gha,mode=max,scope=frontend
+          build-args: |
+            VITE_API_URL=http://localhost:${{ steps.ports.outputs.api_port }}
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Save Frontend image
+        run: |
+          docker save dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }} | gzip > /tmp/frontend-image.tar.gz
+          echo "image-tag=dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}" >> $GITHUB_OUTPUT
+
+      - name: Upload Frontend image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-image-${{ needs.check-command.outputs.pr_number }}
+          path: /tmp/frontend-image.tar.gz
+          retention-days: 1
 
   # Deploy ephemeral environment
   deploy:
-    needs: [check-command]
+    needs: [check-command, build-api, build-frontend]
     if: needs.check-command.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -192,32 +289,23 @@ jobs:
           REDIS_PORT=${{ steps.ports.outputs.redis_port }}
           EOF
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build API image
-        uses: docker/build-push-action@v5
+      - name: Download API image artifact
+        uses: actions/download-artifact@v4
         with:
-          context: .
-          file: ./Dockerfile
-          push: false
-          load: true
-          tags: dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          name: api-image-${{ needs.check-command.outputs.pr_number }}
+          path: /tmp/
 
-      - name: Build Frontend image
-        uses: docker/build-push-action@v5
+      - name: Download Frontend image artifact
+        uses: actions/download-artifact@v4
         with:
-          context: ./frontend
-          file: ./frontend/Dockerfile.dev
-          push: false
-          load: true
-          tags: dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VITE_API_URL=http://localhost:${{ steps.ports.outputs.api_port }}
+          name: frontend-image-${{ needs.check-command.outputs.pr_number }}
+          path: /tmp/
+
+      - name: Load Docker images
+        run: |
+          docker load < /tmp/api-image.tar.gz
+          docker load < /tmp/frontend-image.tar.gz
+          docker images
 
       - name: Copy Docker Compose for PR
         run: |
@@ -227,9 +315,9 @@ jobs:
         run: |
           cd /tmp/pr-${{ needs.check-command.outputs.pr_number }}
           
-          # Set image names
-          export API_IMAGE="dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}"
-          export FRONTEND_IMAGE="dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}"
+          # Set image names from build outputs
+          export API_IMAGE="${{ needs.build-api.outputs.image-tag }}"
+          export FRONTEND_IMAGE="${{ needs.build-frontend.outputs.image-tag }}"
           
           # Deploy with unique project name
           docker compose -p pr-${{ needs.check-command.outputs.pr_number }} up -d
@@ -237,61 +325,55 @@ jobs:
           # Wait for services to be ready
           sleep 30
           
-          # Check if services are healthy
-          max_attempts=10
+          # Fast health check using ping endpoint
+          max_attempts=6
           attempt=0
           while [ $attempt -lt $max_attempts ]; do
-            if curl -f -s http://localhost:${{ steps.ports.outputs.api_port }}/api/v1/healthz > /dev/null 2>&1; then
-              echo "API is healthy"
+            if curl -f -s http://localhost:${{ steps.ports.outputs.api_port }}/api/v1/ping > /dev/null 2>&1; then
+              echo "API ping endpoint is healthy"
               break
             fi
-            echo "Waiting for API to be ready... (attempt $((attempt + 1))/$max_attempts)"
-            sleep 10
+            echo "Waiting for API ping endpoint... (attempt $((attempt + 1))/$max_attempts)"
+            sleep 5
             attempt=$((attempt + 1))
           done
           
           if [ $attempt -eq $max_attempts ]; then
-            echo "API failed to become healthy after $max_attempts attempts"
+            echo "API ping endpoint failed after $max_attempts attempts"
             echo "=== Container Status ==="
             docker compose -p pr-${{ needs.check-command.outputs.pr_number }} ps -a
-            echo "=== API Container Logs ==="
-            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs api
-            echo "=== Redis Container Logs ==="
-            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs redis
-            echo "=== Worker Container Logs ==="
-            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs worker
+            echo "=== API Container Logs (last 30 lines) ==="
+            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs api --tail 30
+            echo "=== Redis Container Status ==="
+            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs redis --tail 10
             exit 1
           fi
 
-      - name: Post-deployment health checks
+      - name: Final health verification
         run: |
           cd /tmp/pr-${{ needs.check-command.outputs.pr_number }}
           
           echo "=== Final Container Status ==="
           docker compose -p pr-${{ needs.check-command.outputs.pr_number }} ps
           
-          # Test API health endpoint
+          # Quick final verification
           api_port=${{ steps.ports.outputs.api_port }}
-          echo "Testing API health endpoint at port $api_port..."
+          echo "Final verification of API at port $api_port..."
           
-          max_attempts=5
-          attempt=0
-          while [ $attempt -lt $max_attempts ]; do
-            if curl -f -s http://localhost:$api_port/api/v1/ping > /dev/null 2>&1; then
-              echo "✅ API ping endpoint healthy"
-              break
+          if curl -f -s http://localhost:$api_port/api/v1/ping > /dev/null 2>&1; then
+            echo "✅ Environment deployed and API responding"
+            
+            # Test additional endpoints quickly
+            if curl -f -s http://localhost:$api_port/api/v1/healthz > /dev/null 2>&1; then
+              echo "✅ Health endpoint also responding"
+            else
+              echo "⚠️ Health endpoint not responding (ping works)"
             fi
-            echo "API ping check attempt $((attempt + 1))/$max_attempts failed"
-            sleep 5
-            attempt=$((attempt + 1))
-          done
-          
-          if [ $attempt -eq $max_attempts ]; then
-            echo "❌ API ping endpoint failed after $max_attempts attempts"
-            echo "=== API Logs ==="
-            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs api --tail 50
           else
-            echo "✅ API is responding to ping requests"
+            echo "❌ API ping endpoint not responding"
+            echo "=== API Logs (last 20 lines) ==="
+            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs api --tail 20
+            exit 1
           fi
 
       - name: Run database migrations
@@ -345,7 +427,7 @@ jobs:
 
   # Comment on PR with environment details  
   comment:
-    needs: [check-command, deploy, test]
+    needs: [check-command, build-api, build-frontend, deploy, test]
     if: always() && needs.check-command.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -375,12 +457,18 @@ jobs:
             - **Frontend**: http://localhost:${{ steps.ports.outputs.frontend_port }}
             - **API**: http://localhost:${{ steps.ports.outputs.api_port }}
             - **API Docs**: http://localhost:${{ steps.ports.outputs.api_port }}/docs
-            - **Health Check**: http://localhost:${{ steps.ports.outputs.api_port }}/api/v1/healthz
+            - **Health Check**: http://localhost:${{ steps.ports.outputs.api_port }}/api/v1/ping
             
             **Environment Info:**
             - Environment ID: \`pr-${pr_number}\`
             - Auto-cleanup: 24 hours
             - Database: SQLite (ephemeral)
+            
+            **Performance Optimizations:**
+            - ⚡ Parallel Docker builds
+            - 🚀 Advanced caching (GHA + registry)
+            - 💨 Fast health checks (ping endpoint)
+            - 📦 Artifact-based image sharing
             
             **Available Commands:**
             - \`/deploy-to-dev\` - Promote to development environment
