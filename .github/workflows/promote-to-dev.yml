@@ -244,8 +244,28 @@ jobs:
           echo "PR_BRANCH=${{ needs.check-promote-command.outputs.pr_branch }}" >> $GITHUB_ENV
           echo "DEPLOY_TIMESTAMP=$(date -Iseconds)" >> $GITHUB_ENV
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Test basic authentication
+        run: |
+          echo "🔐 Testing Google Cloud authentication..."
+          gcloud auth list --filter=status:ACTIVE
+          gcloud config list project
+          echo "✅ Authentication successful!"
+
       - name: Build and push images to Google Container Registry
         run: |
+          # Enable required APIs
+          gcloud services enable artifactregistry.googleapis.com --project=${{ secrets.GCP_PROJECT_ID }}
+          gcloud services enable containerregistry.googleapis.com --project=${{ secrets.GCP_PROJECT_ID }}
+          
           # Configure Docker for GCR
           gcloud auth configure-docker --quiet
           
@@ -268,6 +288,15 @@ jobs:
           
           echo "✅ Images built and pushed to Google Container Registry"
 
+      - name: Authenticate to Google Cloud for deployment
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK for deployment
+        uses: google-github-actions/setup-gcloud@v1
+
       - name: Deploy to development environment
         run: |
           echo "🚀 Deploying to development environment..."
@@ -280,6 +309,9 @@ jobs:
           
           if [[ "$VM_STATUS" == "NOT_FOUND" ]]; then
             echo "VM not found. Creating development VM..."
+            
+            # Enable required APIs for VM creation
+            gcloud services enable compute.googleapis.com --project=${{ secrets.GCP_PROJECT_ID }}
             
             # Create the VM using our optimized specifications
             gcloud compute instances create ${{ secrets.DEV_VM_NAME }} \

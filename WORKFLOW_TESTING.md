@@ -8,9 +8,10 @@ Complete guide to test our cost-optimized GCP deployment through GitHub Actions.
 
 **What you need**:
 - GCP Project ID (e.g., `my-project-123456`)
-- Enable these APIs (can be done via GCP Console):
+- **APIs**: The workflow will auto-enable these, but you can enable manually:
   - Compute Engine API
-  - Container Registry API
+  - Container Registry API  
+  - Artifact Registry API
   - Cloud Resource Manager API
 
 ### Step 2: Configure GitHub Secrets
@@ -28,39 +29,30 @@ LETSENCRYPT_EMAIL=your-email@domain.com
 
 **For GCP Authentication**, you'll need:
 ```
-GOOGLE_CREDENTIALS=<service-account-json>
+GCP_WORKLOAD_IDENTITY_PROVIDER=projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
+GCP_SERVICE_ACCOUNT_EMAIL=github-actions-deploy@PROJECT_ID.iam.gserviceaccount.com
 ```
 
-### Step 3: Quick Service Account Creation
+### Step 3: Set up Workload Identity Federation
 
-**Option A: Via GCP Console (Fastest)**
-1. Go to GCP Console → IAM & Admin → Service Accounts
-2. Create service account: `github-actions-deploy`
-3. Add roles:
+**Use the provided setup script:**
+```bash
+./scripts/setup-github-gcp-integration.sh \
+  --project-id YOUR_PROJECT_ID \
+  --repo-owner arjaygg \
+  --repo-name supervisor-coding-agent
+```
+
+**Or manually via GCP Console:**
+1. Go to GCP Console → IAM & Admin → Workload Identity Federation
+2. Create workload identity pool: `github-actions-pool`
+3. Create OIDC provider for GitHub Actions
+4. Create service account: `github-actions-deploy` with roles:
    - Compute Admin
    - Storage Admin
    - Service Account User
-4. Create JSON key → Copy to `GOOGLE_CREDENTIALS` secret
 
-**Option B: Via CLI**
-```bash
-# Create service account
-gcloud iam service-accounts create github-actions-deploy \
-  --display-name="GitHub Actions Deployment"
-
-# Add required roles
-gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:github-actions-deploy@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/compute.admin"
-
-gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:github-actions-deploy@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/storage.admin"
-
-# Create key
-gcloud iam service-accounts keys create key.json \
-  --iam-account=github-actions-deploy@YOUR_PROJECT_ID.iam.gserviceaccount.com
-```
+**The script will output the required secrets that you need to add to GitHub.**
 
 ### Step 4: Create Test Branch and PR
 
@@ -148,9 +140,9 @@ gh run list --workflow="promote-to-dev.yml" --limit 5
 
 ### **1. Authentication Failed**
 ```
-Error: google: could not find default credentials
+Error: You do not currently have an active account selected
 ```
-**Fix**: Check `GOOGLE_CREDENTIALS` secret is valid JSON
+**Fix**: Ensure `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT_EMAIL` secrets are properly configured
 
 ### **2. VM Creation Failed**
 ```
