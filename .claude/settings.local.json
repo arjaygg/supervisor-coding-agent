@@ -36,7 +36,8 @@
       "Bash(python -m pytest supervisor_agent/tests/test_cost_tracking.py::TestCostTracker::test_track_task_execution -v)",
       "Bash(python -m pytest supervisor_agent/tests/ --tb=short -q)",
       "Bash(python -m pytest supervisor_agent/tests/test_cost_tracking.py::TestCostTrackingCRUD::test_get_cost_summary_empty_data -v)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(python -m pytest supervisor_agent/tests/test_websocket.py -v)"
     ],
     "deny": []
   }
