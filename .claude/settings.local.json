@@ -44,7 +44,17 @@
       "Bash(python -m pytest supervisor_agent/tests/test_subscription_integration.py -v)",
       "Bash(python -m pytest supervisor_agent/tests/test_subscription_integration.py::TestIntelligentTaskProcessor::test_process_task_new_request -v)",
       "Bash(python -m pytest supervisor_agent/tests/test_static_analysis.py -x --tb=short -q)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(./scripts/cleanup-github-gcp-integration.sh:*)",
+      "Bash(gcloud iam workload-identity-pools list:*)",
+      "Bash(git remote get-url:*)",
+      "Bash(./scripts/setup-github-gcp-simple.sh:*)",
+      "Bash(gcloud iam workload-identity-pools create:*)",
+      "Bash(gcloud iam workload-identity-pools describe:*)",
+      "Bash(gcloud iam workload-identity-pools providers create-oidc:*)",
+      "Bash(gcloud iam service-accounts add-iam-policy-binding:*)",
+      "Bash(gcloud iam workload-identity-pools providers describe:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }
