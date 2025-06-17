@@ -229,9 +229,8 @@ jobs:
           # Build API image
           docker build -t dev-assist-api:dev-${{ needs.check-promote-command.outputs.pr_number }} .
           
-          # Build frontend image
-          cd frontend
-          docker build -f Dockerfile.prod -t dev-assist-frontend:dev-${{ needs.check-promote-command.outputs.pr_number }} \
+          # Build frontend image (from project root with frontend Dockerfile)
+          docker build -f frontend/Dockerfile.prod -t dev-assist-frontend:dev-${{ needs.check-promote-command.outputs.pr_number }} \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
             --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
           
