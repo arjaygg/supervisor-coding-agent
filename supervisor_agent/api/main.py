@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-import logging
 from supervisor_agent.config import settings
 from supervisor_agent.api.routes.tasks import router as tasks_router
 from supervisor_agent.api.routes.health import router as health_router
@@ -21,11 +20,11 @@ async def lifespan(app: FastAPI):
     setup_logging()
     logger = get_logger(__name__)
     logger.info("Starting Supervisor Agent API")
-    
+
     # Create database tables
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables created")
-    
+
     # Initialize agents in database
     db = next(get_db())
     try:
@@ -33,9 +32,9 @@ async def lifespan(app: FastAPI):
         logger.info("Agents initialized in database")
     finally:
         db.close()
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down Supervisor Agent API")
 
@@ -44,7 +43,7 @@ app = FastAPI(
     title="Supervisor Coding Agent",
     description="AI-powered task orchestration and management system",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -66,10 +65,9 @@ app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
 async def global_exception_handler(request: Request, exc: Exception):
     logger = get_logger(__name__)
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
-    
+
     return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error", "error": str(exc)}
+        status_code=500, content={"detail": "Internal server error", "error": str(exc)}
     )
 
 
@@ -85,16 +83,17 @@ async def root():
         "message": "Supervisor Coding Agent API",
         "version": "1.0.0",
         "docs_url": "/docs",
-        "websocket_url": "/ws"
+        "websocket_url": "/ws",
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "supervisor_agent.api.main:app",
         host=settings.app_host,
         port=settings.app_port,
         reload=settings.app_debug,
-        log_level=settings.log_level.lower()
+        log_level=settings.log_level.lower(),
     )

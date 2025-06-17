@@ -15,14 +15,11 @@ sys.path.insert(0, project_root)
 from supervisor_agent.queue.celery_app import celery_app
 from supervisor_agent.utils.logger import setup_logging
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Setup logging
     setup_logging()
-    
+
     # Start the worker
-    celery_app.worker_main([
-        'worker',
-        '--loglevel=info',
-        '--concurrency=4',
-        '--pool=prefork'
-    ])
+    celery_app.worker_main(
+        ["worker", "--loglevel=info", "--concurrency=4", "--pool=prefork"]
+    )

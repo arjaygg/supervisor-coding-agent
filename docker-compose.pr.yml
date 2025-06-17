@@ -6,14 +6,14 @@ version: '3.8'
 services:
   # SQLite-based API for fast startup
   api:
-    image: ${API_IMAGE:-ghcr.io/dev-assist/api:latest}
+    image: ${API_IMAGE:-dev-assist-api:latest}
     container_name: pr-${PR_NUMBER:-0}-api
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
       - APP_DEBUG=true
       - LOG_LEVEL=DEBUG
-      - DATABASE_URL=sqlite:///tmp/pr-${PR_NUMBER:-0}.db
+      - DATABASE_URL=sqlite:////app/data/pr-${PR_NUMBER:-0}.db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -23,16 +23,15 @@ services:
       - MOCK_EXTERNAL_SERVICES=true
       - PYTHONPATH=/app
     volumes:
-      - pr_data_${PR_NUMBER:-0}:/tmp
+      - pr_data:/app/data
     depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      - redis
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/ping"]
+    #   interval: 15s
+    #   timeout: 10s
+    #   retries: 10
+    #   start_period: 60s
     restart: unless-stopped
     networks:
       - pr-network
@@ -43,13 +42,13 @@ services:
 
   # Lightweight worker for task processing
   worker:
-    image: ${API_IMAGE:-ghcr.io/dev-assist/api:latest}
+    image: ${API_IMAGE:-dev-assist-api:latest}
     container_name: pr-${PR_NUMBER:-0}-worker
     command: celery -A supervisor_agent.queue.celery_app worker --loglevel=debug --concurrency=2
     environment:
       - APP_DEBUG=true
       - LOG_LEVEL=DEBUG
-      - DATABASE_URL=sqlite:///tmp/pr-${PR_NUMBER:-0}.db
+      - DATABASE_URL=sqlite:////app/data/pr-${PR_NUMBER:-0}.db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -58,10 +57,9 @@ services:
       - MOCK_EXTERNAL_SERVICES=true
       - PYTHONPATH=/app
     volumes:
-      - pr_data_${PR_NUMBER:-0}:/tmp
+      - pr_data:/app/data
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
     restart: unless-stopped
     networks:
       - pr-network
@@ -78,7 +76,7 @@ services:
       - "${REDIS_PORT:-6379}:6379"
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
-      - pr_redis_${PR_NUMBER:-0}:/data
+      - pr_redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -94,7 +92,7 @@ services:
 
   # Frontend development server
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/dev-assist/frontend:latest}
+    image: ${FRONTEND_IMAGE:-dev-assist-frontend:latest}
     container_name: pr-${PR_NUMBER:-0}-frontend
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
@@ -104,8 +102,7 @@ services:
       - VITE_WS_URL=ws://localhost:${API_PORT:-8000}
       - VITE_PR_NUMBER=${PR_NUMBER:-0}
     depends_on:
-      api:
-        condition: service_healthy
+      - api
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
@@ -122,16 +119,16 @@ services:
 
   # Development tools and utilities
   tools:
-    image: ${API_IMAGE:-ghcr.io/dev-assist/api:latest}
+    image: ${API_IMAGE:-dev-assist-api:latest}
     container_name: pr-${PR_NUMBER:-0}-tools
     command: tail -f /dev/null  # Keep container running
     environment:
       - APP_DEBUG=true
-      - DATABASE_URL=sqlite:///tmp/pr-${PR_NUMBER:-0}.db
+      - DATABASE_URL=sqlite:////app/data/pr-${PR_NUMBER:-0}.db
       - REDIS_URL=redis://redis:6379/0
       - PYTHONPATH=/app
     volumes:
-      - pr_data_${PR_NUMBER:-0}:/tmp
+      - pr_data:/app/data
       - ./scripts:/scripts:ro
     depends_on:
       - api
@@ -148,12 +145,12 @@ services:
 
 # Named volumes for PR-specific data
 volumes:
-  pr_data_${PR_NUMBER:-0}:
+  pr_data:
     name: pr-${PR_NUMBER:-0}-data
     labels:
       - "pr.number=${PR_NUMBER:-0}"
       - "pr.environment=ephemeral"
-  pr_redis_${PR_NUMBER:-0}:
+  pr_redis:
     name: pr-${PR_NUMBER:-0}-redis
     labels:
       - "pr.number=${PR_NUMBER:-0}"

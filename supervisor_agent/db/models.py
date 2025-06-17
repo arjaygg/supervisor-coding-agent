@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey, Boolean
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    Text,
+    JSON,
+    ForeignKey,
+    Boolean,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum
@@ -25,7 +34,7 @@ class TaskStatus(str, Enum):
 
 class Task(Base):
     __tablename__ = "tasks"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     type = Column(String, nullable=False)
     status = Column(String, default=TaskStatus.PENDING)
@@ -36,7 +45,7 @@ class Task(Base):
     assigned_agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
     retry_count = Column(Integer, default=0)
     error_message = Column(Text, nullable=True)
-    
+
     # Relationships
     agent = relationship("Agent", back_populates="tasks")
     sessions = relationship("TaskSession", back_populates="task")
@@ -44,7 +53,7 @@ class Task(Base):
 
 class TaskSession(Base):
     __tablename__ = "task_sessions"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     prompt = Column(Text, nullable=False)
@@ -52,14 +61,14 @@ class TaskSession(Base):
     result = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     execution_time_seconds = Column(Integer, nullable=True)
-    
+
     # Relationships
     task = relationship("Task", back_populates="sessions")
 
 
 class Agent(Base):
     __tablename__ = "agents"
-    
+
     id = Column(String, primary_key=True, index=True)
     api_key = Column(String, nullable=False)
     quota_used = Column(Integer, default=0)
@@ -68,14 +77,14 @@ class Agent(Base):
     is_active = Column(Boolean, default=True)
     last_used_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Relationships
     tasks = relationship("Task", back_populates="agent")
 
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     event_type = Column(String, nullable=False)
     agent_id = Column(String, nullable=True)
@@ -89,18 +98,20 @@ class AuditLog(Base):
 
 class CostTrackingEntry(Base):
     __tablename__ = "cost_tracking"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
     prompt_tokens = Column(Integer, nullable=False, default=0)
     completion_tokens = Column(Integer, nullable=False, default=0)
     total_tokens = Column(Integer, nullable=False, default=0)
-    estimated_cost_usd = Column(String, nullable=False, default="0.00")  # Store as string for precision
+    estimated_cost_usd = Column(
+        String, nullable=False, default="0.00"
+    )  # Store as string for precision
     model_used = Column(String, nullable=True)
     execution_time_ms = Column(Integer, nullable=False, default=0)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Relationships
     task = relationship("Task", backref="cost_entries")
     agent = relationship("Agent", backref="cost_entries")
@@ -108,18 +119,18 @@ class CostTrackingEntry(Base):
 
 class UsageMetrics(Base):
     __tablename__ = "usage_metrics"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     metric_type = Column(String, nullable=False)  # 'daily', 'hourly', 'agent'
-    metric_key = Column(String, nullable=False)   # date, hour, agent_id
+    metric_key = Column(String, nullable=False)  # date, hour, agent_id
     total_requests = Column(Integer, nullable=False, default=0)
     total_tokens = Column(Integer, nullable=False, default=0)
     total_cost_usd = Column(String, nullable=False, default="0.00")
     avg_response_time_ms = Column(Integer, nullable=False, default=0)
-    success_rate = Column(String, nullable=False, default="100.00")  # Percentage as string
+    success_rate = Column(
+        String, nullable=False, default="100.00"
+    )  # Percentage as string
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Composite index for efficient queries
-    __table_args__ = (
-        {'extend_existing': True}
-    )
+    __table_args__ = {"extend_existing": True}

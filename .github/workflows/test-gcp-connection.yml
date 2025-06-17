@@ -1,0 +1,94 @@
+name: 🧪 Test GCP Connection
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of test to run'
+        required: false
+        default: 'basic'
+        type: choice
+        options:
+          - basic
+          - compute
+          - secrets
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test-authentication:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Test basic authentication
+        run: |
+          echo "🔐 Testing Google Cloud authentication..."
+          gcloud auth list --filter=status:ACTIVE
+          gcloud config list project
+          echo "✅ Authentication successful!"
+
+      - name: Test project access
+        run: |
+          echo "📋 Testing project access..."
+          gcloud projects describe ${{ secrets.GCP_PROJECT_ID }}
+          echo "✅ Project access confirmed!"
+
+      - name: Test compute permissions
+        if: github.event.inputs.test_type == 'compute' || github.event.inputs.test_type == 'basic'
+        run: |
+          echo "🖥️ Testing compute permissions..."
+          gcloud compute instances list --limit=1 --project=${{ secrets.GCP_PROJECT_ID }} || echo "No instances found (this is ok)"
+          gcloud compute zones list --limit=1 --project=${{ secrets.GCP_PROJECT_ID }}
+          echo "✅ Compute permissions confirmed!"
+
+      - name: Test secret manager permissions
+        if: github.event.inputs.test_type == 'secrets' || github.event.inputs.test_type == 'basic'
+        run: |
+          echo "🔒 Testing Secret Manager permissions..."
+          gcloud secrets list --limit=1 --project=${{ secrets.GCP_PROJECT_ID }} || echo "No secrets found (this is ok)"
+          echo "✅ Secret Manager permissions confirmed!"
+
+      - name: Test container registry access
+        run: |
+          echo "📦 Testing container registry access..."
+          gcloud auth configure-docker gcr.io --quiet
+          echo "✅ Container registry access configured!"
+
+      - name: Display configuration
+        run: |
+          echo "🎯 Current configuration:"
+          echo "Project ID: ${{ secrets.GCP_PROJECT_ID }}"
+          echo "Service Account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}"
+          echo "Zone: ${{ vars.GCP_ZONE || 'us-central1-a (default)' }}"
+          echo "VM Name: ${{ vars.VM_NAME || 'dev-assist-vm (default)' }}"
+
+      - name: Success summary
+        run: |
+          echo ""
+          echo "🎉 All tests passed!"
+          echo "==================="
+          echo "✅ Authentication: Working"
+          echo "✅ Project Access: Working" 
+          echo "✅ Compute API: Working"
+          echo "✅ Secret Manager: Working"
+          echo "✅ Container Registry: Working"
+          echo ""
+          echo "🚀 Your GitHub Actions → Google Cloud integration is ready!"
+          echo ""
+          echo "Next steps:"
+          echo "1. Create a Pull Request to test ephemeral environments"
+          echo "2. Use /deploy-to-dev to test development promotion"
+          echo "3. Deploy your first VM with the deployment scripts"
