@@ -12,6 +12,12 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
+@router.get("/ping")
+async def ping():
+    """Simple ping endpoint for basic health check"""
+    return {"status": "ok", "message": "pong"}
+
+
 @router.get("/healthz", response_model=schemas.HealthResponse)
 async def health_check(db: Session = Depends(get_db)):
     """Basic health check endpoint"""
