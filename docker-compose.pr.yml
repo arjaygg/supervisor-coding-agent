@@ -13,7 +13,7 @@ services:
     environment:
       - APP_DEBUG=true
       - LOG_LEVEL=DEBUG
-      - DATABASE_URL=sqlite:///tmp/pr-${PR_NUMBER:-0}.db
+      - DATABASE_URL=sqlite:////app/data/pr-${PR_NUMBER:-0}.db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -23,7 +23,7 @@ services:
       - MOCK_EXTERNAL_SERVICES=true
       - PYTHONPATH=/app
     volumes:
-      - pr_data:/tmp
+      - pr_data:/app/data
     depends_on:
       - redis
     # healthcheck:
@@ -48,7 +48,7 @@ services:
     environment:
       - APP_DEBUG=true
       - LOG_LEVEL=DEBUG
-      - DATABASE_URL=sqlite:///tmp/pr-${PR_NUMBER:-0}.db
+      - DATABASE_URL=sqlite:////app/data/pr-${PR_NUMBER:-0}.db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -57,7 +57,7 @@ services:
       - MOCK_EXTERNAL_SERVICES=true
       - PYTHONPATH=/app
     volumes:
-      - pr_data:/tmp
+      - pr_data:/app/data
     depends_on:
       - redis
     restart: unless-stopped
@@ -124,11 +124,11 @@ services:
     command: tail -f /dev/null  # Keep container running
     environment:
       - APP_DEBUG=true
-      - DATABASE_URL=sqlite:///tmp/pr-${PR_NUMBER:-0}.db
+      - DATABASE_URL=sqlite:////app/data/pr-${PR_NUMBER:-0}.db
       - REDIS_URL=redis://redis:6379/0
       - PYTHONPATH=/app
     volumes:
-      - pr_data:/tmp
+      - pr_data:/app/data
       - ./scripts:/scripts:ro
     depends_on:
       - api
