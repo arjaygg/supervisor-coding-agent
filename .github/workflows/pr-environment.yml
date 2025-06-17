@@ -275,6 +275,8 @@ jobs:
             -e "LOG_LEVEL=DEBUG" \
             -e "DATABASE_URL=sqlite:////app/data/pr-${{ needs.check-command.outputs.pr_number }}.db" \
             -e "REDIS_URL=redis://$redis_host/0" \
+            -e "CELERY_BROKER_URL=redis://$redis_host/0" \
+            -e "CELERY_RESULT_BACKEND=redis://$redis_host/0" \
             -e "SECRET_KEY=pr-secret-key-${{ needs.check-command.outputs.pr_number }}" \
             -e "CLAUDE_API_KEYS=mock-key-for-testing" \
             -v "/tmp/api-data-$env_id:/app/data" \
@@ -288,6 +290,8 @@ jobs:
             -e "APP_DEBUG=true" \
             -e "DATABASE_URL=sqlite:////app/data/pr-${{ needs.check-command.outputs.pr_number }}.db" \
             -e "REDIS_URL=redis://$redis_host/0" \
+            -e "CELERY_BROKER_URL=redis://$redis_host/0" \
+            -e "CELERY_RESULT_BACKEND=redis://$redis_host/0" \
             -e "SECRET_KEY=pr-secret-key-${{ needs.check-command.outputs.pr_number }}" \
             -e "CLAUDE_API_KEYS=mock-key-for-testing" \
             -v "/tmp/api-data-$env_id:/app/data" \
