@@ -272,20 +272,56 @@ jobs:
         run: |
           echo "🚀 Deploying to development environment..."
           
-          # Ensure VM is running
+          # Ensure VM exists and is running
           VM_STATUS=$(gcloud compute instances describe ${{ secrets.DEV_VM_NAME }} \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
-            --format="value(status)" || echo "NOT_FOUND")
+            --format="value(status)" 2>/dev/null || echo "NOT_FOUND")
           
-          if [[ "$VM_STATUS" == "TERMINATED" ]]; then
-            echo "Starting development VM..."
+          if [[ "$VM_STATUS" == "NOT_FOUND" ]]; then
+            echo "VM not found. Creating development VM..."
+            
+            # Create the VM using our optimized specifications
+            gcloud compute instances create ${{ secrets.DEV_VM_NAME }} \
+              --zone=${{ secrets.GCP_ZONE }} \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --machine-type=e2-micro \
+              --boot-disk-size=10GB \
+              --boot-disk-type=pd-standard \
+              --image-family=ubuntu-2204-lts \
+              --image-project=ubuntu-os-cloud \
+              --tags=http-server,https-server \
+              --metadata=startup-script='#!/bin/bash
+                apt-get update
+                apt-get install -y docker.io docker-compose-v2
+                systemctl start docker
+                systemctl enable docker
+                usermod -aG docker $USER
+                mkdir -p /opt/dev-assist
+                cd /opt/dev-assist
+                git clone https://github.com/arjaygg/supervisor-coding-agent.git .
+              '
+            
+            # Create firewall rules if they don't exist
+            gcloud compute firewall-rules create allow-dev-http \
+              --allow tcp:80,tcp:443,tcp:3000,tcp:8000,tcp:8080 \
+              --source-ranges 0.0.0.0/0 \
+              --target-tags http-server,https-server \
+              --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "Firewall rule already exists"
+            
+            echo "VM created. Waiting for startup script to complete..."
+            sleep 120
+            
+          elif [[ "$VM_STATUS" == "TERMINATED" ]]; then
+            echo "Starting existing development VM..."
             gcloud compute instances start ${{ secrets.DEV_VM_NAME }} \
               --zone=${{ secrets.GCP_ZONE }} \
               --project=${{ secrets.GCP_PROJECT_ID }}
             
             echo "Waiting for VM to be ready..."
             sleep 60
+          else
+            echo "VM is already running"
           fi
           
           # Get VM external IP
