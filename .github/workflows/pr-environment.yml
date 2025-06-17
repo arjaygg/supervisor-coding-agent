@@ -252,7 +252,14 @@ jobs:
           
           if [ $attempt -eq $max_attempts ]; then
             echo "API failed to become healthy"
-            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs
+            echo "=== Container Status ==="
+            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} ps -a
+            echo "=== API Container Logs ==="
+            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs api
+            echo "=== Redis Container Logs ==="
+            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs redis
+            echo "=== Worker Container Logs ==="
+            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs worker
             exit 1
           fi
 

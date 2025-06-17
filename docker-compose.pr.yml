@@ -25,14 +25,13 @@ services:
     volumes:
       - pr_data:/tmp
     depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/ping"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
+      - redis
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/ping"]
+    #   interval: 15s
+    #   timeout: 10s
+    #   retries: 10
+    #   start_period: 60s
     restart: unless-stopped
     networks:
       - pr-network
@@ -60,8 +59,7 @@ services:
     volumes:
       - pr_data:/tmp
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
     restart: unless-stopped
     networks:
       - pr-network
@@ -104,8 +102,7 @@ services:
       - VITE_WS_URL=ws://localhost:${API_PORT:-8000}
       - VITE_PR_NUMBER=${PR_NUMBER:-0}
     depends_on:
-      api:
-        condition: service_healthy
+      - api
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
