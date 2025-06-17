@@ -108,40 +108,55 @@ class TestCostTracker:
     @pytest.mark.asyncio
     async def test_track_task_execution(self, test_db, sample_task):
         """Test tracking task execution"""
+        from datetime import datetime
+        
         # Mock database operations
         with patch('supervisor_agent.db.crud.CostTrackingCRUD.create_cost_entry') as mock_create:
+            # Create a mock entry with proper attributes
             mock_entry = Mock()
             mock_entry.id = 1
             mock_entry.task_id = sample_task.id
             mock_entry.agent_id = "test-agent"
+            mock_entry.prompt_tokens = 100
+            mock_entry.completion_tokens = 50
+            mock_entry.total_tokens = 150
             mock_entry.estimated_cost_usd = "0.0250"
+            mock_entry.model_used = "claude-3-5-sonnet-20241022"
+            mock_entry.execution_time_ms = 5000
+            mock_entry.timestamp = datetime.utcnow()
             mock_create.return_value = mock_entry
             
-            # Track execution
-            result = cost_tracker.track_task_execution(
-                db=test_db,
-                task_id=sample_task.id,
-                agent_id="test-agent",
-                prompt="Test prompt for PR review",
-                response="This PR looks good with minor suggestions",
-                execution_time_ms=5000,
-                context={"project": "test"}
-            )
-            
-            # Verify create was called
-            mock_create.assert_called_once()
-            
-            # Verify call arguments
-            call_args = mock_create.call_args[0]
-            cost_entry = call_args[1]  # Second argument is the cost entry
-            
-            assert cost_entry.task_id == sample_task.id
-            assert cost_entry.agent_id == "test-agent"
-            assert cost_entry.execution_time_ms == 5000
-            assert cost_entry.prompt_tokens > 0
-            assert cost_entry.completion_tokens > 0
-            assert cost_entry.total_tokens > 0
-            assert float(cost_entry.estimated_cost_usd) > 0
+            # Mock usage metrics operations to avoid database calls
+            with patch('supervisor_agent.core.cost_tracker.CostTracker._update_usage_metrics'):
+                # Track execution
+                result = cost_tracker.track_task_execution(
+                    db=test_db,
+                    task_id=sample_task.id,
+                    agent_id="test-agent",
+                    prompt="Test prompt for PR review",
+                    response="This PR looks good with minor suggestions",
+                    execution_time_ms=5000,
+                    context={"project": "test"}
+                )
+                
+                # Verify create was called
+                mock_create.assert_called_once()
+                
+                # Verify call arguments
+                call_args = mock_create.call_args[0]
+                cost_entry = call_args[1]  # Second argument is the cost entry
+                
+                assert cost_entry.task_id == sample_task.id
+                assert cost_entry.agent_id == "test-agent"
+                assert cost_entry.execution_time_ms == 5000
+                assert cost_entry.prompt_tokens > 0
+                assert cost_entry.completion_tokens > 0
+                assert cost_entry.total_tokens > 0
+                assert float(cost_entry.estimated_cost_usd) > 0
+                
+                # Verify the result matches our mock
+                assert result.id == 1
+                assert result.estimated_cost_usd == "0.0250"
     
     def test_get_cost_summary(self, test_db):
         """Test getting cost summary"""
