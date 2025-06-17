@@ -229,6 +229,10 @@ jobs:
           
           export PR_NUMBER=${{ needs.check-command.outputs.pr_number }}
           export REDIS_PORT=${{ steps.ports.outputs.redis_port }}
+          export API_IMAGE="${{ needs.build-api.outputs.image-tag }}"
+          export FRONTEND_IMAGE="${{ needs.build-frontend.outputs.image-tag }}"
+          export API_PORT=${{ steps.ports.outputs.api_port }}
+          export FRONTEND_PORT=${{ steps.ports.outputs.frontend_port }}
           
           echo "🚀 Starting Redis infrastructure..."
           docker compose -p $env_id up -d redis
