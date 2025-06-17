@@ -265,11 +265,11 @@ jobs:
           
           echo "🗂️ Creating API data directory..."
           mkdir -p "/tmp/api-data-$env_id"
-          chmod 755 "/tmp/api-data-$env_id"
+          chmod 777 "/tmp/api-data-$env_id"
           
-          echo "🗄️ Pre-creating database file..."
+          echo "🗄️ Pre-creating database file with proper permissions..."
           touch "/tmp/api-data-$env_id/pr-${{ needs.check-command.outputs.pr_number }}.db"
-          chmod 664 "/tmp/api-data-$env_id/pr-${{ needs.check-command.outputs.pr_number }}.db"
+          chmod 666 "/tmp/api-data-$env_id/pr-${{ needs.check-command.outputs.pr_number }}.db"
           
           echo "🔍 Verifying data directory setup..."
           ls -la "/tmp/api-data-$env_id"
@@ -282,6 +282,7 @@ jobs:
             --restart unless-stopped \
             -p "$api_port:8000" \
             --network host \
+            --user "$(id -u):$(id -g)" \
             -e "APP_DEBUG=true" \
             -e "LOG_LEVEL=DEBUG" \
             -e "DATABASE_URL=sqlite:////app/data/pr-${{ needs.check-command.outputs.pr_number }}.db" \
@@ -290,7 +291,7 @@ jobs:
             -e "CELERY_RESULT_BACKEND=redis://$redis_host/0" \
             -e "SECRET_KEY=pr-secret-key-${{ needs.check-command.outputs.pr_number }}" \
             -e "CLAUDE_API_KEYS=mock-key-for-testing" \
-            -v "/tmp/api-data-$env_id:/app/data" \
+            -v "/tmp/api-data-$env_id:/app/data:rw" \
             "$api_image"
           
           # Start worker container
@@ -298,6 +299,7 @@ jobs:
             --name "worker-$env_id" \
             --restart unless-stopped \
             --network host \
+            --user "$(id -u):$(id -g)" \
             -e "APP_DEBUG=true" \
             -e "DATABASE_URL=sqlite:////app/data/pr-${{ needs.check-command.outputs.pr_number }}.db" \
             -e "REDIS_URL=redis://$redis_host/0" \
@@ -305,7 +307,7 @@ jobs:
             -e "CELERY_RESULT_BACKEND=redis://$redis_host/0" \
             -e "SECRET_KEY=pr-secret-key-${{ needs.check-command.outputs.pr_number }}" \
             -e "CLAUDE_API_KEYS=mock-key-for-testing" \
-            -v "/tmp/api-data-$env_id:/app/data" \
+            -v "/tmp/api-data-$env_id:/app/data:rw" \
             "$api_image" \
             celery -A supervisor_agent.queue.celery_app worker --loglevel=debug --concurrency=2
           
