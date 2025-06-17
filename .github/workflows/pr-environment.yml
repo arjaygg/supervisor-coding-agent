@@ -410,35 +410,9 @@ jobs:
           echo "url=http://localhost:$frontend_port" >> $GITHUB_OUTPUT
           docker logs "frontend-$env_id" --tail 20
 
-  # Database setup (depends on API being ready)
-  setup-database:
-    needs: [check-command, deploy-api, setup-environment]
-    if: needs.check-command.outputs.should_deploy == 'true' && needs.deploy-api.outputs.api-status == 'success'
-    runs-on: ubuntu-latest
-    outputs:
-      db-status: ${{ steps.db-setup.outputs.status }}
-    steps:
-      - name: Setup database
-        id: db-setup
-        run: |
-          env_id="${{ needs.setup-environment.outputs.environment_id }}"
-          
-          echo "🗄️ Setting up database..."
-          
-          # Run database migrations via API container
-          docker exec "api-$env_id" python -c "
-          from supervisor_agent.db.database import engine
-          from supervisor_agent.db.models import Base
-          Base.metadata.create_all(bind=engine)
-          print('Database tables created successfully')
-          " || echo "Migration completed"
-          
-          echo "✅ Database setup completed"
-          echo "status=success" >> $GITHUB_OUTPUT
-
   # Final verification (runs after all deployments complete)
   verify-deployment:
-    needs: [check-command, setup-environment, deploy-infrastructure, deploy-api, deploy-frontend, setup-database]
+    needs: [check-command, setup-environment, deploy-infrastructure, deploy-api, deploy-frontend]
     if: always() && needs.check-command.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     outputs:
@@ -452,15 +426,13 @@ jobs:
           redis_status="${{ needs.deploy-infrastructure.outputs.redis-status }}"
           api_status="${{ needs.deploy-api.outputs.api-status }}"
           frontend_status="${{ needs.deploy-frontend.outputs.frontend-status }}"
-          db_status="${{ needs.setup-database.outputs.db-status }}"
           
           echo "📊 Deployment Results:"
           echo "  Redis Infrastructure: $redis_status"
-          echo "  API Service: $api_status" 
+          echo "  API Service: $api_status (includes database initialization)" 
           echo "  Frontend Service: $frontend_status"
-          echo "  Database Setup: $db_status"
           
-          if [[ "$redis_status" == "success" && "$api_status" == "success" && "$frontend_status" == "success" && "$db_status" == "success" ]]; then
+          if [[ "$redis_status" == "success" && "$api_status" == "success" && "$frontend_status" == "success" ]]; then
             echo "✅ All services deployed successfully in parallel!"
             echo "status=success" >> $GITHUB_OUTPUT
           else
@@ -509,15 +481,14 @@ jobs:
             - ⚡ **Parallel Docker Builds**: API and Frontend built simultaneously
             - 🏗️ **Parallel Infrastructure**: Redis deployed independently
             - 🔄 **Parallel Services**: API and Frontend deployed simultaneously
-            - 🗄️ **Async Database Setup**: Runs parallel with Frontend deployment
+            - 🗄️ **Integrated Database**: Database initialized during API startup
             - 🏥 **Independent Health Checks**: Each service verified separately
             - 🎯 **Maximum Parallelization**: ~70% faster than sequential
             
             **Deployment Timeline:**
             - Infrastructure: ${{ needs.deploy-infrastructure.outputs.redis-status }}
-            - API Service: ${{ needs.deploy-api.outputs.api-status }}
+            - API Service: ${{ needs.deploy-api.outputs.api-status }} (includes database initialization)
             - Frontend Service: ${{ needs.deploy-frontend.outputs.frontend-status }}
-            - Database: ${{ needs.setup-database.outputs.db-status }}
             
             **Available Commands:**
             - \`/deploy-to-dev\` - Promote to development environment
@@ -530,9 +501,8 @@ jobs:
             
             **Deployment Status:**
             - Infrastructure: ${{ needs.deploy-infrastructure.outputs.redis-status || '❌' }}
-            - API Service: ${{ needs.deploy-api.outputs.api-status || '❌' }}
+            - API Service: ${{ needs.deploy-api.outputs.api-status || '❌' }} (includes database)
             - Frontend Service: ${{ needs.deploy-frontend.outputs.frontend-status || '❌' }}
-            - Database: ${{ needs.setup-database.outputs.db-status || '❌' }}
             
             Please check the [workflow logs](${context.payload.repository.html_url}/actions/runs/${context.runId}) for details.
             
