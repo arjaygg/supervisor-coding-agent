@@ -285,7 +285,7 @@ jobs:
           export FRONTEND_IMAGE="${{ needs.build.outputs.frontend-image }}"
           
           # Deploy with unique project name
-          docker-compose -p pr-${{ needs.check-command.outputs.pr_number }} up -d
+          docker compose -p pr-${{ needs.check-command.outputs.pr_number }} up -d
           
           # Wait for services to be ready
           sleep 30
@@ -305,7 +305,7 @@ jobs:
           
           if [ $attempt -eq $max_attempts ]; then
             echo "API failed to become healthy"
-            docker-compose -p pr-${{ needs.check-command.outputs.pr_number }} logs
+            docker compose -p pr-${{ needs.check-command.outputs.pr_number }} logs
             exit 1
           fi
 
@@ -314,7 +314,7 @@ jobs:
           cd /tmp/pr-${{ needs.check-command.outputs.pr_number }}
           
           # Run migrations (if using SQLite, create tables)
-          docker-compose -p pr-${{ needs.check-command.outputs.pr_number }} exec -T api python -c "
+          docker compose -p pr-${{ needs.check-command.outputs.pr_number }} exec -T api python -c "
           from supervisor_agent.db.database import engine
           from supervisor_agent.db.models import Base
           Base.metadata.create_all(bind=engine)
@@ -467,7 +467,7 @@ jobs:
           echo "Cleaning up PR environment: pr-$pr_number"
           
           # Stop and remove containers
-          docker-compose -p pr-$pr_number down -v --remove-orphans || echo "No environment found to cleanup"
+          docker compose -p pr-$pr_number down -v --remove-orphans || echo "No environment found to cleanup"
           
           # Remove images
           docker rmi dev-assist-api:pr-$pr_number || echo "API image not found"
