@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import asyncio
 from supervisor_agent.db.database import get_db
 from supervisor_agent.db import schemas, crud
 from supervisor_agent.db.models import TaskStatus
 from supervisor_agent.queue.tasks import process_single_task
 from supervisor_agent.core.quota import quota_manager
+from supervisor_agent.api.websocket import notify_task_update
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -38,6 +40,16 @@ async def create_task(
         
         # Queue task for processing
         process_single_task.delay(db_task.id)
+        
+        # Send WebSocket notification
+        asyncio.create_task(notify_task_update({
+            "id": db_task.id,
+            "type": db_task.type,
+            "status": db_task.status,
+            "priority": db_task.priority,
+            "created_at": db_task.created_at.isoformat() if db_task.created_at else None,
+            "payload": db_task.payload
+        }))
         
         logger.info(f"Created and queued task {db_task.id} of type {task.type}")
         
