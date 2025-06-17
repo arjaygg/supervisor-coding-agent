@@ -77,7 +77,19 @@ setup-dev: ## Setup development environment
 	echo "Please edit .env file with your configuration"
 
 health-check: ## Check application health
+	./scripts/health-check.sh
+
+health-check-basic: ## Basic health check via curl
 	curl -f http://localhost:8000/api/v1/healthz || echo "Health check failed"
+
+setup: ## Interactive setup with dependency checking
+	./scripts/setup.sh
+
+quick-start: ## Quick start setup
+	./scripts/quick-start.sh
+
+dev-setup: ## Complete development environment setup
+	./scripts/dev-setup.sh
 
 api-docs: ## Open API documentation
 	open http://localhost:8000/docs

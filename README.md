@@ -18,68 +18,90 @@ A production-grade MVP for orchestrating and managing Claude AI coding tasks wit
 ### Prerequisites
 
 - Python 3.11+
-- PostgreSQL
-- Redis
-- Claude CLI tool
-- Docker & Docker Compose (for containerized deployment)
+- Docker & Docker Compose
+- Claude CLI tool (optional for testing)
 
-### Local Development
+### 🚀 One-Command Setup
 
-1. **Clone and setup**:
-   ```bash
-   git clone <repository-url>
-   cd supervisor-agent
-   make setup-dev
-   ```
+```bash
+# Clone and run the quick start script
+git clone https://github.com/your-username/supervisor-coding-agent.git
+cd supervisor-coding-agent
+./scripts/quick-start.sh
+```
 
-2. **Configure environment**:
+This script will:
+- Setup environment configuration
+- Start PostgreSQL and Redis
+- Run database migrations
+- Guide you through starting the API and workers
+
+### 🔧 Development Setup
+
+For a complete development environment:
+
+```bash
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Run development setup
+./scripts/dev-setup.sh
+```
+
+### 📦 Docker-Only Setup
+
+If you prefer Docker-only setup:
+
+```bash
+# Copy environment file
+cp .env.sample .env
+
+# Start all services
+make docker-up
+
+# Check status
+make health-check
+```
+
+### 🏃‍♂️ Manual Setup
+
+1. **Setup environment**:
    ```bash
    cp .env.sample .env
-   # Edit .env with your configuration
+   # Edit .env with your Claude API keys
    ```
 
-3. **Install dependencies**:
+2. **Install dependencies**:
    ```bash
    make install
    ```
 
-4. **Run with Docker Compose**:
-   ```bash
-   make docker-up
-   ```
-
-5. **Access the API**:
-   - API: http://localhost:8000
-   - Docs: http://localhost:8000/docs
-   - Health: http://localhost:8000/api/v1/healthz
-
-### Manual Setup
-
-1. **Start PostgreSQL and Redis**:
-   ```bash
-   # PostgreSQL
-   createdb supervisor_agent
-   
-   # Redis
-   redis-server
-   ```
-
-2. **Run migrations**:
-   ```bash
-   make migrate
-   ```
-
 3. **Start services**:
    ```bash
-   # Terminal 1: API
-   make run
-   
-   # Terminal 2: Worker
-   make run-worker
-   
-   # Terminal 3: Scheduler
-   make run-beat
+   make docker-up  # Start databases
+   make run        # Start API (in terminal 1)
+   make run-worker # Start worker (in terminal 2)
    ```
+
+### ✅ Verify Installation
+
+```bash
+# Run health check
+./scripts/health-check.sh
+
+# Or check individual endpoints
+curl http://localhost:8000/api/v1/healthz
+curl http://localhost:8000/api/v1/health/detailed
+```
+
+### 🌐 Access Points
+
+- **API**: http://localhost:8000
+- **Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/api/v1/healthz
+- **Metrics**: http://localhost:8000/api/v1/metrics
+
 
 ## Configuration
 
@@ -170,6 +192,15 @@ curl "http://localhost:8000/api/v1/agents/quota/status"
 ```
 
 ## Development
+
+### Setup Scripts
+
+The `scripts/` directory contains helpful setup scripts:
+
+- **`./scripts/setup.sh`** - Interactive setup with dependency checking
+- **`./scripts/quick-start.sh`** - Minimal setup to get running quickly  
+- **`./scripts/dev-setup.sh`** - Complete development environment setup
+- **`./scripts/health-check.sh`** - Comprehensive system health verification
 
 ### Running Tests
 
