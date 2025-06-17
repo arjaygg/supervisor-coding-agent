@@ -223,10 +223,10 @@ class TestCostTrackingCRUD:
             
             summary = crud.CostTrackingCRUD.get_cost_summary(test_db)
             
-            assert summary["total_cost_usd"] == "0.00"
+            assert summary["total_cost_usd"] == "0.0000"
             assert summary["total_tokens"] == 0
             assert summary["total_requests"] == 0
-            assert summary["avg_cost_per_request"] == "0.00"
+            assert summary["avg_cost_per_request"] == "0.0000"
             assert summary["avg_tokens_per_request"] == 0.0
             assert summary["cost_by_agent"] == {}
             assert summary["cost_by_task_type"] == {}
