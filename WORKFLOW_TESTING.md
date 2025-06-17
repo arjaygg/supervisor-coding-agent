@@ -8,9 +8,10 @@ Complete guide to test our cost-optimized GCP deployment through GitHub Actions.
 
 **What you need**:
 - GCP Project ID (e.g., `my-project-123456`)
-- Enable these APIs (can be done via GCP Console):
+- **APIs**: The workflow will auto-enable these, but you can enable manually:
   - Compute Engine API
-  - Container Registry API
+  - Container Registry API  
+  - Artifact Registry API
   - Cloud Resource Manager API
 
 ### Step 2: Configure GitHub Secrets
