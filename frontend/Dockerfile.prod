@@ -4,8 +4,8 @@ FROM node:18-alpine as builder
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files  
+COPY frontend/package*.json ./
 
 # Install all dependencies (including dev dependencies needed for build)
 RUN npm ci && npm cache clean --force
@@ -21,7 +21,7 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 
 # Copy source code
-COPY . .
+COPY frontend/ .
 
 # Build the application
 RUN npm run build
@@ -40,7 +40,7 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/build ./build
+COPY --from=builder --chown=nodejs:nodejs /app/.svelte-kit/output/client ./build
 
 # Switch to non-root user
 USER nodejs

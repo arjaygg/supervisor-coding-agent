@@ -193,3 +193,6 @@ settings.local.py
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# SvelteKit build artifacts
+.svelte-kit/
