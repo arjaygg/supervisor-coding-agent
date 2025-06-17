@@ -20,10 +20,6 @@ permissions:
   issues: write
   checks: write
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
   # Skip if this is a comment and not a deploy command
   check-command:
@@ -82,9 +78,7 @@ jobs:
           push: false
           load: true
           tags: dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}
-          cache-from: |
-            type=gha,scope=api
-            type=registry,ref=ghcr.io/${{ github.repository }}/api:cache
+          cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
           build-args: |
             BUILDKIT_INLINE_CACHE=1
@@ -134,9 +128,7 @@ jobs:
           push: false
           load: true
           tags: dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}
-          cache-from: |
-            type=gha,scope=frontend
-            type=registry,ref=ghcr.io/${{ github.repository }}/frontend:cache
+          cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
           build-args: |
             VITE_API_URL=http://localhost:${{ steps.ports.outputs.api_port }}
