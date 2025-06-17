@@ -1,10 +1,8 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey, Boolean
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum
-
-Base = declarative_base()
+from supervisor_agent.db.database import Base
 
 
 class TaskType(str, Enum):

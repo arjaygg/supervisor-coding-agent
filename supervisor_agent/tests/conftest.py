@@ -2,20 +2,34 @@ import pytest
 import tempfile
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from fastapi.testclient import TestClient
 from supervisor_agent.db.database import get_db, Base
 from supervisor_agent.api.main import app
 from supervisor_agent.config import settings
+# Import models to register them with Base
+from supervisor_agent.db import models
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def test_engine():
     """Create a test database engine"""
-    # Use in-memory SQLite for tests
-    engine = create_engine("sqlite:///:memory:", echo=False)
+    # Use file-based SQLite for tests to avoid threading issues
+    db_file = tempfile.NamedTemporaryFile(delete=False)
+    db_file.close()
+    engine = create_engine(
+        f"sqlite:///{db_file.name}", 
+        echo=False,
+        connect_args={"check_same_thread": False}  # Allow multiple threads
+    )
     Base.metadata.create_all(engine)
-    return engine
+    yield engine
+    # Cleanup
+    engine.dispose()
+    try:
+        os.unlink(db_file.name)
+    except OSError:
+        pass
 
 
 @pytest.fixture
@@ -30,13 +44,16 @@ def test_db(test_engine):
 
 
 @pytest.fixture
-def test_client(test_db):
+def test_client(test_engine):
     """Create a test client with database dependency override"""
+    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    
     def override_get_db():
+        db = TestSessionLocal()
         try:
-            yield test_db
+            yield db
         finally:
-            pass
+            db.close()
     
     app.dependency_overrides[get_db] = override_get_db
     client = TestClient(app)

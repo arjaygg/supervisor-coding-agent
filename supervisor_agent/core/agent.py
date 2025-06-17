@@ -52,7 +52,9 @@ class ClaudeAgentWrapper:
         task_type = task.type
         payload = task.payload
         
-        base_prompt = f"Task Type: {task_type}\n\n"
+        # Extract the enum value if it's an enum, otherwise use string directly
+        task_type_str = task_type.value if hasattr(task_type, 'value') else str(task_type)
+        base_prompt = f"Task Type: {task_type_str}\n\n"
         
         # Add shared memory context if available
         if shared_memory:
@@ -165,12 +167,19 @@ Please provide:
     
     async def _run_claude_cli(self, prompt: str) -> str:
         try:
-            # Set environment variable for API key
-            env = {"ANTHROPIC_API_KEY": self.api_key}
+            # Set environment variable for API key, inheriting current environment
+            import os
+            env = os.environ.copy()
+            env["ANTHROPIC_API_KEY"] = self.api_key
             
-            # Run Claude CLI with the prompt
+            # Construct Claude CLI command
+            # Using stdin for prompt to handle large prompts and special characters
+            command = [self.cli_path]
+            
+            # Run Claude CLI with the prompt via stdin
             process = subprocess.run(
-                [self.cli_path, "--prompt", prompt],
+                command,
+                input=prompt,
                 capture_output=True,
                 text=True,
                 env=env,
@@ -178,12 +187,15 @@ Please provide:
             )
             
             if process.returncode != 0:
-                raise Exception(f"Claude CLI failed with return code {process.returncode}: {process.stderr}")
+                error_msg = process.stderr.strip() if process.stderr else "Unknown error"
+                raise Exception(f"Claude CLI failed with return code {process.returncode}: {error_msg}")
             
             return process.stdout.strip()
             
         except subprocess.TimeoutExpired:
             raise Exception("Claude CLI execution timed out")
+        except FileNotFoundError:
+            raise Exception(f"Claude CLI not found at path: {self.cli_path}")
         except Exception as e:
             raise Exception(f"Failed to execute Claude CLI: {str(e)}")
 
