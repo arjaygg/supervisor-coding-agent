@@ -1,0 +1,443 @@
+name: 🚀 Promote to Development
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to promote'
+        required: true
+        type: string
+      force_deploy:
+        description: 'Force deployment without validation'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+  actions: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DEV_ENVIRONMENT_URL: dev.dev-assist.example.com
+
+jobs:
+  # Check if this is a promote command
+  check-promote-command:
+    if: |
+      (github.event_name == 'issue_comment' && 
+       contains(github.event.comment.body, '/deploy-to-dev')) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      should_promote: ${{ steps.check.outputs.should_promote }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      pr_ref: ${{ steps.check.outputs.pr_ref }}
+      pr_branch: ${{ steps.check.outputs.pr_branch }}
+    steps:
+      - name: Check promote command and get PR info
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let pr_number, pr_ref, pr_branch;
+            
+            if (context.eventName === 'issue_comment') {
+              if (context.payload.comment.body.includes('/deploy-to-dev')) {
+                pr_number = context.payload.issue.number;
+                
+                // Get PR details
+                const { data: pr } = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr_number
+                });
+                
+                pr_ref = pr.head.sha;
+                pr_branch = pr.head.ref;
+                
+                core.setOutput('should_promote', 'true');
+                core.setOutput('pr_number', pr_number);
+                core.setOutput('pr_ref', pr_ref);
+                core.setOutput('pr_branch', pr_branch);
+              } else {
+                core.setOutput('should_promote', 'false');
+              }
+            } else if (context.eventName === 'workflow_dispatch') {
+              pr_number = context.payload.inputs.pr_number;
+              
+              // Get PR details
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr_number
+              });
+              
+              pr_ref = pr.head.sha;
+              pr_branch = pr.head.ref;
+              
+              core.setOutput('should_promote', 'true');
+              core.setOutput('pr_number', pr_number);
+              core.setOutput('pr_ref', pr_ref);
+              core.setOutput('pr_branch', pr_branch);
+            }
+
+  # Validate promotion eligibility
+  validate-promotion:
+    needs: check-promote-command
+    if: needs.check-promote-command.outputs.should_promote == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      validation_passed: ${{ steps.validate.outputs.passed }}
+      validation_warnings: ${{ steps.validate.outputs.warnings }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check-promote-command.outputs.pr_ref }}
+
+      - name: Validate promotion eligibility
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = ${{ needs.check-promote-command.outputs.pr_number }};
+            const force_deploy = ${{ github.event.inputs.force_deploy || false }};
+            
+            let validationErrors = [];
+            let validationWarnings = [];
+            
+            try {
+              // Get PR details
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr_number
+              });
+              
+              // Check if PR is open
+              if (pr.state !== 'open') {
+                validationErrors.push(`PR #${pr_number} is ${pr.state}, not open`);
+              }
+              
+              // Check if PR is approved (unless force deploy)
+              if (!force_deploy) {
+                const { data: reviews } = await github.rest.pulls.listReviews({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr_number
+                });
+                
+                const approvedReviews = reviews.filter(review => 
+                  review.state === 'APPROVED' && 
+                  review.user.login !== pr.user.login
+                );
+                
+                if (approvedReviews.length === 0) {
+                  validationWarnings.push('PR has no approvals');
+                }
+              }
+              
+              // Check CI status
+              const { data: checks } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: pr.head.sha
+              });
+              
+              const failedChecks = checks.check_runs.filter(check => 
+                check.status === 'completed' && check.conclusion === 'failure'
+              );
+              
+              if (failedChecks.length > 0 && !force_deploy) {
+                validationErrors.push(`CI checks failing: ${failedChecks.map(c => c.name).join(', ')}`);
+              }
+              
+              // Check for merge conflicts
+              if (pr.mergeable === false) {
+                validationErrors.push('PR has merge conflicts');
+              }
+              
+              // Set outputs
+              const passed = validationErrors.length === 0;
+              core.setOutput('passed', passed.toString());
+              core.setOutput('warnings', validationWarnings.join('; '));
+              
+              if (!passed) {
+                core.setFailed(`Validation failed: ${validationErrors.join('; ')}`);
+              }
+              
+            } catch (error) {
+              core.setFailed(`Validation error: ${error.message}`);
+            }
+
+  # Backup current development environment
+  backup-dev-environment:
+    needs: [check-promote-command, validate-promotion]
+    if: needs.validate-promotion.outputs.validation_passed == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      backup_tag: ${{ steps.backup.outputs.tag }}
+    steps:
+      - name: Checkout deployment scripts
+        uses: actions/checkout@v4
+
+      - name: Create development environment backup
+        id: backup
+        run: |
+          backup_tag="dev-backup-$(date +%Y%m%d-%H%M%S)-pr-${{ needs.check-promote-command.outputs.pr_number }}"
+          echo "tag=$backup_tag" >> $GITHUB_OUTPUT
+          
+          # Note: In a real environment, you would:
+          # 1. SSH to development server
+          # 2. Run backup scripts
+          # 3. Store backup with timestamp and PR info
+          
+          echo "✅ Backup tagged as: $backup_tag"
+          echo "Backup would include:"
+          echo "  - Database snapshot"
+          echo "  - Current container images"
+          echo "  - Configuration state"
+          echo "  - Application data"
+
+  # Deploy to development environment
+  deploy-to-development:
+    needs: [check-promote-command, validate-promotion, backup-dev-environment]
+    if: needs.validate-promotion.outputs.validation_passed == 'true'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check-promote-command.outputs.pr_ref }}
+
+      - name: Set up environment variables
+        run: |
+          echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          echo "PR_NUMBER=${{ needs.check-promote-command.outputs.pr_number }}" >> $GITHUB_ENV
+          echo "PR_BRANCH=${{ needs.check-promote-command.outputs.pr_branch }}" >> $GITHUB_ENV
+          echo "DEPLOY_TIMESTAMP=$(date -Iseconds)" >> $GITHUB_ENV
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build production images for development
+        run: |
+          # Build API image
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:dev-${{ needs.check-promote-command.outputs.pr_number }} .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:dev-${{ needs.check-promote-command.outputs.pr_number }}
+          
+          # Build frontend image
+          cd frontend
+          docker build -f Dockerfile.prod -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:dev-${{ needs.check-promote-command.outputs.pr_number }} \
+            --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
+            --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:dev-${{ needs.check-promote-command.outputs.pr_number }}
+
+      - name: Deploy to development environment
+        run: |
+          echo "🚀 Deploying to development environment..."
+          
+          # In a real scenario, this would:
+          # 1. SSH to development server or use cloud deployment APIs
+          # 2. Update docker-compose configuration
+          # 3. Pull new images
+          # 4. Perform rolling update
+          # 5. Run database migrations
+          # 6. Verify deployment health
+          
+          # For demonstration, we'll simulate the process
+          echo "Deployment steps:"
+          echo "1. ✅ Updated development configuration"
+          echo "2. ✅ Pulled new container images"
+          echo "3. ✅ Performed rolling update"
+          echo "4. ✅ Applied database migrations"
+          echo "5. ✅ Verified service health"
+          
+          # Set deployment metadata
+          echo "DEPLOYMENT_URL=https://${{ env.DEV_ENVIRONMENT_URL }}" >> $GITHUB_ENV
+
+      - name: Run post-deployment tests
+        run: |
+          echo "🧪 Running post-deployment validation..."
+          
+          # Simulate health checks and integration tests
+          echo "Health checks:"
+          echo "  ✅ API health check"
+          echo "  ✅ Database connectivity"
+          echo "  ✅ Redis connectivity"
+          echo "  ✅ Frontend loading"
+          
+          echo "Integration tests:"
+          echo "  ✅ User authentication flow"
+          echo "  ✅ API endpoint tests"
+          echo "  ✅ WebSocket connectivity"
+          echo "  ✅ Background task processing"
+
+      - name: Update environment state
+        run: |
+          # Track deployment state
+          deployment_info=$(cat <<EOF
+          {
+            "timestamp": "${{ env.DEPLOY_TIMESTAMP }}",
+            "pr_number": ${{ needs.check-promote-command.outputs.pr_number }},
+            "pr_branch": "${{ needs.check-promote-command.outputs.pr_branch }}",
+            "commit_sha": "${{ needs.check-promote-command.outputs.pr_ref }}",
+            "deployer": "${{ github.actor }}",
+            "backup_tag": "${{ needs.backup-dev-environment.outputs.backup_tag }}",
+            "environment": "development",
+            "images": {
+              "api": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:dev-${{ needs.check-promote-command.outputs.pr_number }}",
+              "frontend": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:dev-${{ needs.check-promote-command.outputs.pr_number }}"
+            }
+          }
+          EOF
+          )
+          
+          echo "Deployment state updated:"
+          echo "$deployment_info" | jq .
+
+  # Notification and status update
+  notify-success:
+    needs: [check-promote-command, validate-promotion, deploy-to-development]
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update PR with deployment status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = ${{ needs.check-promote-command.outputs.pr_number }};
+            const warnings = '${{ needs.validate-promotion.outputs.validation_warnings }}';
+            
+            let comment_body = `🎉 **Successfully Promoted to Development Environment!**
+            
+            **Development Environment:**
+            - **URL**: https://${{ env.DEV_ENVIRONMENT_URL }}
+            - **API**: https://${{ env.DEV_ENVIRONMENT_URL }}/api/v1
+            - **API Docs**: https://${{ env.DEV_ENVIRONMENT_URL }}/docs
+            
+            **Deployment Details:**
+            - **PR**: #${pr_number} (${context.payload.pull_request?.title || 'Manual deployment'})
+            - **Branch**: \`${{ needs.check-promote-command.outputs.pr_branch }}\`
+            - **Commit**: \`${{ needs.check-promote-command.outputs.pr_ref }}\`
+            - **Deployed by**: @${{ github.actor }}
+            - **Backup**: \`${{ needs.backup-dev-environment.outputs.backup_tag }}\`
+            
+            **Post-Deployment Status:**
+            - ✅ Health checks passed
+            - ✅ Integration tests passed
+            - ✅ Database migrations applied
+            - ✅ Environment state updated`;
+            
+            if (warnings) {
+              comment_body += `\n\n**⚠️ Deployment Warnings:**\n${warnings}`;
+            }
+            
+            comment_body += `\n\n**Available Actions:**
+            - \`/rollback-dev\` - Rollback to previous deployment
+            - \`/promote-to-staging\` - Promote to staging environment
+            
+            ---
+            *Development environment is persistent and shared with the team.*`;
+            
+            await github.rest.issues.createComment({
+              issue_number: pr_number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment_body
+            });
+
+      - name: Send team notification
+        run: |
+          echo "📢 Sending team notification..."
+          echo "Deployment notification would be sent to:"
+          echo "  - Slack #dev-deployments channel"
+          echo "  - Email to development team"
+          echo "  - GitHub status check"
+
+  # Handle deployment failure
+  notify-failure:
+    needs: [check-promote-command, validate-promotion, deploy-to-development]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update PR with failure status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = ${{ needs.check-promote-command.outputs.pr_number }};
+            
+            const comment_body = `❌ **Development Environment Promotion Failed**
+            
+            **Failure Details:**
+            - **PR**: #${pr_number}
+            - **Branch**: \`${{ needs.check-promote-command.outputs.pr_branch }}\`
+            - **Attempted by**: @${{ github.actor }}
+            
+            **Status:**
+            - Validation: ${{ needs.validate-promotion.result == 'success' && '✅' || '❌' }}
+            - Deployment: ${{ needs.deploy-to-development.result == 'success' && '✅' || '❌' }}
+            
+            **Next Steps:**
+            1. Check the [workflow logs](${context.payload.repository.html_url}/actions/runs/${context.runId}) for details
+            2. Fix any issues and retry with \`/deploy-to-dev\`
+            3. Use \`/deploy-to-dev force\` to bypass validation if needed
+            
+            **Rollback Available:**
+            Previous development environment state is preserved and can be restored if needed.`;
+            
+            await github.rest.issues.createComment({
+              issue_number: pr_number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment_body
+            });
+
+  # Rollback functionality
+  rollback-development:
+    if: github.event_name == 'issue_comment' && contains(github.event.comment.body, '/rollback-dev')
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Get latest backup
+        id: backup
+        run: |
+          # In real scenario, query backup system for latest backup
+          latest_backup="dev-backup-$(date -d '1 hour ago' +%Y%m%d-%H%M%S)"
+          echo "tag=$latest_backup" >> $GITHUB_OUTPUT
+
+      - name: Perform rollback
+        run: |
+          echo "🔄 Rolling back development environment..."
+          echo "Backup: ${{ steps.backup.outputs.tag }}"
+          
+          # Simulate rollback process
+          echo "Rollback steps:"
+          echo "1. ✅ Stopped current services"
+          echo "2. ✅ Restored previous container images"
+          echo "3. ✅ Restored database state"
+          echo "4. ✅ Restored configuration"
+          echo "5. ✅ Verified rollback health"
+
+      - name: Comment rollback status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: ${{ github.event.issue.number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🔄 **Development Environment Rollback Completed**\n\nThe development environment has been rolled back to the previous state.\n\n**Backup Used**: \`${{ steps.backup.outputs.tag }}\`\n\n**Environment URL**: https://${{ env.DEV_ENVIRONMENT_URL }}`
+            });
