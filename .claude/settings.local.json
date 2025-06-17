@@ -62,7 +62,10 @@
       "Bash(source:*)",
       "Bash(pip install black flake8 mypy)",
       "Bash(black:*)",
-      "Bash(flake8:*)"
+      "Bash(flake8:*)",
+      "Bash(pip install:*)",
+      "Bash(pipx install:*)",
+      "Bash(apt install:*)"
     ],
     "deny": []
   }

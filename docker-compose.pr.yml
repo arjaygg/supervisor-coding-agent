@@ -6,7 +6,7 @@ version: '3.8'
 services:
   # SQLite-based API for fast startup
   api:
-    image: ${API_IMAGE:-ghcr.io/dev-assist/api:latest}
+    image: ${API_IMAGE:-dev-assist-api:latest}
     container_name: pr-${PR_NUMBER:-0}-api
     ports:
       - "${API_PORT:-8000}:8000"
@@ -43,7 +43,7 @@ services:
 
   # Lightweight worker for task processing
   worker:
-    image: ${API_IMAGE:-ghcr.io/dev-assist/api:latest}
+    image: ${API_IMAGE:-dev-assist-api:latest}
     container_name: pr-${PR_NUMBER:-0}-worker
     command: celery -A supervisor_agent.queue.celery_app worker --loglevel=debug --concurrency=2
     environment:
@@ -94,7 +94,7 @@ services:
 
   # Frontend development server
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/dev-assist/frontend:latest}
+    image: ${FRONTEND_IMAGE:-dev-assist-frontend:latest}
     container_name: pr-${PR_NUMBER:-0}-frontend
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
@@ -122,7 +122,7 @@ services:
 
   # Development tools and utilities
   tools:
-    image: ${API_IMAGE:-ghcr.io/dev-assist/api:latest}
+    image: ${API_IMAGE:-dev-assist-api:latest}
     container_name: pr-${PR_NUMBER:-0}-tools
     command: tail -f /dev/null  # Keep container running
     environment:
