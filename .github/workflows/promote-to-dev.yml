@@ -57,7 +57,17 @@ jobs:
                   pull_number: pr_number
                 });
                 
-                pr_ref = pr.merged_at ? pr.merge_commit_sha : pr.head.sha;
+                // For merged PRs, use current main branch instead of stale merge commit
+                if (pr.merged_at) {
+                  const { data: mainBranch } = await github.rest.repos.getBranch({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    branch: 'main'
+                  });
+                  pr_ref = mainBranch.commit.sha;
+                } else {
+                  pr_ref = pr.head.sha;
+                }
                 pr_branch = pr.head.ref;
                 
                 core.setOutput('should_promote', 'true');
@@ -77,7 +87,17 @@ jobs:
                 pull_number: pr_number
               });
               
-              pr_ref = pr.head.sha;
+              // For merged PRs, use current main branch instead of stale merge commit
+              if (pr.merged_at) {
+                const { data: mainBranch } = await github.rest.repos.getBranch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  branch: 'main'
+                });
+                pr_ref = mainBranch.commit.sha;
+              } else {
+                pr_ref = pr.head.sha;
+              }
               pr_branch = pr.head.ref;
               
               core.setOutput('should_promote', 'true');
