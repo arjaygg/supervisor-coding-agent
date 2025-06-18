@@ -231,7 +231,9 @@ grant_permissions() {
         "roles/compute.securityAdmin"       # Firewall rules
         "roles/secretmanager.admin"         # Secret management
         "roles/storage.admin"               # Container registry (GCR)
-        "roles/artifactregistry.writer"     # Artifact Registry
+        "roles/storage.objectAdmin"         # Storage object access
+        "roles/artifactregistry.admin"      # Artifact Registry (full admin for createOnPush)
+        "roles/iam.serviceAccountUser"      # Use default compute service account
         "roles/iam.serviceAccountTokenCreator"  # Token creation
     )
 
