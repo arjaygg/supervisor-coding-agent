@@ -21,6 +21,7 @@ permissions:
   issues: write
   checks: write
   actions: write
+  id-token: write
 
 env:
   DEV_ENVIRONMENT_URL: dev.dev-assist.example.com
