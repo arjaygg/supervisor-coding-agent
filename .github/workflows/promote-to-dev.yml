@@ -417,6 +417,7 @@ jobs:
               echo 'Pulling latest images...' && \
               sudo -E docker compose -f docker-compose.prod.yml pull && \
               echo 'Starting services...' && \
+              export LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }} && \
               sudo -E docker compose -f docker-compose.prod.yml up -d --remove-orphans && \
               echo '✅ Deployment completed successfully'
             "
