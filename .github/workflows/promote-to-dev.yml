@@ -415,9 +415,9 @@ jobs:
               echo 'Configuring Docker for Artifact Registry...' && \
               gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet && \
               echo 'Pulling latest images...' && \
-              sudo docker compose -f docker-compose.prod.yml pull && \
+              sudo -E docker compose -f docker-compose.prod.yml pull && \
               echo 'Starting services...' && \
-              sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans && \
+              sudo -E docker compose -f docker-compose.prod.yml up -d --remove-orphans && \
               echo '✅ Deployment completed successfully'
             "
           
