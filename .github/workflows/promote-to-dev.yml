@@ -338,7 +338,7 @@ jobs:
             
             # Create the VM using our optimized specifications
             echo "Creating VM in zone: ${{ secrets.GCP_ZONE }}"
-            if ! gcloud compute instances create "$VM_NAME" \
+            if gcloud compute instances create "$VM_NAME" \
               --zone=${{ secrets.GCP_ZONE }} \
               --project=${{ secrets.GCP_PROJECT_ID }} \
               --machine-type=e2-micro \

@@ -64,7 +64,8 @@
       "Bash(git checkout:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(gh workflow run:*)"
     ],
     "deny": []
   }
