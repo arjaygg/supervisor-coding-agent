@@ -337,7 +337,8 @@ jobs:
             # This service account does not have permission to enable APIs
             
             # Create the VM using our optimized specifications
-            gcloud compute instances create "$VM_NAME" \
+            echo "Creating VM in zone: ${{ secrets.GCP_ZONE }}"
+            if ! gcloud compute instances create "$VM_NAME" \
               --zone=${{ secrets.GCP_ZONE }} \
               --project=${{ secrets.GCP_PROJECT_ID }} \
               --machine-type=e2-micro \
@@ -355,17 +356,27 @@ jobs:
                 mkdir -p /opt/dev-assist
                 cd /opt/dev-assist
                 git clone https://github.com/arjaygg/supervisor-coding-agent.git .
-              '
-            
-            # Create firewall rules if they don't exist
-            gcloud compute firewall-rules create allow-dev-http \
-              --allow tcp:80,tcp:443,tcp:3000,tcp:8000,tcp:8080 \
-              --source-ranges 0.0.0.0/0 \
-              --target-tags http-server,https-server \
-              --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "Firewall rule already exists"
-            
-            echo "VM created. Waiting for startup script to complete..."
-            sleep 120
+              '; then
+              echo "✅ VM created successfully"
+              
+              # Create firewall rules if they don't exist
+              gcloud compute firewall-rules create allow-dev-http \
+                --allow tcp:80,tcp:443,tcp:3000,tcp:8000,tcp:8080 \
+                --source-ranges 0.0.0.0/0 \
+                --target-tags http-server,https-server \
+                --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "Firewall rule already exists"
+              
+              echo "VM created. Waiting for startup script to complete..."
+              sleep 120
+            else
+              echo "❌ VM creation failed. Check quotas and permissions."
+              echo "Available zones in asia-southeast1: asia-southeast1-a, asia-southeast1-b, asia-southeast1-c"
+              echo "You may need to:"
+              echo "1. Check compute quotas in GCP Console"
+              echo "2. Try a different zone (asia-southeast1-b or asia-southeast1-c)"
+              echo "3. Verify service account has compute.instanceAdmin role"
+              exit 1
+            fi
             
           elif [[ "$VM_STATUS" == "TERMINATED" ]]; then
             echo "Starting existing development VM..."
