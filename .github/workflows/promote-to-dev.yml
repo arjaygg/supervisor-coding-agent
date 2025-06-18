@@ -359,12 +359,19 @@ jobs:
               '; then
               echo "✅ VM created successfully"
               
-              # Create firewall rules if they don't exist
-              gcloud compute firewall-rules create allow-dev-http \
-                --allow tcp:80,tcp:443,tcp:3000,tcp:8000,tcp:8080 \
-                --source-ranges 0.0.0.0/0 \
-                --target-tags http-server,https-server \
-                --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "Firewall rule already exists"
+              # Create firewall rules if they don't exist (essential for external access)
+              if ! gcloud compute firewall-rules describe allow-dev-http --project=${{ secrets.GCP_PROJECT_ID }} >/dev/null 2>&1; then
+                echo "Creating firewall rule for HTTP/HTTPS access..."
+                gcloud compute firewall-rules create allow-dev-http \
+                  --allow tcp:80,tcp:443,tcp:3000,tcp:8000,tcp:8080 \
+                  --source-ranges 0.0.0.0/0 \
+                  --target-tags http-server,https-server \
+                  --project=${{ secrets.GCP_PROJECT_ID }} \
+                  --description="Allow HTTP/HTTPS access for dev environment"
+                echo "✅ Firewall rule created"
+              else
+                echo "Firewall rule already exists"
+              fi
               
               echo "VM created. Waiting for startup script to complete..."
               sleep 120

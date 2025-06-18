@@ -17,6 +17,8 @@ Complete guide to test our cost-optimized GCP deployment through GitHub Actions.
 
 **⚠️ IMPORTANT**: Enable these APIs manually in GCP Console before running the workflow. The service account does not have permission to enable APIs automatically.
 
+**🔥 FIREWALL**: The workflow automatically creates firewall rules for HTTP/HTTPS access. No manual intervention needed.
+
 ### Step 2: Configure GitHub Secrets
 
 Go to: `GitHub Repo → Settings → Secrets and Variables → Actions`
