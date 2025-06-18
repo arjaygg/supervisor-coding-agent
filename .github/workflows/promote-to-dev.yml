@@ -267,21 +267,25 @@ jobs:
           # - Artifact Registry API, Container Registry API, Compute Engine API
           # This service account does not have permission to enable APIs
           
-          # Configure Docker for GCR
+          # Configure Docker for Container Registry (legacy but still supported)
           gcloud auth configure-docker --quiet
           
-          # Build and tag API image
+          # Create Artifact Registry repository if it doesn't exist (alternative approach)
+          # Note: Using Container Registry (gcr.io) which should still work with storage.admin role
+          
+          # Build and tag API image for Container Registry
           docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:latest \
             -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:pr-${{ needs.check-promote-command.outputs.pr_number }} .
           
-          # Build and tag frontend image
+          # Build and tag frontend image for Container Registry  
           docker build -f frontend/Dockerfile.prod \
             -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:latest \
             -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:pr-${{ needs.check-promote-command.outputs.pr_number }} \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
             --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
           
-          # Push images to GCR
+          # Push images to Container Registry
+          echo "Pushing to Container Registry..."
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:latest
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:pr-${{ needs.check-promote-command.outputs.pr_number }}
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:latest  
