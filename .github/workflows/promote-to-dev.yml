@@ -262,9 +262,9 @@ jobs:
 
       - name: Build and push images to Google Container Registry
         run: |
-          # Enable required APIs
-          gcloud services enable artifactregistry.googleapis.com --project=${{ secrets.GCP_PROJECT_ID }}
-          gcloud services enable containerregistry.googleapis.com --project=${{ secrets.GCP_PROJECT_ID }}
+          # Note: Required APIs must be pre-enabled in GCP Console:
+          # - Artifact Registry API, Container Registry API, Compute Engine API
+          # This service account does not have permission to enable APIs
           
           # Configure Docker for GCR
           gcloud auth configure-docker --quiet
@@ -310,8 +310,8 @@ jobs:
           if [[ "$VM_STATUS" == "NOT_FOUND" ]]; then
             echo "VM not found. Creating development VM..."
             
-            # Enable required APIs for VM creation
-            gcloud services enable compute.googleapis.com --project=${{ secrets.GCP_PROJECT_ID }}
+            # Note: Compute Engine API must be pre-enabled in GCP Console
+            # This service account does not have permission to enable APIs
             
             # Create the VM using our optimized specifications
             gcloud compute instances create ${{ secrets.DEV_VM_NAME }} \

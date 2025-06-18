@@ -8,11 +8,14 @@ Complete guide to test our cost-optimized GCP deployment through GitHub Actions.
 
 **What you need**:
 - GCP Project ID (e.g., `my-project-123456`)
-- **APIs**: The workflow will auto-enable these, but you can enable manually:
+- **Required APIs** (must be enabled manually in GCP Console):
+  - Service Usage API (required first to enable other APIs)
   - Compute Engine API
   - Container Registry API  
   - Artifact Registry API
   - Cloud Resource Manager API
+
+**⚠️ IMPORTANT**: Enable these APIs manually in GCP Console before running the workflow. The service account does not have permission to enable APIs automatically.
 
 ### Step 2: Configure GitHub Secrets
 
@@ -143,6 +146,14 @@ gh run list --workflow="promote-to-dev.yml" --limit 5
 Error: You do not currently have an active account selected
 ```
 **Fix**: Ensure `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT_EMAIL` secrets are properly configured
+
+### **1b. API Permission Denied**
+```
+ERROR: (gcloud.services.enable) PERMISSION_DENIED: Permission denied to enable service
+```
+**Fix**: The service account cannot enable APIs. Enable these APIs manually in GCP Console:
+- Go to https://console.developers.google.com/apis/library
+- Search and enable: Service Usage API, Compute Engine API, Container Registry API, Artifact Registry API
 
 ### **2. VM Creation Failed**
 ```
