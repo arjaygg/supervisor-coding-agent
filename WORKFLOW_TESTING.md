@@ -54,6 +54,8 @@ GCP_SERVICE_ACCOUNT_EMAIL=github-actions-deploy@PROJECT_ID.iam.gserviceaccount.c
    - Compute Admin
    - Storage Admin
    - Service Account User
+   - Artifact Registry Writer
+   - Storage Object Admin (for Container Registry)
 
 **The script will output the required secrets that you need to add to GitHub.**
 
@@ -163,9 +165,12 @@ Error: Insufficient quota for 'CPUS' in region 'asia-southeast1'
 
 ### **3. Images Failed to Push**
 ```
-Error: denied: Token exchange failed
+Error: denied: Permission "artifactregistry.repositories.uploadArtifacts" denied
 ```
-**Fix**: Enable Container Registry API, check service account permissions
+**Fix**: Service account needs additional permissions. Add these IAM roles:
+- Artifact Registry Writer
+- Storage Object Admin (for Container Registry)
+- Or run: `gcloud projects add-iam-policy-binding PROJECT_ID --member="serviceAccount:SERVICE_ACCOUNT_EMAIL" --role="roles/artifactregistry.writer"`
 
 ### **4. SSH Connection Failed**
 ```
