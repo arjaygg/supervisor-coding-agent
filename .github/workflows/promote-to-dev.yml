@@ -404,6 +404,7 @@ jobs:
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --command "
+              sudo chown -R \$USER:\$USER /opt/dev-assist && \
               cd /opt/dev-assist && \
               git config --global --add safe.directory /opt/dev-assist && \
               git pull origin main && \
