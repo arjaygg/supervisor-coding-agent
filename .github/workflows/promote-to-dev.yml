@@ -267,31 +267,43 @@ jobs:
           # - Artifact Registry API, Container Registry API, Compute Engine API
           # This service account does not have permission to enable APIs
           
-          # Configure Docker for Container Registry (legacy but still supported)
-          gcloud auth configure-docker --quiet
+          # Configure Docker for Artifact Registry (Southeast Asia region)
+          gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
           
-          # Create Artifact Registry repository if it doesn't exist (alternative approach)
-          # Note: Using Container Registry (gcr.io) which should still work with storage.admin role
+          # Create Artifact Registry repository if it doesn't exist
+          REPO_EXISTS=$(gcloud artifacts repositories describe dev-assist \
+            --location=asia-southeast1 \
+            --format="value(name)" 2>/dev/null || echo "NOT_FOUND")
           
-          # Build and tag API image for Container Registry
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:latest \
-            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:pr-${{ needs.check-promote-command.outputs.pr_number }} .
+          if [[ "$REPO_EXISTS" == "NOT_FOUND" ]]; then
+            echo "Creating Artifact Registry repository..."
+            gcloud artifacts repositories create dev-assist \
+              --repository-format=docker \
+              --location=asia-southeast1 \
+              --description="Dev Assist application images"
+          else
+            echo "Artifact Registry repository already exists"
+          fi
           
-          # Build and tag frontend image for Container Registry  
+          # Build and tag API image for Artifact Registry
+          docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:pr-${{ needs.check-promote-command.outputs.pr_number }} .
+          
+          # Build and tag frontend image for Artifact Registry
           docker build -f frontend/Dockerfile.prod \
-            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:latest \
-            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:pr-${{ needs.check-promote-command.outputs.pr_number }} \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:pr-${{ needs.check-promote-command.outputs.pr_number }} \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
             --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
           
-          # Push images to Container Registry
-          echo "Pushing to Container Registry..."
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:latest
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:pr-${{ needs.check-promote-command.outputs.pr_number }}
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:latest  
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:pr-${{ needs.check-promote-command.outputs.pr_number }}
+          # Push images to Artifact Registry
+          echo "Pushing to Artifact Registry (Singapore region)..."
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:pr-${{ needs.check-promote-command.outputs.pr_number }}
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest  
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:pr-${{ needs.check-promote-command.outputs.pr_number }}
           
-          echo "✅ Images built and pushed to Google Container Registry"
+          echo "✅ Images built and pushed to Artifact Registry (Singapore)"
 
       - name: Authenticate to Google Cloud for deployment
         uses: google-github-actions/auth@v1

@@ -93,7 +93,7 @@ services:
 
   # Main API Application - Production Configuration
   api:
-    image: gcr.io/${GCP_PROJECT_ID}/dev-assist-api:latest
+    image: asia-southeast1-docker.pkg.dev/${GCP_PROJECT_ID}/dev-assist/api:latest
     restart: unless-stopped
     expose:
       - "8000"
@@ -151,7 +151,7 @@ services:
 
   # Celery Worker - Production Configuration
   worker:
-    image: gcr.io/${GCP_PROJECT_ID}/dev-assist-api:latest
+    image: asia-southeast1-docker.pkg.dev/${GCP_PROJECT_ID}/dev-assist/api:latest
     restart: unless-stopped
     command: >
       celery -A supervisor_agent.queue.celery_app worker
@@ -213,7 +213,7 @@ services:
 
   # Celery Beat (Scheduler) - Production Configuration
   beat:
-    image: gcr.io/${GCP_PROJECT_ID}/dev-assist-api:latest
+    image: asia-southeast1-docker.pkg.dev/${GCP_PROJECT_ID}/dev-assist/api:latest
     restart: unless-stopped
     command: >
       celery -A supervisor_agent.queue.celery_app beat
@@ -262,7 +262,7 @@ services:
 
   # Frontend Application - Production Build
   frontend:
-    image: gcr.io/${GCP_PROJECT_ID}/dev-assist-frontend:latest
+    image: asia-southeast1-docker.pkg.dev/${GCP_PROJECT_ID}/dev-assist/frontend:latest
     restart: unless-stopped
     expose:
       - "3000"
