@@ -27,8 +27,10 @@ GCP_PROJECT_ID=your-project-id
 GCP_ZONE=asia-southeast1-a
 DEV_VM_NAME=dev-assist-vm
 DEV_ENVIRONMENT_URL=dev-assist.example.com
-LETSENCRYPT_EMAIL=your-email@domain.com
+LETSENCRYPT_EMAIL=your-real-email@gmail.com
 ```
+
+**Important**: Use your actual email for `LETSENCRYPT_EMAIL` - Let's Encrypt will send SSL certificate expiration notifications to this address.
 
 **For GCP Authentication**, you'll need:
 ```
