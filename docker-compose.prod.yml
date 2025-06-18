@@ -312,6 +312,8 @@ services:
       - "80:80"
       - "443:443"
       - "127.0.0.1:8080:8080"  # Dashboard (localhost only)
+    environment:
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@example.com}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./deployment/traefik/traefik.yml:/traefik.yml:ro

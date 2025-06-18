@@ -30,7 +30,7 @@ providers:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: "admin@example.com"
+      email: ${LETSENCRYPT_EMAIL}
       storage: /acme.json
       httpChallenge:
         entryPoint: web
