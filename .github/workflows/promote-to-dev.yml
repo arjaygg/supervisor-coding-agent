@@ -409,10 +409,12 @@ jobs:
               cd /opt/dev-assist && \
               git config --global --add safe.directory /opt/dev-assist && \
               git pull origin main && \
-              cp .env.sample .env 2>/dev/null || echo 'APP_DEBUG=false' > .env && \
+              cp .env.sample .env && \
               export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
               export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }} && \
               export LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }} && \
+              echo \"\" >> .env && \
+              echo \"# Deployment Configuration\" >> .env && \
               echo \"GCP_PROJECT_ID=\$GCP_PROJECT_ID\" >> .env && \
               echo \"DOMAIN_NAME=\$DOMAIN_NAME\" >> .env && \
               echo \"LETSENCRYPT_EMAIL=\$LETSENCRYPT_EMAIL\" >> .env && \
