@@ -412,12 +412,15 @@ jobs:
               cp .env.sample .env 2>/dev/null || echo 'APP_DEBUG=false' > .env && \
               export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
               export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }} && \
+              export LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }} && \
+              echo \"GCP_PROJECT_ID=\$GCP_PROJECT_ID\" >> .env && \
+              echo \"DOMAIN_NAME=\$DOMAIN_NAME\" >> .env && \
+              echo \"LETSENCRYPT_EMAIL=\$LETSENCRYPT_EMAIL\" >> .env && \
               echo 'Configuring Docker for Artifact Registry...' && \
               gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet && \
               echo 'Pulling latest images...' && \
               sudo -E docker compose -f docker-compose.prod.yml pull && \
               echo 'Starting services...' && \
-              export LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }} && \
               sudo -E docker compose -f docker-compose.prod.yml up -d --remove-orphans && \
               echo '✅ Deployment completed successfully'
             "

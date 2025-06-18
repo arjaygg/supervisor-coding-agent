@@ -316,11 +316,11 @@ services:
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@example.com}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./deployment/traefik/traefik.yml:/traefik.yml:ro
+      - ./deployment/traefik/traefik.toml:/traefik.toml:ro
       - ./deployment/traefik/acme.json:/acme.json
       - traefik_data:/data
     command:
-      - --configfile=/traefik.yml
+      - --configfile=/traefik.toml
     deploy:
       resources:
         limits:
