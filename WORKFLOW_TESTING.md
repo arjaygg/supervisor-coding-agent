@@ -112,7 +112,7 @@ gh run list --workflow="promote-to-dev.yml" --limit 5
 - Tag with PR number for tracking
 
 ### **Phase 3: VM Management** 🖥️
-- **Create VM if needed** (e2-micro, 10GB disk)
+- **Create VM if needed** (e2-small, 10GB disk)
 - Start VM if stopped
 - Configure Docker and dependencies
 
@@ -131,15 +131,15 @@ gh run list --workflow="promote-to-dev.yml" --limit 5
 ## 📊 Expected Results
 
 **If successful, you'll see**:
-- ✅ VM created with e2-micro specs (~$8/month)
+- ✅ VM created with e2-small specs (~$14/month)
 - ✅ Services running within memory limits
 - ✅ API responding at `http://VM_IP:8000/api/v1/healthz`
 - ✅ Frontend loading at `http://VM_IP:3000`
 - ✅ Traefik dashboard at `http://VM_IP:8080`
 
 **Cost Impact**:
-- 💰 **Monthly Cost**: ~$8 (vs $122 original = 93% savings)
-- 💰 **With auto-scheduling**: ~$2-3/month (97% total savings)
+- 💰 **Monthly Cost**: ~$14 (vs $122 original = 88% savings)
+- 💰 **With auto-scheduling**: ~$4-5/month (95% total savings)
 
 ## 🐛 Common Workflow Issues
 

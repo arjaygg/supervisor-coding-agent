@@ -30,7 +30,7 @@ providers:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: ${LETSENCRYPT_EMAIL}
+      email: "admin@example.com"
       storage: /acme.json
       httpChallenge:
         entryPoint: web
@@ -45,7 +45,7 @@ log:
   level: WARN
 
 accessLog:
-  filePath: "/var/log/traefik/access.log"
+  filePath: "/data/access.log"
   format: json
 
 # Ping endpoint for health checks

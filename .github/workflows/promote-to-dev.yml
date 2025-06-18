@@ -341,7 +341,7 @@ jobs:
             if gcloud compute instances create "$VM_NAME" \
               --zone=${{ secrets.GCP_ZONE }} \
               --project=${{ secrets.GCP_PROJECT_ID }} \
-              --machine-type=e2-micro \
+              --machine-type=e2-small \
               --boot-disk-size=10GB \
               --boot-disk-type=pd-standard \
               --image-family=ubuntu-2204-lts \
