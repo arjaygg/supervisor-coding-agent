@@ -405,6 +405,7 @@ jobs:
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --command "
               sudo chown -R \$USER:\$USER /opt/dev-assist && \
+              sudo usermod -aG docker \$USER && \
               cd /opt/dev-assist && \
               git config --global --add safe.directory /opt/dev-assist && \
               git pull origin main && \
@@ -414,9 +415,9 @@ jobs:
               echo 'Configuring Docker for Artifact Registry...' && \
               gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet && \
               echo 'Pulling latest images...' && \
-              docker compose -f docker-compose.prod.yml pull && \
+              sudo docker compose -f docker-compose.prod.yml pull && \
               echo 'Starting services...' && \
-              docker compose -f docker-compose.prod.yml up -d --remove-orphans && \
+              sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans && \
               echo '✅ Deployment completed successfully'
             "
           
