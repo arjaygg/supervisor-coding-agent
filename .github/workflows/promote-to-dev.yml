@@ -318,8 +318,14 @@ jobs:
         run: |
           echo "🚀 Deploying to development environment..."
           
+          # Sanitize VM name to meet GCP requirements (lowercase, letters/numbers/hyphens only)
+          VM_NAME=$(echo "${{ secrets.DEV_VM_NAME }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+          # Fallback to default if sanitization results in empty string
+          VM_NAME=${VM_NAME:-"dev-assist-vm"}
+          echo "Using VM name: $VM_NAME"
+          
           # Ensure VM exists and is running
-          VM_STATUS=$(gcloud compute instances describe ${{ secrets.DEV_VM_NAME }} \
+          VM_STATUS=$(gcloud compute instances describe "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --format="value(status)" 2>/dev/null || echo "NOT_FOUND")
@@ -331,7 +337,7 @@ jobs:
             # This service account does not have permission to enable APIs
             
             # Create the VM using our optimized specifications
-            gcloud compute instances create ${{ secrets.DEV_VM_NAME }} \
+            gcloud compute instances create "$VM_NAME" \
               --zone=${{ secrets.GCP_ZONE }} \
               --project=${{ secrets.GCP_PROJECT_ID }} \
               --machine-type=e2-micro \
@@ -363,7 +369,7 @@ jobs:
             
           elif [[ "$VM_STATUS" == "TERMINATED" ]]; then
             echo "Starting existing development VM..."
-            gcloud compute instances start ${{ secrets.DEV_VM_NAME }} \
+            gcloud compute instances start "$VM_NAME" \
               --zone=${{ secrets.GCP_ZONE }} \
               --project=${{ secrets.GCP_PROJECT_ID }}
             
@@ -374,7 +380,7 @@ jobs:
           fi
           
           # Get VM external IP
-          VM_IP=$(gcloud compute instances describe ${{ secrets.DEV_VM_NAME }} \
+          VM_IP=$(gcloud compute instances describe "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --format="value(networkInterfaces[0].accessConfigs[0].natIP)")
@@ -383,14 +389,18 @@ jobs:
           
           # Deploy via SSH
           echo "Deploying application..."
-          gcloud compute ssh ${{ secrets.DEV_VM_NAME }} \
+          gcloud compute ssh "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --command "
               cd /opt/dev-assist && \
               export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
               export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }} && \
+              echo 'Configuring Docker for Artifact Registry...' && \
+              gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet && \
+              echo 'Pulling latest images...' && \
               docker-compose -f docker-compose.prod.yml pull && \
+              echo 'Starting services...' && \
               docker-compose -f docker-compose.prod.yml up -d --remove-orphans && \
               echo '✅ Deployment completed successfully'
             "
