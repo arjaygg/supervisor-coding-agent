@@ -183,6 +183,8 @@ enable_apis() {
         "iam.googleapis.com"
         "cloudresourcemanager.googleapis.com"
         "storage.googleapis.com"
+        "containerregistry.googleapis.com"
+        "artifactregistry.googleapis.com"
     )
 
     for api in "${apis[@]}"; do
@@ -228,7 +230,10 @@ grant_permissions() {
         "roles/compute.instanceAdmin.v1"    # VM management
         "roles/compute.securityAdmin"       # Firewall rules
         "roles/secretmanager.admin"         # Secret management
-        "roles/storage.admin"               # Container registry
+        "roles/storage.admin"               # Container registry (GCR)
+        "roles/storage.objectAdmin"         # Storage object access
+        "roles/artifactregistry.admin"      # Artifact Registry (full admin for createOnPush)
+        "roles/iam.serviceAccountUser"      # Use default compute service account
         "roles/iam.serviceAccountTokenCreator"  # Token creation
     )
 

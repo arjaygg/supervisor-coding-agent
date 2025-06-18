@@ -8,11 +8,14 @@ Complete guide to test our cost-optimized GCP deployment through GitHub Actions.
 
 **What you need**:
 - GCP Project ID (e.g., `my-project-123456`)
-- **APIs**: The workflow will auto-enable these, but you can enable manually:
+- **Required APIs** (must be enabled manually in GCP Console):
+  - Service Usage API (required first to enable other APIs)
   - Compute Engine API
   - Container Registry API  
   - Artifact Registry API
   - Cloud Resource Manager API
+
+**⚠️ IMPORTANT**: Enable these APIs manually in GCP Console before running the workflow. The service account does not have permission to enable APIs automatically.
 
 ### Step 2: Configure GitHub Secrets
 
@@ -51,6 +54,8 @@ GCP_SERVICE_ACCOUNT_EMAIL=github-actions-deploy@PROJECT_ID.iam.gserviceaccount.c
    - Compute Admin
    - Storage Admin
    - Service Account User
+   - Artifact Registry Writer
+   - Storage Object Admin (for Container Registry)
 
 **The script will output the required secrets that you need to add to GitHub.**
 
@@ -144,6 +149,14 @@ Error: You do not currently have an active account selected
 ```
 **Fix**: Ensure `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT_EMAIL` secrets are properly configured
 
+### **1b. API Permission Denied**
+```
+ERROR: (gcloud.services.enable) PERMISSION_DENIED: Permission denied to enable service
+```
+**Fix**: The service account cannot enable APIs. Enable these APIs manually in GCP Console:
+- Go to https://console.developers.google.com/apis/library
+- Search and enable: Service Usage API, Compute Engine API, Container Registry API, Artifact Registry API
+
 ### **2. VM Creation Failed**
 ```
 Error: Insufficient quota for 'CPUS' in region 'asia-southeast1'
@@ -152,9 +165,12 @@ Error: Insufficient quota for 'CPUS' in region 'asia-southeast1'
 
 ### **3. Images Failed to Push**
 ```
-Error: denied: Token exchange failed
+Error: denied: Permission "artifactregistry.repositories.uploadArtifacts" denied
 ```
-**Fix**: Enable Container Registry API, check service account permissions
+**Fix**: Service account needs additional permissions. Add these IAM roles:
+- Artifact Registry Writer
+- Storage Object Admin (for Container Registry)
+- Or run: `gcloud projects add-iam-policy-binding PROJECT_ID --member="serviceAccount:SERVICE_ACCOUNT_EMAIL" --role="roles/artifactregistry.writer"`
 
 ### **4. SSH Connection Failed**
 ```

@@ -21,6 +21,7 @@ permissions:
   issues: write
   checks: write
   actions: write
+  id-token: write
 
 env:
   DEV_ENVIRONMENT_URL: dev.dev-assist.example.com
@@ -262,31 +263,47 @@ jobs:
 
       - name: Build and push images to Google Container Registry
         run: |
-          # Enable required APIs
-          gcloud services enable artifactregistry.googleapis.com --project=${{ secrets.GCP_PROJECT_ID }}
-          gcloud services enable containerregistry.googleapis.com --project=${{ secrets.GCP_PROJECT_ID }}
+          # Note: Required APIs must be pre-enabled in GCP Console:
+          # - Artifact Registry API, Container Registry API, Compute Engine API
+          # This service account does not have permission to enable APIs
           
-          # Configure Docker for GCR
-          gcloud auth configure-docker --quiet
+          # Configure Docker for Artifact Registry (Southeast Asia region)
+          gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
           
-          # Build and tag API image
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:latest \
-            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:pr-${{ needs.check-promote-command.outputs.pr_number }} .
+          # Create Artifact Registry repository if it doesn't exist
+          REPO_EXISTS=$(gcloud artifacts repositories describe dev-assist \
+            --location=asia-southeast1 \
+            --format="value(name)" 2>/dev/null || echo "NOT_FOUND")
           
-          # Build and tag frontend image
+          if [[ "$REPO_EXISTS" == "NOT_FOUND" ]]; then
+            echo "Creating Artifact Registry repository..."
+            gcloud artifacts repositories create dev-assist \
+              --repository-format=docker \
+              --location=asia-southeast1 \
+              --description="Dev Assist application images"
+          else
+            echo "Artifact Registry repository already exists"
+          fi
+          
+          # Build and tag API image for Artifact Registry
+          docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:pr-${{ needs.check-promote-command.outputs.pr_number }} .
+          
+          # Build and tag frontend image for Artifact Registry
           docker build -f frontend/Dockerfile.prod \
-            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:latest \
-            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:pr-${{ needs.check-promote-command.outputs.pr_number }} \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:pr-${{ needs.check-promote-command.outputs.pr_number }} \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
             --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
           
-          # Push images to GCR
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:latest
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-api:pr-${{ needs.check-promote-command.outputs.pr_number }}
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:latest  
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/dev-assist-frontend:pr-${{ needs.check-promote-command.outputs.pr_number }}
+          # Push images to Artifact Registry
+          echo "Pushing to Artifact Registry (Singapore region)..."
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:pr-${{ needs.check-promote-command.outputs.pr_number }}
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest  
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:pr-${{ needs.check-promote-command.outputs.pr_number }}
           
-          echo "✅ Images built and pushed to Google Container Registry"
+          echo "✅ Images built and pushed to Artifact Registry (Singapore)"
 
       - name: Authenticate to Google Cloud for deployment
         uses: google-github-actions/auth@v1
@@ -301,8 +318,14 @@ jobs:
         run: |
           echo "🚀 Deploying to development environment..."
           
+          # Sanitize VM name to meet GCP requirements (lowercase, letters/numbers/hyphens only)
+          VM_NAME=$(echo "${{ secrets.DEV_VM_NAME }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+          # Fallback to default if sanitization results in empty string
+          VM_NAME=${VM_NAME:-"dev-assist-vm"}
+          echo "Using VM name: $VM_NAME"
+          
           # Ensure VM exists and is running
-          VM_STATUS=$(gcloud compute instances describe ${{ secrets.DEV_VM_NAME }} \
+          VM_STATUS=$(gcloud compute instances describe "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --format="value(status)" 2>/dev/null || echo "NOT_FOUND")
@@ -310,11 +333,12 @@ jobs:
           if [[ "$VM_STATUS" == "NOT_FOUND" ]]; then
             echo "VM not found. Creating development VM..."
             
-            # Enable required APIs for VM creation
-            gcloud services enable compute.googleapis.com --project=${{ secrets.GCP_PROJECT_ID }}
+            # Note: Compute Engine API must be pre-enabled in GCP Console
+            # This service account does not have permission to enable APIs
             
             # Create the VM using our optimized specifications
-            gcloud compute instances create ${{ secrets.DEV_VM_NAME }} \
+            echo "Creating VM in zone: ${{ secrets.GCP_ZONE }}"
+            if ! gcloud compute instances create "$VM_NAME" \
               --zone=${{ secrets.GCP_ZONE }} \
               --project=${{ secrets.GCP_PROJECT_ID }} \
               --machine-type=e2-micro \
@@ -332,21 +356,31 @@ jobs:
                 mkdir -p /opt/dev-assist
                 cd /opt/dev-assist
                 git clone https://github.com/arjaygg/supervisor-coding-agent.git .
-              '
-            
-            # Create firewall rules if they don't exist
-            gcloud compute firewall-rules create allow-dev-http \
-              --allow tcp:80,tcp:443,tcp:3000,tcp:8000,tcp:8080 \
-              --source-ranges 0.0.0.0/0 \
-              --target-tags http-server,https-server \
-              --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "Firewall rule already exists"
-            
-            echo "VM created. Waiting for startup script to complete..."
-            sleep 120
+              '; then
+              echo "✅ VM created successfully"
+              
+              # Create firewall rules if they don't exist
+              gcloud compute firewall-rules create allow-dev-http \
+                --allow tcp:80,tcp:443,tcp:3000,tcp:8000,tcp:8080 \
+                --source-ranges 0.0.0.0/0 \
+                --target-tags http-server,https-server \
+                --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "Firewall rule already exists"
+              
+              echo "VM created. Waiting for startup script to complete..."
+              sleep 120
+            else
+              echo "❌ VM creation failed. Check quotas and permissions."
+              echo "Available zones in asia-southeast1: asia-southeast1-a, asia-southeast1-b, asia-southeast1-c"
+              echo "You may need to:"
+              echo "1. Check compute quotas in GCP Console"
+              echo "2. Try a different zone (asia-southeast1-b or asia-southeast1-c)"
+              echo "3. Verify service account has compute.instanceAdmin role"
+              exit 1
+            fi
             
           elif [[ "$VM_STATUS" == "TERMINATED" ]]; then
             echo "Starting existing development VM..."
-            gcloud compute instances start ${{ secrets.DEV_VM_NAME }} \
+            gcloud compute instances start "$VM_NAME" \
               --zone=${{ secrets.GCP_ZONE }} \
               --project=${{ secrets.GCP_PROJECT_ID }}
             
@@ -357,7 +391,7 @@ jobs:
           fi
           
           # Get VM external IP
-          VM_IP=$(gcloud compute instances describe ${{ secrets.DEV_VM_NAME }} \
+          VM_IP=$(gcloud compute instances describe "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --format="value(networkInterfaces[0].accessConfigs[0].natIP)")
@@ -366,14 +400,18 @@ jobs:
           
           # Deploy via SSH
           echo "Deploying application..."
-          gcloud compute ssh ${{ secrets.DEV_VM_NAME }} \
+          gcloud compute ssh "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --command "
               cd /opt/dev-assist && \
               export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
               export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }} && \
+              echo 'Configuring Docker for Artifact Registry...' && \
+              gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet && \
+              echo 'Pulling latest images...' && \
               docker-compose -f docker-compose.prod.yml pull && \
+              echo 'Starting services...' && \
               docker-compose -f docker-compose.prod.yml up -d --remove-orphans && \
               echo '✅ Deployment completed successfully'
             "
