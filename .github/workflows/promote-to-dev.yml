@@ -405,6 +405,7 @@ jobs:
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --command "
               cd /opt/dev-assist && \
+              git config --global --add safe.directory /opt/dev-assist && \
               git pull origin main && \
               cp .env.sample .env 2>/dev/null || echo 'APP_DEBUG=false' > .env && \
               export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
