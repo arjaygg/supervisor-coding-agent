@@ -3,7 +3,7 @@ import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from supervisor_agent.config import settings
@@ -121,7 +121,7 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
 
 **Status:** {'Will retry automatically' if retry_count < settings.max_retries else 'Max retries reached - manual intervention required'}
 
-**Timestamp:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
+**Timestamp:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}
         """.strip()
 
     def _format_batch_completion_message(self, batch_summary: Dict[str, Any]) -> str:
@@ -142,7 +142,7 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
             return f"- {task_type}: {count}\n"
 
         return f"""
-**Timestamp:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
+**Timestamp:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}
         """.strip()
 
     def _format_health_alert_message(self, health_status: Dict[str, Any]) -> str:
@@ -167,7 +167,7 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
             return "- No specific issues detected\n"
 
         return f"""
-**Timestamp:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
+**Timestamp:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}
 
 **Action Required:** Please check system components and resolve any connectivity issues.
         """.strip()
@@ -248,7 +248,7 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
         """Test all notification channels"""
         results = {}
 
-        test_message = f"🧪 Test notification from Supervisor Agent at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+        test_message = f"🧪 Test notification from Supervisor Agent at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
 
         # Test Slack
         if self.slack_enabled:

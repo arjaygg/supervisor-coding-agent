@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from sqlalchemy import text
 from supervisor_agent.config import settings
 from supervisor_agent.api.routes.tasks import router as tasks_router
 from supervisor_agent.api.routes.health import router as health_router
@@ -44,7 +45,7 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         # Test database connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         quota_manager.initialize_agents(db)
         logger.info("Agents initialized in database")
     except Exception as e:

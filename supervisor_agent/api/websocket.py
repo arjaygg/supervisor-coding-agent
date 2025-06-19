@@ -2,7 +2,7 @@ import json
 import asyncio
 from typing import List, Dict, Any
 from fastapi import WebSocket, WebSocketDisconnect
-from datetime import datetime
+from datetime import datetime, timezone
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -60,7 +60,7 @@ class WebSocketManager:
         message = {
             "type": "task_update",
             "task": task_data,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         }
 
         await self.broadcast(json.dumps(message))
@@ -71,7 +71,7 @@ class WebSocketManager:
         message = {
             "type": "quota_update",
             "quota_status": quota_data,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         }
 
         await self.broadcast(json.dumps(message))
@@ -82,7 +82,7 @@ class WebSocketManager:
         message = {
             "type": "agent_status_update",
             "agent": agent_data,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         }
 
         await self.broadcast(json.dumps(message))
@@ -95,7 +95,7 @@ class WebSocketManager:
         message = {
             "type": "system_notification",
             "notification": notification,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         }
 
         await self.broadcast(json.dumps(message))
@@ -120,7 +120,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 {
                     "type": "connection_established",
                     "message": "Connected to Supervisor Coding Agent",
-                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                 }
             ),
             websocket,
@@ -142,7 +142,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "error",
                                 "message": "Invalid JSON format",
-                                "timestamp": datetime.utcnow().isoformat() + "Z",
+                                "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                             }
                         ),
                         websocket,
@@ -168,7 +168,7 @@ async def handle_client_message(message: Dict[str, Any], websocket: WebSocket):
         # Respond to ping with pong
         await websocket_manager.send_personal_message(
             json.dumps(
-                {"type": "pong", "timestamp": datetime.utcnow().isoformat() + "Z"}
+                {"type": "pong", "timestamp": datetime.now(timezone.utc).isoformat() + "Z"}
             ),
             websocket,
         )
@@ -183,7 +183,7 @@ async def handle_client_message(message: Dict[str, Any], websocket: WebSocket):
                 {
                     "type": "subscription_confirmed",
                     "subscription_type": subscription_type,
-                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                 }
             ),
             websocket,

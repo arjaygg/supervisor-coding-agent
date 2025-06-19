@@ -1,7 +1,7 @@
 import pytest
 import tempfile
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from fastapi.testclient import TestClient
 from supervisor_agent.db.database import get_db, Base
@@ -45,7 +45,7 @@ def test_db(test_engine):
     db = TestSessionLocal()
     try:
         # Test connection before yielding
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         yield db
     except Exception as e:
         db.rollback()
@@ -63,7 +63,7 @@ def test_client(test_engine):
         db = TestSessionLocal()
         try:
             # Test connection and yield
-            db.execute("SELECT 1")
+            db.execute(text("SELECT 1"))
             yield db
         except Exception as e:
             db.rollback()
@@ -100,11 +100,11 @@ def sample_task_data():
 @pytest.fixture
 def sample_agent_data():
     """Sample agent data for testing"""
-    from datetime import datetime, timedelta
+    from datetime import datetime, timezone, timedelta
 
     return {
         "id": "test-agent-1",
         "api_key": "test-api-key",
         "quota_limit": 1000,
-        "quota_reset_at": datetime.utcnow() + timedelta(hours=24),
+        "quota_reset_at": datetime.now(timezone.utc) + timedelta(hours=24),
     }

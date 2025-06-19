@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, desc
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from supervisor_agent.db import models, schemas
 
 
@@ -58,7 +58,7 @@ class TaskCRUD:
     def get_similar_tasks(
         db: Session, task_type: str, hours_back: int = 24
     ) -> List[models.Task]:
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours_back)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours_back)
         return (
             db.query(models.Task)
             .filter(
@@ -123,7 +123,7 @@ class AgentCRUD:
 
     @staticmethod
     def get_available_agents(db: Session) -> List[models.Agent]:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return (
             db.query(models.Agent)
             .filter(

@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any
 from celery import current_task
 from sqlalchemy.orm import Session
@@ -245,7 +245,7 @@ def process_task_batch(self, task_ids: List[int]):
     db = next(get_db())
 
     try:
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         # Get tasks
         tasks = [crud.TaskCRUD.get_task(db, task_id) for task_id in task_ids]
@@ -324,7 +324,7 @@ def process_task_batch(self, task_ids: List[int]):
                 results.append({"task_id": task.id, "success": False, "error": str(e)})
 
         # Calculate processing time
-        processing_time = int((datetime.utcnow() - start_time).total_seconds())
+        processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds())
 
         # Send batch completion notification
         batch_summary = {
@@ -376,7 +376,8 @@ def health_check_task():
 
         # Check database connectivity
         try:
-            db.execute("SELECT 1")
+            from sqlalchemy import text
+            db.execute(text("SELECT 1"))
         except Exception as e:
             health_issues.append(f"Database connectivity issue: {str(e)}")
 
@@ -402,7 +403,7 @@ def health_check_task():
             health_status = {
                 "status": "degraded",
                 "issues": health_issues,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             asyncio.run(notification_manager.send_system_health_alert(health_status))
 

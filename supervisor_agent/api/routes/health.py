@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from datetime import datetime
+from datetime import datetime, timezone
 import redis
 from supervisor_agent.db.database import get_db, engine
 from supervisor_agent.db import schemas, crud
@@ -60,7 +60,7 @@ async def health_check(db: Session = Depends(get_db)):
 
     return schemas.HealthResponse(
         status=status,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         database=database_healthy,
         redis=redis_healthy,
         agents_active=agents_count,
@@ -85,7 +85,7 @@ async def readiness_check(db: Session = Depends(get_db)):
         if len(active_agents) == 0:
             raise Exception("No active agents available")
 
-        return {"status": "ready", "timestamp": datetime.utcnow().isoformat()}
+        return {"status": "ready", "timestamp": datetime.now(timezone.utc).isoformat()}
 
     except Exception as e:
         logger.error(f"Readiness check failed: {str(e)}")
@@ -96,7 +96,7 @@ async def readiness_check(db: Session = Depends(get_db)):
 async def detailed_health_check(db: Session = Depends(get_db)):
     """Detailed health check with component status"""
     health_data = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0",
         "components": {},
         "issues": [],
@@ -194,7 +194,7 @@ async def test_notifications():
         return {
             "message": "Notification test completed",
             "results": results,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
         logger.error(f"Notification test failed: {str(e)}")

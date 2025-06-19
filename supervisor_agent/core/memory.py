@@ -1,7 +1,7 @@
 import json
 import redis
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from supervisor_agent.config import settings
 from supervisor_agent.db.models import Task, TaskSession
 from supervisor_agent.db.crud import TaskCRUD, TaskSessionCRUD
@@ -42,7 +42,7 @@ class SharedMemoryStore:
                 "task_id": task.id,
                 "task_type": task.type,
                 "result": result,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
             # Store with 7-day expiration

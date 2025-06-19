@@ -2,7 +2,7 @@ import subprocess
 import json
 import logging
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from supervisor_agent.config import settings
 from supervisor_agent.db.models import Task, TaskSession, Agent
 from supervisor_agent.db.crud import TaskSessionCRUD, AgentCRUD
@@ -21,7 +21,7 @@ class ClaudeAgentWrapper:
     async def execute_task(
         self, task: Task, shared_memory: Dict[str, Any], db_session=None
     ) -> Dict[str, Any]:
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         prompt = None
         result = None
 
@@ -33,7 +33,7 @@ class ClaudeAgentWrapper:
             # Invoke Claude CLI via subprocess
             result = await self._run_claude_cli(prompt)
 
-            end_time = datetime.utcnow()
+            end_time = datetime.now(timezone.utc)
             execution_time = int((end_time - start_time).total_seconds())
             execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
 
@@ -63,7 +63,7 @@ class ClaudeAgentWrapper:
             }
 
         except Exception as e:
-            end_time = datetime.utcnow()
+            end_time = datetime.now(timezone.utc)
             execution_time = int((end_time - start_time).total_seconds())
             execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
 

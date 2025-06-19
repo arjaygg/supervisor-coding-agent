@@ -7,7 +7,7 @@ Provides async execution of SCC and Semgrep analysis with results storage.
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 from celery import current_task
 from sqlalchemy.orm import Session
@@ -40,7 +40,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
         Dictionary with analysis results and metadata
     """
     db = next(get_db())
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
 
     try:
         logger.info(f"Starting static analysis for repository: {repo_path}")
@@ -78,7 +78,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
                         "status": "IN_PROGRESS",
                         "progress": 25,
                         "message": "Running SCC and Semgrep analysis...",
-                        "updated_at": datetime.utcnow().isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
                     }
                 )
             )
@@ -97,7 +97,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
                         "status": "IN_PROGRESS",
                         "progress": 75,
                         "message": "Processing analysis results...",
-                        "updated_at": datetime.utcnow().isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
                     }
                 )
             )
@@ -158,7 +158,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
 
             # Update task to completed
             update_data = schemas.TaskUpdate(
-                status=models.TaskStatus.COMPLETED, completed_at=datetime.utcnow()
+                status=models.TaskStatus.COMPLETED, completed_at=datetime.now(timezone.utc)
             )
             crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -171,7 +171,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
                         "status": "COMPLETED",
                         "progress": 100,
                         "message": f"Analysis complete: {result.unified_insights.code_quality_score}/100 quality score",
-                        "updated_at": datetime.utcnow().isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
                         "results": {
                             "quality_score": result.unified_insights.code_quality_score,
                             "security_score": result.unified_insights.security_score,
@@ -207,7 +207,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
             update_data = schemas.TaskUpdate(
                 status=models.TaskStatus.FAILED,
                 error_message=error_message,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
             )
             crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -219,7 +219,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
                         "type": "STATIC_ANALYSIS",
                         "status": "FAILED",
                         "error_message": error_message,
-                        "updated_at": datetime.utcnow().isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
                     }
                 )
             )
@@ -261,7 +261,7 @@ def analyze_files_task(
         Dictionary with analysis results
     """
     db = next(get_db())
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
 
     try:
         logger.info(f"Starting static analysis for {len(file_paths)} files")
@@ -305,7 +305,7 @@ def analyze_files_task(
             crud.TaskSessionCRUD.create_session(db, session_data)
 
             update_data = schemas.TaskUpdate(
-                status=models.TaskStatus.COMPLETED, completed_at=datetime.utcnow()
+                status=models.TaskStatus.COMPLETED, completed_at=datetime.now(timezone.utc)
             )
             crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -318,7 +318,7 @@ def analyze_files_task(
             update_data = schemas.TaskUpdate(
                 status=models.TaskStatus.FAILED,
                 error_message=str(e),
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
             )
             crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -485,7 +485,7 @@ def monitor_repository_health(repo_path: str, threshold_quality_score: int = 70)
             "health_score": result["quality_score"],
             "risk_profile": result["risk_profile"],
             "alerts": alerts,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
