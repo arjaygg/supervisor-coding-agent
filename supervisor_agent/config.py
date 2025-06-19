@@ -5,18 +5,38 @@ from typing import List
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = Field(..., env="DATABASE_URL")
+    database_url: str = Field(
+        default="sqlite:///./supervisor_agent.db", 
+        env="DATABASE_URL",
+        description="Database connection URL"
+    )
 
     # Redis
-    redis_url: str = Field(..., env="REDIS_URL")
+    redis_url: str = Field(
+        default="redis://localhost:6379/0", 
+        env="REDIS_URL",
+        description="Redis connection URL"
+    )
 
     # Celery
-    celery_broker_url: str = Field(..., env="CELERY_BROKER_URL")
-    celery_result_backend: str = Field(..., env="CELERY_RESULT_BACKEND")
+    celery_broker_url: str = Field(
+        default="redis://localhost:6379/0", 
+        env="CELERY_BROKER_URL",
+        description="Celery broker URL"
+    )
+    celery_result_backend: str = Field(
+        default="redis://localhost:6379/0", 
+        env="CELERY_RESULT_BACKEND",
+        description="Celery result backend URL"
+    )
 
     # Claude Configuration
     claude_cli_path: str = Field(default="claude", env="CLAUDE_CLI_PATH")
-    claude_api_keys: str = Field(..., env="CLAUDE_API_KEYS")
+    claude_api_keys: str = Field(
+        default="", 
+        env="CLAUDE_API_KEYS",
+        description="Comma-separated list of Claude API keys"
+    )
     claude_quota_limit_per_agent: int = Field(
         default=1000, env="CLAUDE_QUOTA_LIMIT_PER_AGENT"
     )
@@ -48,7 +68,35 @@ class Settings(BaseSettings):
 
     @property
     def claude_api_keys_list(self) -> List[str]:
-        return [key.strip() for key in self.claude_api_keys.split(",")]
+        if not self.claude_api_keys:
+            return []
+        return [key.strip() for key in self.claude_api_keys.split(",") if key.strip()]
+
+    def validate_configuration(self) -> List[str]:
+        """Validate configuration and return list of warnings"""
+        warnings = []
+        
+        if not self.claude_api_keys:
+            warnings.append("No Claude API keys configured - agent functionality will be limited")
+        
+        if "localhost" in self.database_url and "sqlite" not in self.database_url:
+            warnings.append("Using localhost database - ensure PostgreSQL/MySQL is running")
+        
+        if "localhost" in self.redis_url:
+            warnings.append("Using localhost Redis - ensure Redis is running")
+            
+        return warnings
 
 
-settings = Settings()
+try:
+    settings = Settings()
+    warnings = settings.validate_configuration()
+    if warnings:
+        import logging
+        logger = logging.getLogger(__name__)
+        for warning in warnings:
+            logger.warning(f"Configuration: {warning}")
+except Exception as e:
+    import logging
+    logging.error(f"Failed to load configuration: {str(e)}")
+    raise
