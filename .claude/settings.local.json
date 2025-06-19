@@ -71,7 +71,9 @@
       "Bash(docker compose:*)",
       "Bash(echo:*)",
       "Bash(env)",
-      "Bash(gh pr comment:*)"
+      "Bash(gh pr comment:*)",
+      "Bash(ls:*)",
+      "Bash(git stash:*)"
     ],
     "deny": []
   }
