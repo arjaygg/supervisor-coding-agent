@@ -318,10 +318,9 @@ jobs:
         run: |
           echo "🚀 Deploying to development environment..."
           
-          # Sanitize VM name to meet GCP requirements (lowercase, letters/numbers/hyphens only)
-          VM_NAME=$(echo "${{ secrets.DEV_VM_NAME }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-          # Fallback to default if sanitization results in empty string
-          VM_NAME=${VM_NAME:-"dev-assist-vm"}
+          # Use the actual VM name from secrets or fallback to supervisor-agent
+          VM_NAME="${{ secrets.DEV_VM_NAME }}"
+          VM_NAME=${VM_NAME:-"supervisor-agent"}
           echo "Using VM name: $VM_NAME"
           
           # Ensure VM exists and is running
@@ -415,7 +414,9 @@ jobs:
               sudo usermod -aG docker \$USER && \
               cd /opt/dev-assist && \
               git config --global --add safe.directory /opt/dev-assist && \
-              git pull origin main && \
+              git fetch origin && \
+              git checkout ${{ needs.check-promote-command.outputs.pr_branch }} && \
+              git pull origin ${{ needs.check-promote-command.outputs.pr_branch }} && \
               cp .env.sample .env && \
               export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
               export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }} && \
@@ -429,8 +430,9 @@ jobs:
               gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet && \
               echo 'Pulling latest images...' && \
               sudo -E docker compose -f docker-compose.prod.yml pull && \
-              echo 'Starting services...' && \
-              sudo -E docker compose -f docker-compose.prod.yml up -d --remove-orphans && \
+              echo 'Initializing SSL and starting nginx services...' && \
+              chmod +x ./deployment/nginx/docker-ssl-init.sh && \
+              sudo -E ./deployment/nginx/docker-ssl-init.sh && \
               echo '✅ Deployment completed successfully'
             "
           
@@ -446,30 +448,46 @@ jobs:
           echo "Waiting for services to start..."
           sleep 30
           
-          # Health check API
-          echo "Testing API health..."
-          if curl -f -s "http://${{ env.VM_IP }}:8000/api/v1/healthz" > /dev/null; then
-            echo "  ✅ API health check passed"
+          # Test nginx health endpoint
+          echo "Testing nginx health endpoint..."
+          if curl -f -s "http://${{ env.VM_IP }}/health" > /dev/null; then
+            echo "  ✅ nginx health check passed"
           else
-            echo "  ❌ API health check failed"
+            echo "  ⚠️  nginx health check failed (may be normal for new deployments)"
+          fi
+          
+          # Health check API through nginx
+          echo "Testing API health through nginx..."
+          if curl -f -s "http://${{ env.VM_IP }}/api/v1/healthz" > /dev/null; then
+            echo "  ✅ API health check through nginx passed"
+          else
+            echo "  ❌ API health check through nginx failed"
+            
+            # Fallback: try direct API access for debugging
+            echo "  🔍 Trying direct API access for debugging..."
+            if curl -f -s "http://${{ env.VM_IP }}:8000/api/v1/healthz" > /dev/null; then
+              echo "  ✅ Direct API access works - nginx routing issue"
+            else
+              echo "  ❌ Direct API access also failed - API service issue"
+            fi
             exit 1
           fi
           
-          # Test frontend
-          echo "Testing frontend..."
-          if curl -f -s "http://${{ env.VM_IP }}:3000" > /dev/null; then
-            echo "  ✅ Frontend loading"
+          # Test frontend through nginx
+          echo "Testing frontend through nginx..."
+          if curl -f -s "http://${{ env.VM_IP }}/" > /dev/null; then
+            echo "  ✅ Frontend accessible through nginx"
           else
-            echo "  ❌ Frontend failed to load"
+            echo "  ❌ Frontend through nginx failed"
+            
+            # Fallback: try direct frontend access for debugging
+            echo "  🔍 Trying direct frontend access for debugging..."
+            if curl -f -s "http://${{ env.VM_IP }}:3000" > /dev/null; then
+              echo "  ✅ Direct frontend access works - nginx routing issue"
+            else
+              echo "  ❌ Direct frontend access also failed - frontend service issue"
+            fi
             exit 1
-          fi
-          
-          # Test Traefik dashboard
-          echo "Testing Traefik dashboard..."
-          if curl -f -s "http://${{ env.VM_IP }}:8080" > /dev/null; then
-            echo "  ✅ Traefik dashboard accessible"
-          else
-            echo "  ⚠️  Traefik dashboard not accessible (may be normal)"
           fi
           
           echo "✅ Basic health checks completed successfully"
