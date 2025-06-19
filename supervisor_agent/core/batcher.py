@@ -1,7 +1,7 @@
 import json
 import hashlib
 from typing import List, Dict, Any, Set
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from supervisor_agent.db.models import Task, TaskStatus
 from supervisor_agent.db.crud import TaskCRUD
@@ -141,7 +141,7 @@ class TaskBatcher:
 
     def _is_recent_duplicate(self, db: Session, task: Task, task_hash: str) -> bool:
         # Check if a similar task was completed in the recent past
-        cutoff_time = datetime.utcnow() - timedelta(
+        cutoff_time = datetime.now(timezone.utc) - timedelta(
             hours=self.deduplication_window_hours
         )
 

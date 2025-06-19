@@ -7,6 +7,7 @@ from sqlalchemy import (
     JSON,
     ForeignKey,
     Boolean,
+    Enum as SQLEnum,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -36,8 +37,8 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
-    type = Column(String, nullable=False)
-    status = Column(String, default=TaskStatus.PENDING)
+    type = Column(SQLEnum(TaskType), nullable=False)
+    status = Column(SQLEnum(TaskStatus), default=TaskStatus.PENDING)
     payload = Column(JSON, nullable=False)
     priority = Column(Integer, default=5)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

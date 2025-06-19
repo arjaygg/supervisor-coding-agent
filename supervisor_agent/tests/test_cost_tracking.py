@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 from supervisor_agent.core.cost_tracker import TokenEstimator, CostTracker, cost_tracker
 from supervisor_agent.db import models, schemas, crud
 from supervisor_agent.tests.conftest import test_db
@@ -134,7 +134,7 @@ class TestCostTracker:
             mock_entry.estimated_cost_usd = "0.0250"
             mock_entry.model_used = "claude-3-5-sonnet-20241022"
             mock_entry.execution_time_ms = 5000
-            mock_entry.timestamp = datetime.utcnow()
+            mock_entry.timestamp = datetime.now(timezone.utc)
             mock_create.return_value = mock_entry
 
             # Mock usage metrics operations to avoid database calls
@@ -342,7 +342,7 @@ async def test_cost_tracking_integration():
             estimated_cost_usd="0.0050",
             model_used="claude-3-5-sonnet-20241022",
             execution_time_ms=3000,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
 
         # Simulate task execution with cost tracking

@@ -14,7 +14,7 @@ Key improvements:
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any
 from celery import current_task
 from sqlalchemy.orm import Session
@@ -68,7 +68,7 @@ def process_single_task_enhanced(self, task_id: int):
                     "id": task.id,
                     "type": task.type,
                     "status": "IN_PROGRESS",
-                    "updated_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
                 }
             )
         )
@@ -147,7 +147,7 @@ def process_single_task_enhanced(self, task_id: int):
                         "id": task.id,
                         "type": task.type,
                         "status": "COMPLETED",
-                        "updated_at": datetime.utcnow().isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
                         "optimization_metadata": result.get(
                             "optimization_metadata", {}
                         ),
@@ -205,7 +205,7 @@ def process_single_task_enhanced(self, task_id: int):
                             "type": task.type,
                             "status": "FAILED",
                             "error_message": error_message,
-                            "updated_at": datetime.utcnow().isoformat(),
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
                         }
                     )
                 )
@@ -258,7 +258,7 @@ def process_single_task_enhanced(self, task_id: int):
                     "id": task_id,
                     "status": "FAILED",
                     "error_message": str(e),
-                    "updated_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
                 }
             )
         )
@@ -291,7 +291,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
     db = next(get_db())
 
     try:
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         # Get tasks
         tasks = [crud.TaskCRUD.get_task(db, task_id) for task_id in task_ids]
@@ -386,7 +386,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                                 "id": task.id,
                                 "type": task.type,
                                 "status": "COMPLETED",
-                                "updated_at": datetime.utcnow().isoformat(),
+                                "updated_at": datetime.now(timezone.utc).isoformat(),
                                 "batch_processed": True,
                                 "optimization_metadata": result.get(
                                     "optimization_metadata", {}
@@ -412,7 +412,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                                 "type": task.type,
                                 "status": "FAILED",
                                 "error_message": result.get("error", "Unknown error"),
-                                "updated_at": datetime.utcnow().isoformat(),
+                                "updated_at": datetime.now(timezone.utc).isoformat(),
                                 "batch_processed": True,
                             }
                         )
@@ -426,7 +426,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                 failed_count += 1
 
         # Calculate processing time
-        processing_time = int((datetime.utcnow() - start_time).total_seconds())
+        processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds())
 
         # Get optimization metrics
         processor = TaskProcessorFactory.get_processor()
@@ -457,7 +457,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                 {
                     "type": "batch_complete",
                     "batch_summary": batch_summary,
-                    "completed_at": datetime.utcnow().isoformat(),
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
                 }
             )
         )
@@ -489,7 +489,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                     "type": "batch_error",
                     "error": str(e),
                     "task_ids": task_ids,
-                    "failed_at": datetime.utcnow().isoformat(),
+                    "failed_at": datetime.now(timezone.utc).isoformat(),
                 }
             )
         )
@@ -518,7 +518,7 @@ def get_optimization_metrics():
                 {
                     "type": "metrics_update",
                     "metrics": metrics,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
             )
         )

@@ -10,19 +10,103 @@
   let showCreateTaskModal = false;
   let selectedTaskStatus = 'all';
   
+  // Task creation form state
+  let taskForm = {
+    type: 'CODE_ANALYSIS',
+    priority: 5,
+    description: ''
+  };
+  let isCreatingTask = false;
+  
   $: filteredTasks = selectedTaskStatus === 'all' ? $tasks : 
                    selectedTaskStatus === 'active' ? $activeTasks :
                    selectedTaskStatus === 'pending' ? $pendingTasks :
                    selectedTaskStatus === 'completed' ? $completedTasks :
                    $failedTasks;
   
-  // Refresh data periodically
-  onMount(() => {
+  // Task creation handler
+  async function handleCreateTask() {
+    if (!taskForm.description.trim()) {
+      alert('Please provide a task description');
+      return;
+    }
+    
+    isCreatingTask = true;
+    
+    try {
+      const payload = {
+        description: taskForm.description,
+        // Add basic payload structure based on task type
+        ...(taskForm.type === 'CODE_ANALYSIS' && {
+          code: taskForm.description,
+          language: 'auto-detect'
+        }),
+        ...(taskForm.type === 'BUG_FIX' && {
+          bug_description: taskForm.description,
+          error_message: '',
+          steps_to_reproduce: ''
+        }),
+        ...(taskForm.type === 'FEATURE' && {
+          requirements: taskForm.description,
+          existing_code_context: ''
+        }),
+        ...(taskForm.type === 'REFACTOR' && {
+          target: taskForm.description,
+          current_code: '',
+          requirements: ''
+        }),
+        ...(taskForm.type === 'PR_REVIEW' && {
+          repository: 'unknown',
+          title: taskForm.description,
+          description: taskForm.description,
+          diff: ''
+        })
+      };
+      
+      await tasks.createTask({
+        type: taskForm.type,
+        payload: payload,
+        priority: taskForm.priority
+      });
+      
+      // Reset form and close modal
+      taskForm = {
+        type: 'CODE_ANALYSIS',
+        priority: 5,
+        description: ''
+      };
+      showCreateTaskModal = false;
+      
+      // Refresh task list
+      await tasks.fetchTasks();
+      
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      alert('Failed to create task. Please try again.');
+    } finally {
+      isCreatingTask = false;
+    }
+  }
+  
+  // Initialize data and setup periodic refresh
+  onMount(async () => {
+    // Connect WebSocket
+    websocket.connect();
+    
+    // Initial data load
+    await tasks.fetchTasks();
+    await tasks.refreshStats();
+    
+    // Setup periodic refresh
     const interval = setInterval(async () => {
       await tasks.refreshStats();
+      await tasks.fetchTasks(); // Also refresh tasks list
     }, 30000); // Every 30 seconds
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      websocket.disconnect();
+    };
   });
 </script>
 
@@ -57,6 +141,31 @@
     </div>
   </div>
 </header>
+
+<!-- Error notification -->
+{#if $tasks.error}
+  <div class="fixed top-4 right-4 z-50 max-w-md">
+    <div class="bg-red-800 border border-red-600 rounded-lg p-4 shadow-lg">
+      <div class="flex items-start">
+        <svg class="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+        </svg>
+        <div class="flex-1">
+          <h4 class="text-sm font-medium text-red-100 mb-1">Error</h4>
+          <p class="text-sm text-red-200">{$tasks.error}</p>
+        </div>
+        <button 
+          class="ml-3 text-red-400 hover:text-red-300"
+          on:click={() => tasks.error.set(null)}
+        >
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <!-- Main content -->
 <div class="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-7xl">
@@ -162,14 +271,15 @@
       <div class="p-4 md:p-6">
         <h3 class="text-lg font-semibold text-white mb-4">Create New Task</h3>
         
-        <form on:submit|preventDefault={() => {
-          // Handle task creation
-          showCreateTaskModal = false;
-        }}>
+        <form on:submit|preventDefault={handleCreateTask}>
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">Task Type</label>
-              <select class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
+              <select 
+                bind:value={taskForm.type}
+                class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                disabled={isCreatingTask}
+              >
                 <option value="PR_REVIEW">PR Review</option>
                 <option value="CODE_ANALYSIS">Code Analysis</option>
                 <option value="BUG_FIX">Bug Fix</option>
@@ -180,30 +290,52 @@
             
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">Priority</label>
-              <select class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
-                <option value="1">🔴 Critical</option>
-                <option value="3">🟡 High</option>
-                <option value="5" selected>🔵 Normal</option>
-                <option value="7">🟢 Low</option>
+              <select 
+                bind:value={taskForm.priority}
+                class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                disabled={isCreatingTask}
+              >
+                <option value={1}>🔴 Critical</option>
+                <option value={3}>🟡 High</option>
+                <option value={5}>🔵 Normal</option>
+                <option value={7}>🟢 Low</option>
               </select>
             </div>
             
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
               <textarea 
+                bind:value={taskForm.description}
                 class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
                 rows="3"
                 placeholder="Describe the task..."
+                disabled={isCreatingTask}
+                required
               ></textarea>
             </div>
           </div>
           
           <div class="flex space-x-3 mt-6">
-            <button type="submit" class="btn-primary flex-1">Create Task</button>
+            <button 
+              type="submit" 
+              class="btn-primary flex-1" 
+              disabled={isCreatingTask || !taskForm.description.trim()}
+            >
+              {#if isCreatingTask}
+                <svg class="w-4 h-4 animate-spin mr-2" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating...
+              {:else}
+                Create Task
+              {/if}
+            </button>
             <button 
               type="button" 
               class="btn-secondary"
               on:click={() => showCreateTaskModal = false}
+              disabled={isCreatingTask}
             >
               Cancel
             </button>

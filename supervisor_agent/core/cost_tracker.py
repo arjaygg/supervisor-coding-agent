@@ -5,7 +5,7 @@ Cost tracking and token estimation for Claude API usage
 import hashlib
 import re
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from supervisor_agent.db import crud, schemas
 from supervisor_agent.utils.logger import get_logger
@@ -220,7 +220,7 @@ class CostTracker:
     ):
         """Update aggregated usage metrics"""
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             date_key = now.strftime("%Y-%m-%d")
             hour_key = now.strftime("%Y-%m-%d-%H")
 

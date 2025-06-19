@@ -4,7 +4,7 @@ Analytics and cost tracking API endpoints
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from supervisor_agent.db.database import get_db
 from supervisor_agent.db import schemas, crud
@@ -32,10 +32,10 @@ async def get_cost_summary(
     try:
         # Set default date range if not provided
         if not start_date:
-            end_date = end_date or datetime.utcnow()
+            end_date = end_date or datetime.now(timezone.utc)
             start_date = end_date - timedelta(days=days)
         elif not end_date:
-            end_date = datetime.utcnow()
+            end_date = datetime.now(timezone.utc)
 
         cost_summary = cost_tracker.get_cost_summary(db, start_date, end_date)
         return cost_summary
@@ -102,7 +102,7 @@ async def get_usage_trends(
 ):
     """Get usage trends over time"""
     try:
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=days)
 
         # Get metrics for the time period
@@ -179,7 +179,7 @@ async def get_agent_performance(
 ):
     """Get agent performance analytics"""
     try:
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=days)
 
         # Get agent metrics
@@ -268,7 +268,7 @@ async def get_cost_optimization_insights(
 ):
     """Get cost optimization insights and recommendations"""
     try:
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=days)
 
         # Get cost entries for analysis

@@ -1,5 +1,5 @@
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public data?: any) {
     super(message);
     this.name = 'ApiError';
   }
@@ -18,22 +18,48 @@ export async function apiRequest<T>(
     },
   };
 
-  const response = await fetch(url, { ...defaultOptions, ...options });
+  try {
+    const response = await fetch(url, { ...defaultOptions, ...options });
 
-  if (!response.ok) {
-    let errorMessage = `HTTP error! status: ${response.status}`;
-    
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.detail || errorData.message || errorMessage;
-    } catch {
-      // If we can't parse the error response, use the default message
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      let errorData = null;
+      
+      try {
+        errorData = await response.json();
+        errorMessage = errorData.detail || errorData.message || errorMessage;
+      } catch {
+        // If we can't parse the error response, use the default message
+        if (response.status === 404) {
+          errorMessage = 'Resource not found';
+        } else if (response.status === 500) {
+          errorMessage = 'Internal server error';
+        } else if (response.status === 503) {
+          errorMessage = 'Service unavailable';
+        }
+      }
+      
+      throw new ApiError(response.status, errorMessage, errorData);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return response.json();
+    } else {
+      return response.text() as unknown as T;
+    }
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
     }
     
-    throw new ApiError(response.status, errorMessage);
+    // Handle network errors
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new ApiError(0, 'Network error - please check your connection');
+    }
+    
+    throw new ApiError(0, `Request failed: ${error.message}`);
   }
-
-  return response.json();
 }
 
 export const api = {

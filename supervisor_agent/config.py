@@ -62,6 +62,13 @@ class Settings(BaseSettings):
     batch_size: int = Field(default=10, env="BATCH_SIZE")
     batch_interval_seconds: int = Field(default=60, env="BATCH_INTERVAL_SECONDS")
     max_retries: int = Field(default=3, env="MAX_RETRIES")
+    
+    # Development Features
+    redis_required: bool = Field(default=True, env="REDIS_REQUIRED")
+    celery_required: bool = Field(default=True, env="CELERY_REQUIRED")
+    enable_mock_responses: bool = Field(default=False, env="ENABLE_MOCK_RESPONSES")
+    enable_debug_endpoints: bool = Field(default=False, env="ENABLE_DEBUG_ENDPOINTS")
+    skip_auth_for_development: bool = Field(default=False, env="SKIP_AUTH_FOR_DEVELOPMENT")
 
     class Config:
         env_file = ".env"
@@ -78,18 +85,42 @@ class Settings(BaseSettings):
         
         if not self.claude_api_keys:
             warnings.append("No Claude API keys configured - agent functionality will be limited")
+        elif self.claude_cli_path == "mock":
+            warnings.append("Running in mock mode - Claude CLI responses will be simulated")
         
         if "localhost" in self.database_url and "sqlite" not in self.database_url:
             warnings.append("Using localhost database - ensure PostgreSQL/MySQL is running")
         
         if "localhost" in self.redis_url:
             warnings.append("Using localhost Redis - ensure Redis is running")
+        
+        # Check for missing required environment variables
+        if self.database_url == "sqlite:///./supervisor_agent.db":
+            warnings.append("Using default SQLite database - consider PostgreSQL for production")
+        
+        if self.app_debug:
+            warnings.append("Debug mode is enabled - disable in production")
             
         return warnings
+    
+    def get_startup_info(self) -> dict:
+        """Get startup configuration information"""
+        return {
+            "mode": "mock" if self.claude_cli_path == "mock" else "production",
+            "database_type": "sqlite" if "sqlite" in self.database_url else "postgresql",
+            "redis_connected": "localhost" in self.redis_url,
+            "agents_configured": len(self.claude_api_keys_list),
+            "debug_mode": self.app_debug,
+            "log_level": self.log_level
+        }
 
+
+def create_settings():
+    """Create settings instance, allows for reloading in tests"""
+    return Settings()
 
 try:
-    settings = Settings()
+    settings = create_settings()
     warnings = settings.validate_configuration()
     if warnings:
         import logging

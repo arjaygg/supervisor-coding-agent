@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from supervisor_agent.db.models import Agent
@@ -31,7 +31,7 @@ class QuotaManager:
                     id=agent_id,
                     api_key=api_key,
                     quota_limit=self.quota_limit,
-                    quota_reset_at=datetime.utcnow()
+                    quota_reset_at=datetime.now(timezone.utc)
                     + timedelta(hours=self.reset_hours),
                 )
                 AgentCRUD.create_agent(db, agent_data)
@@ -86,7 +86,7 @@ class QuotaManager:
         from supervisor_agent.db.schemas import AgentUpdate
 
         update_data = AgentUpdate(
-            quota_used=agent.quota_used + messages_used, last_used_at=datetime.utcnow()
+            quota_used=agent.quota_used + messages_used, last_used_at=datetime.now(timezone.utc)
         )
         AgentCRUD.update_agent(db, agent_id, update_data)
 
@@ -96,14 +96,14 @@ class QuotaManager:
         return True
 
     def _needs_quota_reset(self, agent: Agent) -> bool:
-        return datetime.utcnow() >= agent.quota_reset_at
+        return datetime.now(timezone.utc) >= agent.quota_reset_at
 
     def _reset_agent_quota(self, db: Session, agent: Agent):
         from supervisor_agent.db.schemas import AgentUpdate
 
         update_data = AgentUpdate(
             quota_used=0,
-            quota_reset_at=datetime.utcnow() + timedelta(hours=self.reset_hours),
+            quota_reset_at=datetime.now(timezone.utc) + timedelta(hours=self.reset_hours),
         )
         AgentCRUD.update_agent(db, agent.id, update_data)
         logger.info(f"Reset quota for agent {agent.id}")
