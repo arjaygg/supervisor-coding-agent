@@ -104,6 +104,7 @@ services:
       - "traefik.http.routers.api-domain.tls.certresolver=letsencrypt"
       - "traefik.http.routers.api-ip.rule=PathPrefix(`/api`)"
       - "traefik.http.routers.api-ip.entrypoints=web"
+      - "traefik.http.routers.api-ip.priority=10"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
     environment:
       - DATABASE_URL=postgresql://supervisor:supervisor_pass@postgres:5432/supervisor_agent
