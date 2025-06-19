@@ -63,6 +63,24 @@ export async function apiRequest<T>(
 }
 
 export const api = {
+  // Generic HTTP methods
+  get: <T>(endpoint: string) => apiRequest<T>(endpoint),
+  
+  post: <T>(endpoint: string, data?: any) => 
+    apiRequest<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    }),
+  
+  patch: <T>(endpoint: string, data?: any) =>
+    apiRequest<T>(endpoint, {
+      method: 'PATCH', 
+      body: data ? JSON.stringify(data) : undefined,
+    }),
+  
+  delete: <T>(endpoint: string) =>
+    apiRequest<T>(endpoint, { method: 'DELETE' }),
+
   // Tasks
   getTasks: (params?: { skip?: number; limit?: number; status?: string }) =>
     apiRequest<any[]>(`/api/v1/tasks${params ? `?${new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined) as [string, string][]).toString()}` : ''}`),
@@ -75,11 +93,25 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  updateTask: (id: number, data: { priority?: number; payload?: any }) =>
+    apiRequest<any>(`/api/v1/tasks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteTask: (id: number) =>
+    apiRequest<{ message: string }>(`/api/v1/tasks/${id}`, {
+      method: 'DELETE',
+    }),
   
   retryTask: (id: number) =>
     apiRequest<{ message: string; task_id: number }>(`/api/v1/tasks/${id}/retry`, {
       method: 'POST',
     }),
+
+  getTaskSessions: (id: number) =>
+    apiRequest<any[]>(`/api/v1/tasks/${id}/sessions`),
   
   getTaskStats: () =>
     apiRequest<any>('/api/v1/tasks/stats/summary'),
