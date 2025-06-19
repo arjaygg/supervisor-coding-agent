@@ -8,7 +8,7 @@ set -e
 # Configuration from environment or defaults
 DOMAIN_NAME=${DOMAIN_NAME:-localhost}
 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@example.com}
-COMPOSE_FILE=${COMPOSE_FILE:-docker compose.prod.yml}
+COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.prod.yml}
 
 echo "🔧 Initializing SSL setup for nginx migration"
 echo "   Domain: $DOMAIN_NAME"
