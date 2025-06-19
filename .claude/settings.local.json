@@ -82,7 +82,21 @@
       "Bash(true)",
       "Bash(gh issue list:*)",
       "Bash(gh issue view:*)",
-      "Bash(python -m pytest supervisor_agent/tests/test_integration.py::TestCriticalUserFlows::test_create_and_process_task_flow -v)"
+      "Bash(python -m pytest supervisor_agent/tests/test_integration.py::TestCriticalUserFlows::test_create_and_process_task_flow -v)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(npm test:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(cat:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(timeout 30s npm test -- --run src/lib/utils/api.integration.test.ts)",
+      "Bash(timeout:*)",
+      "Bash(python -m pytest supervisor_agent/tests/test_claude_cli_integration.py -v)",
+      "Bash(diff:*)",
+      "Bash(python -m pytest supervisor_agent/tests/test_claude_cli_integration.py::TestClaudeCliIntegration::test_mock_mode_configuration -v)",
+      "Bash(python -m pytest supervisor_agent/tests/test_claude_cli_integration.py::TestClaudeCliIntegration::test_claude_cli_validation_with_mock_mode -v)",
+      "Bash(python -m pytest supervisor_agent/tests/test_claude_cli_integration.py::TestClaudeCliIntegration::test_task_execution_error_handling -v)"
     ],
     "deny": []
   }

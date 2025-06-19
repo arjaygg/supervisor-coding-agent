@@ -115,8 +115,12 @@ class Settings(BaseSettings):
         }
 
 
+def create_settings():
+    """Create settings instance, allows for reloading in tests"""
+    return Settings()
+
 try:
-    settings = Settings()
+    settings = create_settings()
     warnings = settings.validate_configuration()
     if warnings:
         import logging

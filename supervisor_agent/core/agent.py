@@ -98,6 +98,10 @@ class ClaudeAgentWrapper:
         task_type = task.type
         payload = task.payload
 
+        # Handle None task type
+        if task_type is None:
+            raise ValueError("Task type cannot be None")
+
         # Extract the enum value if it's an enum, otherwise use string directly
         task_type_str = (
             task_type.value if hasattr(task_type, "value") else str(task_type)
@@ -268,6 +272,10 @@ Please provide:
         try:
             import os
             import shutil
+            
+            # In mock mode, always return False to trigger mock responses
+            if self.cli_path == "mock":
+                return False
             
             # Check if file exists
             if not shutil.which(self.cli_path) and not os.path.isfile(self.cli_path):
