@@ -40,7 +40,7 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/.svelte-kit/output/client ./build
+COPY --from=builder --chown=nodejs:nodejs /app/build ./build
 
 # Switch to non-root user
 USER nodejs

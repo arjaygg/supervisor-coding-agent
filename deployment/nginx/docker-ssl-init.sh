@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Docker-based SSL Initialization Script for nginx + certbot
-# This script works with the docker-compose setup to initialize SSL certificates
+# This script works with the docker compose setup to initialize SSL certificates
 
 set -e
 
@@ -15,7 +15,7 @@ echo "   Domain: $DOMAIN_NAME"
 echo "   Email: $LETSENCRYPT_EMAIL"
 echo "   Compose file: $COMPOSE_FILE"
 
-# Check if docker-compose file exists
+# Check if docker compose file exists
 if [ ! -f "$COMPOSE_FILE" ]; then
     echo "❌ Docker compose file not found: $COMPOSE_FILE"
     exit 1
@@ -59,16 +59,16 @@ sed -i.tmp "s|ssl_certificate_key /etc/letsencrypt/live/\${DOMAIN_NAME:-localhos
 echo "🚀 Starting nginx and certbot services..."
 
 # Start nginx first with self-signed certificates
-docker-compose -f "$COMPOSE_FILE" up -d nginx
+docker compose -f "$COMPOSE_FILE" up -d nginx
 
 # Wait for nginx to be ready
 echo "⏳ Waiting for nginx to start..."
 sleep 5
 
 # Check if nginx started successfully
-if ! docker-compose -f "$COMPOSE_FILE" ps nginx | grep -q "Up"; then
+if ! docker compose -f "$COMPOSE_FILE" ps nginx | grep -q "Up"; then
     echo "❌ nginx failed to start"
-    docker-compose -f "$COMPOSE_FILE" logs nginx
+    docker compose -f "$COMPOSE_FILE" logs nginx
     exit 1
 fi
 
@@ -79,7 +79,7 @@ if [ "$DOMAIN_NAME" != "localhost" ] && [[ "$DOMAIN_NAME" != *.local ]] && [ -n 
     echo "🌐 Requesting Let's Encrypt certificate for $DOMAIN_NAME..."
     
     # Create the certificate
-    docker-compose -f "$COMPOSE_FILE" run --rm certbot \
+    docker compose -f "$COMPOSE_FILE" run --rm certbot \
         certonly --webroot --webroot-path=/var/www/certbot \
         --email "$LETSENCRYPT_EMAIL" --agree-tos --no-eff-email \
         --force-renewal -d "$DOMAIN_NAME"
@@ -92,12 +92,12 @@ if [ "$DOMAIN_NAME" != "localhost" ] && [[ "$DOMAIN_NAME" != *.local ]] && [ -n 
         mv ./deployment/nginx/conf.d/default.conf.backup ./deployment/nginx/conf.d/default.conf
         
         # Reload nginx with new certificates
-        docker-compose -f "$COMPOSE_FILE" exec nginx nginx -s reload
+        docker compose -f "$COMPOSE_FILE" exec nginx nginx -s reload
         
         echo "✅ nginx updated to use Let's Encrypt certificates"
         
         # Start certbot renewal service
-        docker-compose -f "$COMPOSE_FILE" up -d certbot
+        docker compose -f "$COMPOSE_FILE" up -d certbot
         echo "✅ Certbot renewal service started"
     else
         echo "❌ Failed to obtain Let's Encrypt certificate"
@@ -116,7 +116,7 @@ echo ""
 echo "🎉 SSL initialization completed!"
 echo ""
 echo "📋 Service Status:"
-docker-compose -f "$COMPOSE_FILE" ps nginx certbot
+docker compose -f "$COMPOSE_FILE" ps nginx certbot
 echo ""
 echo "📋 Next steps:"
 if [ "$DOMAIN_NAME" = "localhost" ]; then
@@ -126,5 +126,5 @@ if [ "$DOMAIN_NAME" = "localhost" ]; then
 else
     echo "   • Services are running and SSL is configured"
     echo "   • Certificates will be automatically renewed"
-    echo "   • Monitor logs: docker-compose -f $COMPOSE_FILE logs -f nginx certbot"
+    echo "   • Monitor logs: docker compose -f $COMPOSE_FILE logs -f nginx certbot"
 fi
