@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from datetime import datetime
 import redis
 from supervisor_agent.db.database import get_db, engine
@@ -23,20 +24,24 @@ async def health_check(db: Session = Depends(get_db)):
     """Basic health check endpoint"""
     try:
         # Test database connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         database_healthy = True
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
         database_healthy = False
 
-    # Test Redis connection
+    # Test Redis connection (optional in development)
     try:
         redis_client = redis.from_url(settings.redis_url)
         redis_client.ping()
         redis_healthy = True
     except Exception as e:
-        logger.error(f"Redis health check failed: {str(e)}")
-        redis_healthy = False
+        if settings.redis_required:
+            logger.error(f"Redis health check failed: {str(e)}")
+            redis_healthy = False
+        else:
+            logger.warning(f"Redis unavailable but not required in development: {str(e)}")
+            redis_healthy = True  # Consider healthy in development mode
 
     # Count active agents
     try:
@@ -69,7 +74,7 @@ async def readiness_check(db: Session = Depends(get_db)):
         # More comprehensive checks for readiness
 
         # Database connectivity and basic query
-        db.execute("SELECT COUNT(*) FROM agents")
+        db.execute(text("SELECT COUNT(*) FROM agents"))
 
         # Redis connectivity
         redis_client = redis.from_url(settings.redis_url)
@@ -99,7 +104,7 @@ async def detailed_health_check(db: Session = Depends(get_db)):
 
     # Database health
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         # Test some basic operations
         task_count = len(crud.TaskCRUD.get_tasks(db, limit=1))
         agent_count = len(crud.AgentCRUD.get_active_agents(db))

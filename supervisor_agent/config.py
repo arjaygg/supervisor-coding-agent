@@ -62,6 +62,13 @@ class Settings(BaseSettings):
     batch_size: int = Field(default=10, env="BATCH_SIZE")
     batch_interval_seconds: int = Field(default=60, env="BATCH_INTERVAL_SECONDS")
     max_retries: int = Field(default=3, env="MAX_RETRIES")
+    
+    # Development Features
+    redis_required: bool = Field(default=True, env="REDIS_REQUIRED")
+    celery_required: bool = Field(default=True, env="CELERY_REQUIRED")
+    enable_mock_responses: bool = Field(default=False, env="ENABLE_MOCK_RESPONSES")
+    enable_debug_endpoints: bool = Field(default=False, env="ENABLE_DEBUG_ENDPOINTS")
+    skip_auth_for_development: bool = Field(default=False, env="SKIP_AUTH_FOR_DEVELOPMENT")
 
     class Config:
         env_file = ".env"
