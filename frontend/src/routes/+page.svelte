@@ -6,9 +6,12 @@
   import TaskStats from '$lib/components/TaskStats.svelte';
   import QuickActions from '$lib/components/QuickActions.svelte';
   import StatusIndicator from '$lib/components/StatusIndicator.svelte';
+  import TaskModal from '$lib/components/TaskModal.svelte';
   
   let showCreateTaskModal = false;
   let selectedTaskStatus = 'all';
+  let selectedTask = null;
+  let isTaskModalOpen = false;
   
   // Task creation form state
   let taskForm = {
@@ -24,6 +27,31 @@
                    selectedTaskStatus === 'completed' ? $completedTasks :
                    $failedTasks;
   
+  // Task view handler
+  function handleViewTask(event) {
+    const task = $tasks.find(t => t.id === event.detail.taskId);
+    if (task) {
+      selectedTask = task;
+      isTaskModalOpen = true;
+    }
+  }
+
+  // Task modal handlers
+  function handleTaskUpdated(event) {
+    const updatedTask = event.detail;
+    tasks.updateTask(updatedTask);
+  }
+
+  function handleTaskDeleted(event) {
+    const deletedTask = event.detail;
+    tasks.removeTask(deletedTask.id);
+  }
+
+  function closeTaskModal() {
+    isTaskModalOpen = false;
+    selectedTask = null;
+  }
+
   // Task creation handler
   async function handleCreateTask() {
     if (!taskForm.description.trim()) {
@@ -257,7 +285,13 @@
       </button>
     </div>
     
-    <TaskList tasks={filteredTasks} />
+    <TaskList 
+      tasks={filteredTasks} 
+      on:viewTask={handleViewTask}
+      on:approveTask={(e) => console.log('Approve task:', e.detail.taskId)}
+      on:rejectTask={(e) => console.log('Reject task:', e.detail.taskId)}
+      on:retryTask={(e) => console.log('Retry task:', e.detail.taskId)}
+    />
   </div>
 </div>
 
@@ -274,8 +308,9 @@
         <form on:submit|preventDefault={handleCreateTask}>
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Task Type</label>
+              <label for="task-type" class="block text-sm font-medium text-gray-300 mb-2">Task Type</label>
               <select 
+                id="task-type"
                 bind:value={taskForm.type}
                 class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
                 disabled={isCreatingTask}
@@ -289,8 +324,9 @@
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Priority</label>
+              <label for="task-priority" class="block text-sm font-medium text-gray-300 mb-2">Priority</label>
               <select 
+                id="task-priority"
                 bind:value={taskForm.priority}
                 class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
                 disabled={isCreatingTask}
@@ -303,8 +339,9 @@
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
+              <label for="task-description" class="block text-sm font-medium text-gray-300 mb-2">Description</label>
               <textarea 
+                id="task-description"
                 bind:value={taskForm.description}
                 class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
                 rows="3"
@@ -345,3 +382,12 @@
     </div>
   </div>
 {/if}
+
+<!-- Task detail modal -->
+<TaskModal 
+  bind:isOpen={isTaskModalOpen}
+  bind:task={selectedTask}
+  on:close={closeTaskModal}
+  on:taskUpdated={handleTaskUpdated}
+  on:taskDeleted={handleTaskDeleted}
+/>

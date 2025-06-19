@@ -124,6 +124,20 @@ function createTaskStore() {
     }
   };
 
+  const updateTask = (updatedTask: Task) => {
+    update(tasks => {
+      const index = tasks.findIndex(t => t.id === updatedTask.id);
+      if (index >= 0) {
+        tasks[index] = updatedTask;
+      }
+      return [...tasks];
+    });
+  };
+
+  const removeTask = (taskId: number) => {
+    update(tasks => tasks.filter(t => t.id !== taskId));
+  };
+
   return {
     subscribe,
     stats: { subscribe: stats.subscribe },
@@ -132,7 +146,9 @@ function createTaskStore() {
     fetchTasks,
     refreshStats,
     createTask,
-    retryTask
+    retryTask,
+    updateTask,
+    removeTask
   };
 }
 
