@@ -194,7 +194,7 @@ config.local.py
 settings.local.py
 
 # Claude Code local settings
-.claude/settings.local.json
+# .claude/settings.local.json - now committed for team consistency
 
 # Frontend build artifacts
 node_modules/
