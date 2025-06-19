@@ -66,7 +66,12 @@
       "Bash(gh run view:*)",
       "Bash(touch:*)",
       "Bash(gh workflow run:*)",
-      "Bash(gcloud compute instances list:*)"
+      "Bash(gcloud compute instances list:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker compose:*)",
+      "Bash(echo:*)",
+      "Bash(env)",
+      "Bash(gh pr comment:*)"
     ],
     "deny": []
   }
