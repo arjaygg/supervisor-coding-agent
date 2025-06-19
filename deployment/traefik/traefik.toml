@@ -28,6 +28,6 @@
   insecure = true
 
 [log]
-  level = "WARN"
+  level = "DEBUG"
 
 [ping]
