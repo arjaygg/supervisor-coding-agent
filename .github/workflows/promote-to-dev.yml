@@ -448,46 +448,54 @@ jobs:
           echo "Waiting for services to start..."
           sleep 30
           
-          # Test nginx health endpoint
-          echo "Testing nginx health endpoint..."
+          # Test reverse proxy health (works for both nginx and Traefik)
+          echo "Testing reverse proxy health endpoint..."
           if curl -f -s "http://${{ env.VM_IP }}/health" > /dev/null; then
-            echo "  ✅ nginx health check passed"
+            echo "  ✅ Reverse proxy health check passed"
           else
-            echo "  ⚠️  nginx health check failed (may be normal for new deployments)"
+            echo "  ⚠️  Reverse proxy health check failed (may be normal for new deployments)"
           fi
           
-          # Health check API through nginx
-          echo "Testing API health through nginx..."
+          # Health check API through reverse proxy (primary test)
+          echo "Testing API health through reverse proxy..."
           if curl -f -s "http://${{ env.VM_IP }}/api/v1/healthz" > /dev/null; then
-            echo "  ✅ API health check through nginx passed"
+            echo "  ✅ API health check through reverse proxy passed"
           else
-            echo "  ❌ API health check through nginx failed"
+            echo "  ❌ API health check through reverse proxy failed"
             
             # Fallback: try direct API access for debugging
             echo "  🔍 Trying direct API access for debugging..."
             if curl -f -s "http://${{ env.VM_IP }}:8000/api/v1/healthz" > /dev/null; then
-              echo "  ✅ Direct API access works - nginx routing issue"
+              echo "  ✅ Direct API access works - reverse proxy routing issue"
             else
               echo "  ❌ Direct API access also failed - API service issue"
             fi
             exit 1
           fi
           
-          # Test frontend through nginx
-          echo "Testing frontend through nginx..."
+          # Test frontend through reverse proxy (primary test)
+          echo "Testing frontend through reverse proxy..."
           if curl -f -s "http://${{ env.VM_IP }}/" > /dev/null; then
-            echo "  ✅ Frontend accessible through nginx"
+            echo "  ✅ Frontend accessible through reverse proxy"
           else
-            echo "  ❌ Frontend through nginx failed"
+            echo "  ❌ Frontend through reverse proxy failed"
             
             # Fallback: try direct frontend access for debugging
             echo "  🔍 Trying direct frontend access for debugging..."
             if curl -f -s "http://${{ env.VM_IP }}:3000" > /dev/null; then
-              echo "  ✅ Direct frontend access works - nginx routing issue"
+              echo "  ✅ Direct frontend access works - reverse proxy routing issue"
             else
               echo "  ❌ Direct frontend access also failed - frontend service issue"
             fi
             exit 1
+          fi
+          
+          # Test reverse proxy dashboard/status (nginx or Traefik)
+          echo "Testing reverse proxy dashboard/status..."
+          if curl -f -s "http://${{ env.VM_IP }}:8080" > /dev/null; then
+            echo "  ✅ Traefik dashboard accessible (using Traefik)"
+          else
+            echo "  ℹ️  Traefik dashboard not accessible (likely using nginx - this is normal)"
           fi
           
           echo "✅ Basic health checks completed successfully"
