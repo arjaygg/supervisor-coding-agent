@@ -22,14 +22,24 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Supervisor Agent API")
 
     # Create database tables
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created")
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created")
+    except Exception as e:
+        logger.error(f"Failed to create database tables: {str(e)}")
+        raise
 
     # Initialize agents in database
-    db = next(get_db())
+    from supervisor_agent.db.database import SessionLocal
+    db = SessionLocal()
     try:
+        # Test database connection
+        db.execute("SELECT 1")
         quota_manager.initialize_agents(db)
         logger.info("Agents initialized in database")
+    except Exception as e:
+        logger.error(f"Failed to initialize agents: {str(e)}")
+        logger.warning("Application will start but some features may not work properly")
     finally:
         db.close()
 

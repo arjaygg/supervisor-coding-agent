@@ -21,7 +21,12 @@ def test_engine():
     engine = create_engine(
         f"sqlite:///{db_file.name}",
         echo=False,
-        connect_args={"check_same_thread": False},  # Allow multiple threads
+        connect_args={
+            "check_same_thread": False,  # Allow multiple threads
+            "timeout": 20,  # Prevent database locks
+        },
+        poolclass=None,  # Disable connection pooling for tests
+        pool_pre_ping=True,  # Verify connections before use
     )
     Base.metadata.create_all(engine)
     yield engine
@@ -39,7 +44,12 @@ def test_db(test_engine):
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     db = TestSessionLocal()
     try:
+        # Test connection before yielding
+        db.execute("SELECT 1")
         yield db
+    except Exception as e:
+        db.rollback()
+        raise
     finally:
         db.close()
 
@@ -52,14 +62,23 @@ def test_client(test_engine):
     def override_get_db():
         db = TestSessionLocal()
         try:
+            # Test connection and yield
+            db.execute("SELECT 1")
             yield db
+        except Exception as e:
+            db.rollback()
+            raise
         finally:
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app)
-    yield client
-    app.dependency_overrides.clear()
+    
+    # Create client with better error handling
+    try:
+        client = TestClient(app)
+        yield client
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
