@@ -21,32 +21,63 @@ A production-grade MVP for orchestrating and managing Claude AI coding tasks wit
 - Docker & Docker Compose
 - Claude CLI tool (optional for testing)
 
-### 🚀 One-Command Setup
+### 🚀 Quick Development Setup
 
 ```bash
-# Clone and run the quick start script
+# Clone and setup for development (no external dependencies needed)
 git clone https://github.com/your-username/supervisor-coding-agent.git
 cd supervisor-coding-agent
-./scripts/quick-start.sh
+./scripts/quick-dev-start.sh
 ```
 
 This script will:
-- Setup environment configuration
-- Start PostgreSQL and Redis
-- Run database migrations
-- Guide you through starting the API and workers
+- Create development environment configuration
+- Setup Python virtual environment
+- Install dependencies
+- Create SQLite database for quick testing
+- Provide instructions to start services
 
-### 🔧 Development Setup
+### 🎯 Start Development Services
 
-For a complete development environment:
+1. **Start the API server:**
+   ```bash
+   source venv/bin/activate
+   python supervisor_agent/api/main.py
+   ```
+
+2. **Start the frontend (in another terminal):**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+3. **Access the application:**
+   - Dashboard: http://localhost:3000
+   - API docs: http://localhost:8000/docs
+
+### 🧪 Mock Mode (Default for Development)
+
+The system runs in mock mode by default, which means:
+- No real Claude CLI required
+- Tasks generate realistic simulated responses
+- Perfect for development and testing
+- All functionality works normally
+
+### 🔧 Production Setup
+
+For production deployment:
 
 ```bash
-# Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# 1. Configure environment
+cp .env.template .env
+# Edit .env with real values
 
-# Run development setup
-./scripts/dev-setup.sh
+# 2. Start with Docker Compose
+docker-compose up -d
+
+# 3. For production deployment
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ### 📦 Docker-Only Setup

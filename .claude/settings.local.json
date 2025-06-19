@@ -79,7 +79,10 @@
       "Bash(npm install:*)",
       "Bash(docker build:*)",
       "Bash(git rm:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(python -m pytest supervisor_agent/tests/test_integration.py::TestCriticalUserFlows::test_create_and_process_task_flow -v)"
     ],
     "deny": []
   }

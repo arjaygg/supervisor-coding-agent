@@ -20,6 +20,16 @@ async def lifespan(app: FastAPI):
     setup_logging()
     logger = get_logger(__name__)
     logger.info("Starting Supervisor Agent API")
+    
+    # Log configuration info
+    config_info = settings.get_startup_info()
+    logger.info(f"Configuration: {config_info}")
+    
+    # Log configuration warnings
+    warnings = settings.validate_configuration()
+    if warnings:
+        for warning in warnings:
+            logger.warning(f"Configuration: {warning}")
 
     # Create database tables
     try:

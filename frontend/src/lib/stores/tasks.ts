@@ -1,5 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import { websocket } from './websocket';
+import { api, ApiError } from '../utils/api';
 
 export interface Task {
   id: number;
@@ -62,21 +63,14 @@ function createTaskStore() {
     error.set(null);
     
     try {
-      const searchParams = new URLSearchParams();
-      if (params.skip) searchParams.set('skip', params.skip.toString());
-      if (params.limit) searchParams.set('limit', params.limit.toString());
-      if (params.status) searchParams.set('status', params.status);
-      
-      const response = await fetch(`/api/v1/tasks?${searchParams}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const tasks = await response.json();
+      const tasks = await api.getTasks(params);
       set(tasks);
     } catch (err) {
-      error.set(err instanceof Error ? err.message : 'Failed to fetch tasks');
+      if (err instanceof ApiError) {
+        error.set(err.message);
+      } else {
+        error.set(err instanceof Error ? err.message : 'Failed to fetch tasks');
+      }
       console.error('Error fetching tasks:', err);
     } finally {
       loading.set(false);
@@ -85,12 +79,7 @@ function createTaskStore() {
 
   const refreshStats = async () => {
     try {
-      const response = await fetch('/api/v1/tasks/stats/summary');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const taskStats = await response.json();
+      const taskStats = await api.getTaskStats();
       stats.set(taskStats);
     } catch (err) {
       console.error('Error fetching task stats:', err);
@@ -103,44 +92,34 @@ function createTaskStore() {
     priority?: number;
   }) => {
     try {
-      const response = await fetch('/api/v1/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(taskData),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const newTask = await response.json();
+      const newTask = await api.createTask(taskData);
       
       // Add to store
       update(tasks => [newTask, ...tasks]);
       
       return newTask;
     } catch (err) {
-      error.set(err instanceof Error ? err.message : 'Failed to create task');
+      if (err instanceof ApiError) {
+        error.set(err.message);
+      } else {
+        error.set(err instanceof Error ? err.message : 'Failed to create task');
+      }
       throw err;
     }
   };
 
   const retryTask = async (taskId: number) => {
     try {
-      const response = await fetch(`/api/v1/tasks/${taskId}/retry`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      await api.retryTask(taskId);
+      
       // Refresh tasks to get updated status
       await fetchTasks();
     } catch (err) {
-      error.set(err instanceof Error ? err.message : 'Failed to retry task');
+      if (err instanceof ApiError) {
+        error.set(err.message);
+      } else {
+        error.set(err instanceof Error ? err.message : 'Failed to retry task');
+      }
       throw err;
     }
   };

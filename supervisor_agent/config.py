@@ -78,14 +78,34 @@ class Settings(BaseSettings):
         
         if not self.claude_api_keys:
             warnings.append("No Claude API keys configured - agent functionality will be limited")
+        elif self.claude_cli_path == "mock":
+            warnings.append("Running in mock mode - Claude CLI responses will be simulated")
         
         if "localhost" in self.database_url and "sqlite" not in self.database_url:
             warnings.append("Using localhost database - ensure PostgreSQL/MySQL is running")
         
         if "localhost" in self.redis_url:
             warnings.append("Using localhost Redis - ensure Redis is running")
+        
+        # Check for missing required environment variables
+        if self.database_url == "sqlite:///./supervisor_agent.db":
+            warnings.append("Using default SQLite database - consider PostgreSQL for production")
+        
+        if self.app_debug:
+            warnings.append("Debug mode is enabled - disable in production")
             
         return warnings
+    
+    def get_startup_info(self) -> dict:
+        """Get startup configuration information"""
+        return {
+            "mode": "mock" if self.claude_cli_path == "mock" else "production",
+            "database_type": "sqlite" if "sqlite" in self.database_url else "postgresql",
+            "redis_connected": "localhost" in self.redis_url,
+            "agents_configured": len(self.claude_api_keys_list),
+            "debug_mode": self.app_debug,
+            "log_level": self.log_level
+        }
 
 
 try:

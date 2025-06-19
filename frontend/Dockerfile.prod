@@ -5,7 +5,7 @@ FROM node:18-alpine as builder
 WORKDIR /app
 
 # Copy package files  
-COPY frontend/package*.json ./
+COPY package*.json ./
 
 # Install all dependencies (including dev dependencies needed for build)
 RUN npm ci && npm cache clean --force
@@ -21,7 +21,7 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 
 # Copy source code
-COPY frontend/ .
+COPY . .
 
 # Build the application
 RUN npm run build
