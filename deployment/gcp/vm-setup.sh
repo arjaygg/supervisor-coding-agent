@@ -10,7 +10,7 @@ PROJECT_ID="${GCP_PROJECT_ID:-}"
 ZONE="${GCP_ZONE:-asia-southeast1-a}"  # Singapore region for Southeast Asia
 MACHINE_TYPE="${GCP_MACHINE_TYPE:-e2-micro}"  # Minimal paid instance: 1 vCPU, 1GB RAM (~$8-10/month)
 VM_NAME="${VM_NAME:-dev-assist-vm}"
-BOOT_DISK_SIZE="${BOOT_DISK_SIZE:-10GB}"  # Minimal size for cost optimization
+BOOT_DISK_SIZE="${BOOT_DISK_SIZE:-50GB}"  # Sufficient space for Docker multi-service deployment
 DOMAIN_NAME="${DOMAIN_NAME:-}"
 EMAIL="${LETSENCRYPT_EMAIL:-}"
 
