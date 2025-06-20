@@ -305,21 +305,21 @@ jobs:
           
           # Build and tag API image for Artifact Registry
           docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
-            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$DEPLOYMENT_TAG .
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag .
           
           # Build and tag frontend image for Artifact Registry
           docker build -f frontend/Dockerfile.prod \
             -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
-            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$DEPLOYMENT_TAG \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
             --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
           
           # Push images to Artifact Registry
           echo "Pushing to Artifact Registry (Singapore region)..."
           docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$DEPLOYMENT_TAG
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag
           docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest  
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$DEPLOYMENT_TAG
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag
           
           echo "✅ Images built and pushed to Artifact Registry (Singapore)"
 
