@@ -119,6 +119,7 @@ class TestWorkflowEngine:
             mock_workflow.is_active = True
             mock_workflow.definition = {
                 "name": "Test Workflow",
+                "description": "Test workflow for execution",
                 "tasks": [],
                 "dependencies": []
             }
