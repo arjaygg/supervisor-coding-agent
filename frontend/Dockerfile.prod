@@ -1,11 +1,11 @@
 # Multi-stage build for production frontend
-FROM node:18-alpine as builder
+FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files  
-COPY package*.json ./
+COPY frontend/package*.json ./
 
 # Install all dependencies (including dev dependencies needed for build)
 RUN npm ci && npm cache clean --force
@@ -21,7 +21,7 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 
 # Copy source code
-COPY . .
+COPY frontend/ .
 
 # Build the application
 RUN npm run build
