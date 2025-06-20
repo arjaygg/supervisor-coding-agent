@@ -1,0 +1,37 @@
+# <type>[optional scope]: <description>
+#
+# [optional body]
+#
+# [optional footer(s)]
+
+# --- COMMIT END ---
+# Type can be:
+#   feat     (new feature)
+#   fix      (bug fix)
+#   docs     (documentation)
+#   style    (formatting, no code change)
+#   refactor (refactoring code)
+#   test     (adding tests)
+#   chore    (build/tooling changes)
+#   perf     (performance improvements)
+#   ci       (CI/CD changes)
+#   build    (build system changes)
+#   revert   (reverting changes)
+#
+# Scope can be:
+#   api, frontend, backend, core, db, queue, auth, config, deps, docker, ci, docs, tests
+#
+# Breaking change: Add ! after type/scope or include BREAKING CHANGE: in footer
+#
+# Examples:
+#   feat(api): add user authentication endpoint
+#   fix(frontend): resolve modal dialog closing issue
+#   feat(api)!: redesign user management API
+#   docs: update API documentation
+#   chore(deps): update dependencies to latest versions
+#
+# Remember:
+#   - Use imperative mood in subject line
+#   - Limit first line to 100 characters
+#   - Reference issues and pull requests liberally
+#   - Consider if this change requires documentation updates

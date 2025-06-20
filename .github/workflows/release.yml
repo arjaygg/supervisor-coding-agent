@@ -1,0 +1,157 @@
+name: 🏷️ Release Management
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+  actions: write
+
+env:
+  REGISTRY: asia-southeast1-docker.pkg.dev
+
+jobs:
+  # Create or update Release PR
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release-created: ${{ steps.release.outputs.release_created }}
+      releases-created: ${{ steps.release.outputs.releases_created }}
+      frontend-release-created: ${{ steps.release.outputs['frontend--release_created'] }}
+      backend-release-created: ${{ steps.release.outputs['supervisor_agent--release_created'] }}
+      frontend-tag-name: ${{ steps.release.outputs['frontend--tag_name'] }}
+      backend-tag-name: ${{ steps.release.outputs['supervisor_agent--tag_name'] }}
+      frontend-version: ${{ steps.release.outputs['frontend--version'] }}
+      backend-version: ${{ steps.release.outputs['supervisor_agent--version'] }}
+    steps:
+      - name: Run release-please
+        id: release
+        uses: google-github-actions/release-please-action@v4
+        with:
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show release outputs
+        if: steps.release.outputs.releases_created
+        run: |
+          echo "Releases created: ${{ steps.release.outputs.releases_created }}"
+          echo "Frontend release: ${{ steps.release.outputs['frontend--release_created'] }}"
+          echo "Backend release: ${{ steps.release.outputs['supervisor_agent--release_created'] }}"
+          echo "Frontend version: ${{ steps.release.outputs['frontend--version'] }}"
+          echo "Backend version: ${{ steps.release.outputs['supervisor_agent--version'] }}"
+
+  # Build and tag Docker images for releases
+  build-release-images:
+    needs: release-please
+    if: needs.release-please.outputs.releases-created
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+
+      - name: Build and tag API image
+        if: needs.release-please.outputs.backend-release-created
+        run: |
+          BACKEND_VERSION="${{ needs.release-please.outputs.backend-version }}"
+          echo "Building backend version: $BACKEND_VERSION"
+          
+          docker build -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
+            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:v$BACKEND_VERSION \
+            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:backend-v$BACKEND_VERSION .
+          
+          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest
+          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:v$BACKEND_VERSION
+          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:backend-v$BACKEND_VERSION
+
+      - name: Build and tag frontend image
+        if: needs.release-please.outputs.frontend-release-created
+        run: |
+          FRONTEND_VERSION="${{ needs.release-please.outputs.frontend-version }}"
+          echo "Building frontend version: $FRONTEND_VERSION"
+          
+          docker build -f frontend/Dockerfile.prod \
+            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
+            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:v$FRONTEND_VERSION \
+            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:frontend-v$FRONTEND_VERSION \
+            --build-arg VITE_API_URL=https://dev.dev-assist.example.com/api \
+            --build-arg VITE_WS_URL=wss://dev.dev-assist.example.com/ws .
+          
+          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest
+          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:v$FRONTEND_VERSION
+          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:frontend-v$FRONTEND_VERSION
+
+      - name: Create release summary
+        if: needs.release-please.outputs.releases-created
+        run: |
+          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.release-please.outputs.frontend-release-created }}" == "true" ]]; then
+            echo "✅ **Frontend**: v${{ needs.release-please.outputs.frontend-version }}" >> $GITHUB_STEP_SUMMARY
+            echo "📦 Docker: \`frontend:v${{ needs.release-please.outputs.frontend-version }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.release-please.outputs.backend-release-created }}" == "true" ]]; then
+            echo "✅ **Backend**: v${{ needs.release-please.outputs.backend-version }}" >> $GITHUB_STEP_SUMMARY  
+            echo "📦 Docker: \`api:v${{ needs.release-please.outputs.backend-version }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🏷️ **Git Tags Created:**" >> $GITHUB_STEP_SUMMARY
+          [[ "${{ needs.release-please.outputs.frontend-release-created }}" == "true" ]] && echo "- ${{ needs.release-please.outputs.frontend-tag-name }}" >> $GITHUB_STEP_SUMMARY
+          [[ "${{ needs.release-please.outputs.backend-release-created }}" == "true" ]] && echo "- ${{ needs.release-please.outputs.backend-tag-name }}" >> $GITHUB_STEP_SUMMARY
+
+  # Optional: Trigger deployment to staging environment for releases
+  deploy-to-staging:
+    needs: [release-please, build-release-images]
+    if: needs.release-please.outputs.releases-created && vars.AUTO_DEPLOY_RELEASES == 'true'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Trigger staging deployment
+        run: |
+          echo "🚀 Triggering staging deployment..."
+          echo "Frontend version: ${{ needs.release-please.outputs.frontend-version }}"
+          echo "Backend version: ${{ needs.release-please.outputs.backend-version }}"
+          
+          # This would trigger your staging deployment workflow
+          # You can customize this based on your staging deployment process
+          echo "Staging deployment would be triggered here"
+
+  # Send notifications about releases
+  notify-release:
+    needs: [release-please, build-release-images]
+    if: needs.release-please.outputs.releases-created
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send release notification
+        run: |
+          echo "📢 Sending release notifications..."
+          echo "Release notification would be sent to:"
+          echo "  - Slack #releases channel"
+          echo "  - Email to development team"
+          echo "  - GitHub status check"
+          
+          # You can integrate with Slack, email, or other notification systems here
+          # Example: curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"🎉 New release: v${{ needs.release-please.outputs.frontend-version }}"}' \
+          #   $SLACK_WEBHOOK_URL

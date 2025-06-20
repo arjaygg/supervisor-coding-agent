@@ -1,0 +1,92 @@
+{
+  "packages": {
+    "frontend": {
+      "package-name": "supervisor-agent-dashboard",
+      "component": "frontend",
+      "release-type": "node",
+      "changelog-path": "frontend/CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "frontend/package.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    },
+    "supervisor_agent": {
+      "package-name": "supervisor-agent",
+      "component": "backend",
+      "release-type": "python",
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "supervisor_agent/__init__.py",
+          "glob": false
+        }
+      ]
+    }
+  },
+  "bootstrap-sha": "59ce04126b6b47f8f8e8e8e8e8e8e8e8e8e8e8e8",
+  "always-link-local": false,
+  "separate-pull-requests": false,
+  "group-pull-request-title-pattern": "chore: release ${component}",
+  "changelog-sections": [
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "feature",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance Improvements"
+    },
+    {
+      "type": "deps",
+      "section": "Dependencies"
+    },
+    {
+      "type": "revert",
+      "section": "Reverts"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation"
+    },
+    {
+      "type": "style",
+      "section": "Styles"
+    },
+    {
+      "type": "chore",
+      "section": "Miscellaneous Chores"
+    },
+    {
+      "type": "refactor",
+      "section": "Code Refactoring"
+    },
+    {
+      "type": "test",
+      "section": "Tests"
+    },
+    {
+      "type": "build",
+      "section": "Build System"
+    },
+    {
+      "type": "ci",
+      "section": "Continuous Integration"
+    }
+  ]
+}
