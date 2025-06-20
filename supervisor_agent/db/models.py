@@ -135,3 +135,13 @@ class UsageMetrics(Base):
 
     # Composite index for efficient queries
     __table_args__ = {"extend_existing": True}
+
+
+# Import workflow models to ensure they're included in Base metadata
+from supervisor_agent.core.workflow_models import (
+    Workflow,
+    WorkflowExecution, 
+    WorkflowTaskExecution,
+    TaskDependency,
+    WorkflowSchedule
+)
