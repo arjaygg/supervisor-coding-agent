@@ -100,7 +100,10 @@
       "Bash(gh workflow list:*)",
       "Bash(gh workflow view:*)",
       "Bash(gh run watch:*)",
-      "Bash(npm ci:*)"
+      "Bash(npm ci:*)",
+      "Bash(git fetch:*)",
+      "Bash(grep:*)",
+      "Bash(git switch:*)"
     ],
     "deny": []
   }

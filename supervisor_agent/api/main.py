@@ -7,6 +7,7 @@ from supervisor_agent.config import settings
 from supervisor_agent.api.routes.tasks import router as tasks_router
 from supervisor_agent.api.routes.health import router as health_router
 from supervisor_agent.api.routes.analytics import router as analytics_router
+from supervisor_agent.api.routes.workflows import router as workflows_router
 from supervisor_agent.api.websocket import websocket_endpoint
 from supervisor_agent.db.database import engine
 from supervisor_agent.db.models import Base
@@ -96,6 +97,7 @@ app.add_middleware(
 app.include_router(tasks_router, prefix="/api/v1", tags=["tasks"])
 app.include_router(health_router, prefix="/api/v1", tags=["health"])
 app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
+app.include_router(workflows_router, prefix="/api/v1", tags=["workflows"])
 
 
 @app.exception_handler(Exception)
