@@ -263,29 +263,63 @@ jobs:
             echo "Artifact Registry repository already exists"
           fi
           
-          # Create deployment tag (branch + timestamp)
+          # Determine deployment tag strategy - use semantic version if available
+          deploy_ref="${{ needs.check-promote-command.outputs.deploy_ref }}"
           deploy_branch="${{ needs.check-promote-command.outputs.deploy_branch }}"
-          branch_clean=$(echo $deploy_branch | sed 's/[^a-zA-Z0-9-]/-/g')
-          deployment_tag="${branch_clean}-$(date +%Y%m%d-%H%M%S)"
-          echo "Using deployment tag: $deployment_tag"
+          
+          # Check if current commit is a release tag
+          if git describe --tags --exact-match $deploy_ref 2>/dev/null; then
+            git_tag=$(git describe --tags --exact-match $deploy_ref 2>/dev/null)
+            echo "🏷️ Release deployment detected: $git_tag"
+            
+            # Extract version from tag (frontend-v1.2.3 or backend-v1.2.3 or v1.2.3)
+            if [[ $git_tag =~ ^frontend-v(.+)$ ]]; then
+              frontend_version="${BASH_REMATCH[1]}"
+              deployment_tag="v$frontend_version"
+              deployment_type="frontend-release"
+            elif [[ $git_tag =~ ^backend-v(.+)$ ]]; then
+              backend_version="${BASH_REMATCH[1]}"
+              deployment_tag="v$backend_version"
+              deployment_type="backend-release"
+            elif [[ $git_tag =~ ^v(.+)$ ]]; then
+              app_version="${BASH_REMATCH[1]}"
+              deployment_tag="v$app_version"
+              deployment_type="application-release"
+            else
+              deployment_tag="$git_tag"
+              deployment_type="tagged-release"
+            fi
+          else
+            # Development deployment - use branch + timestamp
+            branch_clean=$(echo $deploy_branch | sed 's/[^a-zA-Z0-9-]/-/g')
+            deployment_tag="${branch_clean}-$(date +%Y%m%d-%H%M%S)"
+            deployment_type="development"
+          fi
+          
+          echo "🚀 Deployment type: $deployment_type"
+          echo "🏷️ Using deployment tag: $deployment_tag"
+          
+          # Store for later use
+          echo "DEPLOYMENT_TAG=$deployment_tag" >> $GITHUB_ENV
+          echo "DEPLOYMENT_TYPE=$deployment_type" >> $GITHUB_ENV
           
           # Build and tag API image for Artifact Registry
           docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
-            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag .
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$DEPLOYMENT_TAG .
           
           # Build and tag frontend image for Artifact Registry
           docker build -f frontend/Dockerfile.prod \
             -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
-            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$DEPLOYMENT_TAG \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
             --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
           
           # Push images to Artifact Registry
           echo "Pushing to Artifact Registry (Singapore region)..."
           docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$DEPLOYMENT_TAG
           docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest  
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$DEPLOYMENT_TAG
           
           echo "✅ Images built and pushed to Artifact Registry (Singapore)"
 
@@ -491,10 +525,20 @@ jobs:
           commit_short=${commit_short:0:8}
           deploy_id="deploy-$(date +%Y%m%d-%H%M%S)-${commit_short}"
           
-          # Create deployment tag for images (branch + timestamp)
-          deploy_branch="${{ needs.check-promote-command.outputs.deploy_branch }}"
-          branch_clean=$(echo $deploy_branch | sed 's/[^a-zA-Z0-9-]/-/g')
-          deployment_tag="${branch_clean}-$(date +%Y%m%d-%H%M%S)"
+          # Get version information from package files
+          cd frontend && frontend_version=$(node -p "require('./package.json').version") && cd ..
+          backend_version=$(python -c "import supervisor_agent; print(supervisor_agent.__version__)")
+          
+          # Determine if this is a versioned release
+          deployment_type="${{ env.DEPLOYMENT_TYPE }}"
+          deployment_tag="${{ env.DEPLOYMENT_TAG }}"
+          
+          # Create version-aware deployment info
+          if [[ "$deployment_type" == *"release"* ]]; then
+            version_info='"is_release": true,'
+          else
+            version_info='"is_release": false,'
+          fi
           
           deployment_info=$(cat <<EOF
           {
@@ -502,24 +546,33 @@ jobs:
             "timestamp": "${{ env.DEPLOY_TIMESTAMP }}",
             "commit_sha": "${{ env.DEPLOY_REF }}",
             "commit_short": "$commit_short",
-            "source_branch": "$deploy_branch",
+            "source_branch": "${{ needs.check-promote-command.outputs.deploy_branch }}",
             "deployer": "${{ github.actor }}",
             "environment": "development",
             "deployment_method": "${{ github.event_name }}",
+            "deployment_type": "$deployment_type",
+            $version_info
+            "versions": {
+              "frontend": "$frontend_version",
+              "backend": "$backend_version"
+            },
             "images": {
               "api": "asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag",
               "frontend": "asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag"
+            },
+            "tags": {
+              "deployment": "$deployment_tag",
+              "git_ref": "${{ env.DEPLOY_REF }}"
             }
           }
           EOF
           )
           
-          echo "Deployment state updated:"
+          echo "📊 Deployment state updated:"
           echo "$deployment_info" | jq .
           
-          # Store deployment ID for other jobs
+          # Store deployment info for other jobs
           echo "DEPLOYMENT_ID=$deploy_id" >> $GITHUB_ENV
-          echo "DEPLOYMENT_TAG=$deployment_tag" >> $GITHUB_ENV
 
   # Notification and status update
   notify-success:
