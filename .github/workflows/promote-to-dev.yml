@@ -5,9 +5,14 @@ on:
     types: [created]
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch to deploy (default: main)'
+        required: false
+        type: string
+        default: 'main'
       pr_number:
-        description: 'PR number to promote'
-        required: true
+        description: 'PR number (optional, for validation and tracking)'
+        required: false
         type: string
       force_deploy:
         description: 'Force deployment without validation'
@@ -37,15 +42,15 @@ jobs:
     outputs:
       should_promote: ${{ steps.check.outputs.should_promote }}
       pr_number: ${{ steps.check.outputs.pr_number }}
-      pr_ref: ${{ steps.check.outputs.pr_ref }}
-      pr_branch: ${{ steps.check.outputs.pr_branch }}
+      deploy_ref: ${{ steps.check.outputs.deploy_ref }}
+      deploy_branch: ${{ steps.check.outputs.deploy_branch }}
     steps:
       - name: Check promote command and get PR info
         id: check
         uses: actions/github-script@v7
         with:
           script: |
-            let pr_number, pr_ref, pr_branch;
+            let pr_number, deploy_ref, deploy_branch;
             
             if (context.eventName === 'issue_comment') {
               if (context.payload.comment.body.includes('/deploy-to-dev')) {
@@ -65,46 +70,38 @@ jobs:
                     repo: context.repo.repo,
                     branch: 'main'
                   });
-                  pr_ref = mainBranch.commit.sha;
+                  deploy_ref = mainBranch.commit.sha;
+                  deploy_branch = 'main';
                 } else {
-                  pr_ref = pr.head.sha;
+                  deploy_ref = pr.head.sha;
+                  deploy_branch = pr.head.ref;
                 }
-                pr_branch = pr.head.ref;
                 
                 core.setOutput('should_promote', 'true');
                 core.setOutput('pr_number', pr_number);
-                core.setOutput('pr_ref', pr_ref);
-                core.setOutput('pr_branch', pr_branch);
+                core.setOutput('deploy_ref', deploy_ref);
+                core.setOutput('deploy_branch', deploy_branch);
               } else {
                 core.setOutput('should_promote', 'false');
               }
             } else if (context.eventName === 'workflow_dispatch') {
+              const branch_input = context.payload.inputs.branch || 'main';
               pr_number = context.payload.inputs.pr_number;
               
-              // Get PR details
-              const { data: pr } = await github.rest.pulls.get({
+              // Get branch details
+              const { data: branchData } = await github.rest.repos.getBranch({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                pull_number: pr_number
+                branch: branch_input
               });
               
-              // For merged PRs, use current main branch instead of stale merge commit
-              if (pr.merged_at) {
-                const { data: mainBranch } = await github.rest.repos.getBranch({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  branch: 'main'
-                });
-                pr_ref = mainBranch.commit.sha;
-              } else {
-                pr_ref = pr.head.sha;
-              }
-              pr_branch = pr.head.ref;
+              deploy_ref = branchData.commit.sha;
+              deploy_branch = branch_input;
               
               core.setOutput('should_promote', 'true');
-              core.setOutput('pr_number', pr_number);
-              core.setOutput('pr_ref', pr_ref);
-              core.setOutput('pr_branch', pr_branch);
+              core.setOutput('pr_number', pr_number || '');
+              core.setOutput('deploy_ref', deploy_ref);
+              core.setOutput('deploy_branch', deploy_branch);
             }
 
   # Validate promotion eligibility
@@ -119,56 +116,70 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.check-promote-command.outputs.pr_ref }}
+          ref: ${{ needs.check-promote-command.outputs.deploy_ref }}
 
       - name: Validate promotion eligibility
         id: validate
         uses: actions/github-script@v7
         with:
           script: |
-            const pr_number = ${{ needs.check-promote-command.outputs.pr_number }};
+            const pr_number = '${{ needs.check-promote-command.outputs.pr_number }}';
+            const deploy_branch = '${{ needs.check-promote-command.outputs.deploy_branch }}';
+            const deploy_ref = '${{ needs.check-promote-command.outputs.deploy_ref }}';
             const force_deploy = ${{ github.event.inputs.force_deploy || false }};
             
             let validationErrors = [];
             let validationWarnings = [];
             
             try {
-              // Get PR details
-              const { data: pr } = await github.rest.pulls.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr_number
-              });
-              
-              // Check if PR is open or merged (merged PRs have state 'closed' but merged_at is not null)
-              const isMerged = pr.merged_at !== null;
-              if (pr.state !== 'open' && !isMerged) {
-                validationErrors.push(`PR #${pr_number} is ${pr.state} and not merged, must be open or merged`);
-              }
-              
-              // Check if PR is approved (unless force deploy)
-              if (!force_deploy) {
-                const { data: reviews } = await github.rest.pulls.listReviews({
+              // If PR number is provided, validate PR-specific requirements
+              if (pr_number && pr_number !== '') {
+                // Get PR details
+                const { data: pr } = await github.rest.pulls.get({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  pull_number: pr_number
+                  pull_number: parseInt(pr_number)
                 });
                 
-                const approvedReviews = reviews.filter(review => 
-                  review.state === 'APPROVED' && 
-                  review.user.login !== pr.user.login
-                );
-                
-                if (approvedReviews.length === 0) {
-                  validationWarnings.push('PR has no approvals');
+                // Check if PR is open or merged (merged PRs have state 'closed' but merged_at is not null)
+                const isMerged = pr.merged_at !== null;
+                if (pr.state !== 'open' && !isMerged) {
+                  validationErrors.push(`PR #${pr_number} is ${pr.state} and not merged, must be open or merged`);
                 }
+                
+                // Check if PR is approved (unless force deploy)
+                if (!force_deploy) {
+                  const { data: reviews } = await github.rest.pulls.listReviews({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: parseInt(pr_number)
+                  });
+                  
+                  const approvedReviews = reviews.filter(review => 
+                    review.state === 'APPROVED' && 
+                    review.user.login !== pr.user.login
+                  );
+                  
+                  if (approvedReviews.length === 0) {
+                    validationWarnings.push('PR has no approvals');
+                  }
+                }
+                
+                // Check for merge conflicts
+                if (pr.mergeable === false) {
+                  validationErrors.push('PR has merge conflicts');
+                }
+              } else {
+                // Branch-based deployment - validate branch exists and is up-to-date
+                console.log(`Validating branch-based deployment: ${deploy_branch}`);
+                validationWarnings.push(`Deploying directly from branch: ${deploy_branch}`);
               }
               
-              // Check CI status
+              // Check CI status for the deploy ref
               const { data: checks } = await github.rest.checks.listForRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                ref: pr.head.sha
+                ref: deploy_ref
               });
               
               const failedChecks = checks.check_runs.filter(check => 
@@ -177,11 +188,6 @@ jobs:
               
               if (failedChecks.length > 0 && !force_deploy) {
                 validationErrors.push(`CI checks failing: ${failedChecks.map(c => c.name).join(', ')}`);
-              }
-              
-              // Check for merge conflicts
-              if (pr.mergeable === false) {
-                validationErrors.push('PR has merge conflicts');
               }
               
               // Set outputs
@@ -197,38 +203,9 @@ jobs:
               core.setFailed(`Validation error: ${error.message}`);
             }
 
-  # Backup current development environment
-  backup-dev-environment:
-    needs: [check-promote-command, validate-promotion]
-    if: needs.validate-promotion.outputs.validation_passed == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      backup_tag: ${{ steps.backup.outputs.tag }}
-    steps:
-      - name: Checkout deployment scripts
-        uses: actions/checkout@v4
-
-      - name: Create development environment backup
-        id: backup
-        run: |
-          backup_tag="dev-backup-$(date +%Y%m%d-%H%M%S)-pr-${{ needs.check-promote-command.outputs.pr_number }}"
-          echo "tag=$backup_tag" >> $GITHUB_OUTPUT
-          
-          # Note: In a real environment, you would:
-          # 1. SSH to development server
-          # 2. Run backup scripts
-          # 3. Store backup with timestamp and PR info
-          
-          echo "✅ Backup tagged as: $backup_tag"
-          echo "Backup would include:"
-          echo "  - Database snapshot"
-          echo "  - Current container images"
-          echo "  - Configuration state"
-          echo "  - Application data"
-
   # Deploy to development environment
   deploy-to-development:
-    needs: [check-promote-command, validate-promotion, backup-dev-environment]
+    needs: [check-promote-command, validate-promotion]
     if: needs.validate-promotion.outputs.validation_passed == 'true'
     runs-on: ubuntu-latest
     environment: development
@@ -236,13 +213,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.check-promote-command.outputs.pr_ref }}
+          ref: ${{ needs.check-promote-command.outputs.deploy_ref }}
 
       - name: Set up environment variables
         run: |
           echo "ENVIRONMENT=development" >> $GITHUB_ENV
           echo "PR_NUMBER=${{ needs.check-promote-command.outputs.pr_number }}" >> $GITHUB_ENV
-          echo "PR_BRANCH=${{ needs.check-promote-command.outputs.pr_branch }}" >> $GITHUB_ENV
+          echo "DEPLOY_BRANCH=${{ needs.check-promote-command.outputs.deploy_branch }}" >> $GITHUB_ENV
+          echo "DEPLOY_REF=${{ needs.check-promote-command.outputs.deploy_ref }}" >> $GITHUB_ENV
           echo "DEPLOY_TIMESTAMP=$(date -Iseconds)" >> $GITHUB_ENV
 
       - name: Authenticate to Google Cloud
@@ -285,23 +263,29 @@ jobs:
             echo "Artifact Registry repository already exists"
           fi
           
+          # Create deployment tag (branch + timestamp)
+          deploy_branch="${{ needs.check-promote-command.outputs.deploy_branch }}"
+          branch_clean=$(echo $deploy_branch | sed 's/[^a-zA-Z0-9-]/-/g')
+          deployment_tag="${branch_clean}-$(date +%Y%m%d-%H%M%S)"
+          echo "Using deployment tag: $deployment_tag"
+          
           # Build and tag API image for Artifact Registry
           docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
-            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:pr-${{ needs.check-promote-command.outputs.pr_number }} .
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag .
           
           # Build and tag frontend image for Artifact Registry
           docker build -f frontend/Dockerfile.prod \
             -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
-            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:pr-${{ needs.check-promote-command.outputs.pr_number }} \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
             --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
           
           # Push images to Artifact Registry
           echo "Pushing to Artifact Registry (Singapore region)..."
           docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:pr-${{ needs.check-promote-command.outputs.pr_number }}
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag
           docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest  
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:pr-${{ needs.check-promote-command.outputs.pr_number }}
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag
           
           echo "✅ Images built and pushed to Artifact Registry (Singapore)"
 
@@ -415,8 +399,8 @@ jobs:
               cd /opt/dev-assist && \
               git config --global --add safe.directory /opt/dev-assist && \
               git fetch origin && \
-              git checkout ${{ needs.check-promote-command.outputs.pr_branch }} && \
-              git pull origin ${{ needs.check-promote-command.outputs.pr_branch }} && \
+              git checkout ${{ needs.check-promote-command.outputs.deploy_branch }} && \
+              git pull origin ${{ needs.check-promote-command.outputs.deploy_branch }} && \
               cp .env.sample .env && \
               export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
               export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }} && \
@@ -502,19 +486,29 @@ jobs:
 
       - name: Update environment state
         run: |
-          # Track deployment state
+          # Create unique deployment ID based on commit and timestamp
+          commit_short="${{ env.DEPLOY_REF }}"
+          commit_short=${commit_short:0:8}
+          deploy_id="deploy-$(date +%Y%m%d-%H%M%S)-${commit_short}"
+          
+          # Create deployment tag for images (branch + timestamp)
+          deploy_branch="${{ needs.check-promote-command.outputs.deploy_branch }}"
+          branch_clean=$(echo $deploy_branch | sed 's/[^a-zA-Z0-9-]/-/g')
+          deployment_tag="${branch_clean}-$(date +%Y%m%d-%H%M%S)"
+          
           deployment_info=$(cat <<EOF
           {
+            "deployment_id": "$deploy_id",
             "timestamp": "${{ env.DEPLOY_TIMESTAMP }}",
-            "pr_number": ${{ needs.check-promote-command.outputs.pr_number }},
-            "pr_branch": "${{ needs.check-promote-command.outputs.pr_branch }}",
-            "commit_sha": "${{ needs.check-promote-command.outputs.pr_ref }}",
+            "commit_sha": "${{ env.DEPLOY_REF }}",
+            "commit_short": "$commit_short",
+            "source_branch": "$deploy_branch",
             "deployer": "${{ github.actor }}",
-            "backup_tag": "${{ needs.backup-dev-environment.outputs.backup_tag }}",
             "environment": "development",
+            "deployment_method": "${{ github.event_name }}",
             "images": {
-              "api": "dev-assist-api:dev-${{ needs.check-promote-command.outputs.pr_number }}",
-              "frontend": "dev-assist-frontend:dev-${{ needs.check-promote-command.outputs.pr_number }}"
+              "api": "asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag",
+              "frontend": "asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag"
             }
           }
           EOF
@@ -522,6 +516,10 @@ jobs:
           
           echo "Deployment state updated:"
           echo "$deployment_info" | jq .
+          
+          # Store deployment ID for other jobs
+          echo "DEPLOYMENT_ID=$deploy_id" >> $GITHUB_ENV
+          echo "DEPLOYMENT_TAG=$deployment_tag" >> $GITHUB_ENV
 
   # Notification and status update
   notify-success:
@@ -533,7 +531,9 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const pr_number = ${{ needs.check-promote-command.outputs.pr_number }};
+            const pr_number = '${{ needs.check-promote-command.outputs.pr_number }}';
+            const deploy_branch = '${{ needs.check-promote-command.outputs.deploy_branch }}';
+            const deploy_ref = '${{ needs.check-promote-command.outputs.deploy_ref }}';
             const warnings = '${{ needs.validate-promotion.outputs.validation_warnings }}';
             
             let comment_body = `🎉 **Successfully Promoted to Development Environment!**
@@ -544,13 +544,15 @@ jobs:
             - **API Docs**: https://${{ env.DEV_ENVIRONMENT_URL }}/docs
             
             **Deployment Details:**
-            - **PR**: #${pr_number} (${context.payload.pull_request?.title || 'Manual deployment'})
-            - **Branch**: \`${{ needs.check-promote-command.outputs.pr_branch }}\`
-            - **Commit**: \`${{ needs.check-promote-command.outputs.pr_ref }}\`
-            - **Deployed by**: @${{ github.actor }}
-            - **Backup**: \`${{ needs.backup-dev-environment.outputs.backup_tag }}\`
+            - **Branch**: \`${deploy_branch}\`
+            - **Commit**: \`${deploy_ref}\`
+            - **Deployed by**: @${{ github.actor }}`;
             
-            **Post-Deployment Status:**
+            if (pr_number && pr_number !== '') {
+              comment_body += `\n- **PR**: #${pr_number} (${context.payload.pull_request?.title || 'Manual deployment'})`;
+            }
+            
+            comment_body += `\n\n**Post-Deployment Status:**
             - ✅ Health checks passed
             - ✅ Integration tests passed
             - ✅ Database migrations applied
@@ -567,12 +569,18 @@ jobs:
             ---
             *Development environment is persistent and shared with the team.*`;
             
-            await github.rest.issues.createComment({
-              issue_number: pr_number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment_body
-            });
+            // Only create comment if we have a PR number
+            if (pr_number && pr_number !== '') {
+              await github.rest.issues.createComment({
+                issue_number: parseInt(pr_number),
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment_body
+              });
+            } else {
+              console.log('Branch-based deployment - no PR comment created');
+              console.log('Deployment notification:\n' + comment_body);
+            }
 
       - name: Send team notification
         run: |

@@ -98,7 +98,9 @@
       "Bash(python -m pytest supervisor_agent/tests/test_claude_cli_integration.py::TestClaudeCliIntegration::test_claude_cli_validation_with_mock_mode -v)",
       "Bash(python -m pytest supervisor_agent/tests/test_claude_cli_integration.py::TestClaudeCliIntegration::test_task_execution_error_handling -v)",
       "Bash(gh workflow list:*)",
-      "Bash(gh workflow view:*)"
+      "Bash(gh workflow view:*)",
+      "Bash(gh run watch:*)",
+      "Bash(npm ci:*)"
     ],
     "deny": []
   }
