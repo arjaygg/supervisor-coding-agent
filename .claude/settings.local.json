@@ -103,7 +103,17 @@
       "Bash(npm ci:*)",
       "Bash(git fetch:*)",
       "Bash(grep:*)",
-      "Bash(git switch:*)"
+      "Bash(git switch:*)",
+      "Bash(gh pr:*)",
+      "Bash(python -m pytest supervisor_agent/tests/test_workflow_engine.py -v)",
+      "Bash(python3 -m pytest supervisor_agent/tests/test_workflow_engine.py -v)",
+      "Bash(python -m pytest supervisor_agent/tests/test_workflow_engine.py::TestWorkflowEngine::test_execute_workflow_success -v)",
+      "Bash(python -m pytest supervisor_agent/tests/test_dag_resolver.py -v)",
+      "Bash(python -m pytest supervisor_agent/tests/test_workflow_engine.py supervisor_agent/tests/test_dag_resolver.py -v)",
+      "Bash(gh api:*)",
+      "Bash(gcloud compute ssh:*)",
+      "Bash(python -m pytest supervisor_agent/tests/test_analytics.py -v)",
+      "Bash(python3 -m pytest supervisor_agent/tests/test_analytics.py -v)"
     ],
     "deny": []
   }
