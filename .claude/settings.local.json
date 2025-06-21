@@ -113,7 +113,14 @@
       "Bash(gh api:*)",
       "Bash(gcloud compute ssh:*)",
       "Bash(python -m pytest supervisor_agent/tests/test_analytics.py -v)",
-      "Bash(python3 -m pytest supervisor_agent/tests/test_analytics.py -v)"
+      "Bash(python3 -m pytest supervisor_agent/tests/test_analytics.py -v)",
+      "Bash(git remote:*)",
+      "Bash(python -m pytest supervisor_agent/tests/test_analytics.py -v --tb=short)",
+      "Bash(python -m pip:*)",
+      "Bash(docker:*)",
+      "Bash(cp:*)",
+      "Bash(alembic revision:*)",
+      "Bash(venv/bin/python:*)"
     ],
     "deny": []
   }
