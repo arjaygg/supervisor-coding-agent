@@ -62,7 +62,8 @@ class MetricsCollector(MetricsCollectorInterface):
     
     async def collect_task_metrics(self, task_id: int) -> TaskMetrics:
         """Collect comprehensive metrics for a task"""
-        async with self.session_factory() as session:
+        session = self.session_factory()
+        try:
             task = session.query(Task).filter(Task.id == task_id).first()
             if not task:
                 raise ValueError(f"Task {task_id} not found")
@@ -100,6 +101,8 @@ class MetricsCollector(MetricsCollectorInterface):
                 error_message=task.error_message,
                 cost_usd=cost_usd
             )
+        finally:
+            session.close()
     
     async def collect_system_metrics(self) -> SystemMetrics:
         """Collect current system performance metrics"""
@@ -110,7 +113,8 @@ class MetricsCollector(MetricsCollectorInterface):
             if cached_data:
                 return cached_data
         
-        async with self.session_factory() as session:
+        session = self.session_factory()
+        try:
             # Get system stats
             cpu_percent = psutil.cpu_percent(interval=1)
             memory = psutil.virtual_memory()
@@ -157,12 +161,15 @@ class MetricsCollector(MetricsCollectorInterface):
             }
             
             return metrics
+        finally:
+            session.close()
     
     async def collect_user_metrics(self, user_id: str) -> UserMetrics:
         """Collect user activity metrics"""
         # This would typically integrate with session management
         # For now, we'll return basic metrics based on task creation
-        async with self.session_factory() as session:
+        session = self.session_factory()
+        try:
             # Get user's recent task activity
             user_tasks = session.query(Task).filter(
                 Task.assigned_agent_id == user_id
@@ -195,10 +202,13 @@ class MetricsCollector(MetricsCollectorInterface):
                 features_used=features_used,
                 last_activity=last_activity
             )
+        finally:
+            session.close()
     
     async def collect_workflow_metrics(self, workflow_id: str) -> WorkflowMetrics:
         """Collect workflow execution metrics"""
-        async with self.session_factory() as session:
+        session = self.session_factory()
+        try:
             # Get workflow data (would need to query workflow tables)
             # For now, we'll simulate based on tasks that might be part of workflow
             workflow_tasks = session.query(Task).filter(
@@ -206,7 +216,7 @@ class MetricsCollector(MetricsCollectorInterface):
             ).all()
             
             if not workflow_tasks:
-                return WorkflowMetrics(
+                workflow_metrics = WorkflowMetrics(
                     workflow_id=workflow_id,
                     workflow_name=f"Workflow {workflow_id}",
                     total_execution_time_ms=0,
@@ -215,6 +225,7 @@ class MetricsCollector(MetricsCollectorInterface):
                     parallel_efficiency=0.0,
                     resource_utilization={}
                 )
+                return workflow_metrics
             
             # Calculate metrics
             total_execution_time = 0
@@ -247,11 +258,14 @@ class MetricsCollector(MetricsCollectorInterface):
                     "io": 0.0
                 }
             )
+        finally:
+            session.close()
     
     async def store_metric(self, metric_type: MetricType, value: Union[float, int, str], 
                           labels: Dict[str, str] = None, metadata: Dict[str, Any] = None) -> None:
         """Store a metric entry in the database"""
-        async with self.session_factory() as session:
+        session = self.session_factory()
+        try:
             # Handle string values
             float_value = None
             string_value = None
@@ -272,7 +286,9 @@ class MetricsCollector(MetricsCollectorInterface):
             )
             
             session.add(metric_entry)
-            await session.commit()
+            session.commit()
+        finally:
+            session.close()
     
     async def collect_and_store_system_metrics(self) -> None:
         """Convenience method to collect and store system metrics"""
