@@ -7,10 +7,10 @@ Follows SOLID principles with clear separation of concerns.
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional, Any, Union
+from typing import Any, Dict, List, Optional, Union
+
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, Float, Boolean, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String, Text
 from sqlalchemy.sql import func
 
 from supervisor_agent.db.database import Base
@@ -18,6 +18,7 @@ from supervisor_agent.db.database import Base
 
 class MetricType(str, Enum):
     """Types of metrics that can be collected"""
+
     TASK_EXECUTION = "task_execution"
     SYSTEM_PERFORMANCE = "system_performance"
     USER_ACTIVITY = "user_activity"
@@ -28,6 +29,7 @@ class MetricType(str, Enum):
 
 class TimeRange(str, Enum):
     """Time range options for analytics queries"""
+
     HOUR = "1h"
     DAY = "24h"
     WEEK = "7d"
@@ -38,6 +40,7 @@ class TimeRange(str, Enum):
 
 class AggregationType(str, Enum):
     """Types of data aggregation"""
+
     SUM = "sum"
     AVERAGE = "average"
     COUNT = "count"
@@ -49,6 +52,7 @@ class AggregationType(str, Enum):
 
 class ChartType(str, Enum):
     """Dashboard chart types"""
+
     LINE = "line"
     BAR = "bar"
     PIE = "pie"
@@ -61,6 +65,7 @@ class ChartType(str, Enum):
 
 class ExportFormat(str, Enum):
     """Data export formats"""
+
     CSV = "csv"
     JSON = "json"
     PDF = "pdf"
@@ -69,8 +74,10 @@ class ExportFormat(str, Enum):
 
 # Pydantic Models for API
 
+
 class MetricPoint(BaseModel):
     """Individual metric data point"""
+
     timestamp: datetime
     value: Union[float, int, str]
     labels: Dict[str, str] = Field(default_factory=dict)
@@ -79,6 +86,7 @@ class MetricPoint(BaseModel):
 
 class TaskMetrics(BaseModel):
     """Metrics specific to task execution"""
+
     task_id: int
     task_type: str
     execution_time_ms: int
@@ -92,6 +100,7 @@ class TaskMetrics(BaseModel):
 
 class SystemMetrics(BaseModel):
     """System-wide performance metrics"""
+
     timestamp: datetime
     cpu_usage_percent: float
     memory_usage_percent: float
@@ -103,6 +112,7 @@ class SystemMetrics(BaseModel):
 
 class UserMetrics(BaseModel):
     """User activity metrics"""
+
     user_id: str
     session_duration_ms: int
     actions_count: int
@@ -112,6 +122,7 @@ class UserMetrics(BaseModel):
 
 class WorkflowMetrics(BaseModel):
     """Workflow execution metrics"""
+
     workflow_id: str
     workflow_name: str
     total_execution_time_ms: int
@@ -123,6 +134,7 @@ class WorkflowMetrics(BaseModel):
 
 class AnalyticsQuery(BaseModel):
     """Query configuration for analytics data"""
+
     metric_type: MetricType
     time_range: TimeRange
     aggregation: AggregationType
@@ -133,6 +145,7 @@ class AnalyticsQuery(BaseModel):
 
 class ChartConfig(BaseModel):
     """Configuration for dashboard charts"""
+
     chart_id: str
     title: str
     chart_type: ChartType
@@ -145,6 +158,7 @@ class ChartConfig(BaseModel):
 
 class DashboardConfig(BaseModel):
     """Dashboard configuration"""
+
     dashboard_id: str
     name: str
     description: Optional[str] = None
@@ -156,6 +170,7 @@ class DashboardConfig(BaseModel):
 
 class AnalyticsResult(BaseModel):
     """Result of analytics processing"""
+
     query: AnalyticsQuery
     data: List[MetricPoint]
     total_points: int
@@ -165,6 +180,7 @@ class AnalyticsResult(BaseModel):
 
 class TrendPrediction(BaseModel):
     """Trend prediction result"""
+
     metric_type: MetricType
     predicted_values: List[MetricPoint]
     confidence_score: float
@@ -175,6 +191,7 @@ class TrendPrediction(BaseModel):
 
 class Insight(BaseModel):
     """Analytics insight"""
+
     title: str
     description: str
     severity: str  # "info", "warning", "critical"
@@ -187,8 +204,10 @@ class Insight(BaseModel):
 
 # SQLAlchemy Database Models
 
+
 class MetricEntry(Base):
     """Database model for metric storage"""
+
     __tablename__ = "metrics"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -197,18 +216,16 @@ class MetricEntry(Base):
     value = Column(Float, nullable=False)
     string_value = Column(String, nullable=True)  # For non-numeric values
     labels = Column(JSON, nullable=False, default=dict)
-    metadata = Column(JSON, nullable=False, default=dict)
+    metric_metadata = Column(JSON, nullable=False, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Indexes for efficient querying
-    __table_args__ = {
-        'extend_existing': True,
-        'mysql_engine': 'InnoDB'
-    }
+    __table_args__ = {"extend_existing": True, "mysql_engine": "InnoDB"}
 
 
 class Dashboard(Base):
     """Database model for dashboard storage"""
+
     __tablename__ = "dashboards"
 
     id = Column(String, primary_key=True, index=True)  # UUID
@@ -223,6 +240,7 @@ class Dashboard(Base):
 
 class AnalyticsCache(Base):
     """Database model for analytics query caching"""
+
     __tablename__ = "analytics_cache"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -236,6 +254,7 @@ class AnalyticsCache(Base):
 
 class AlertRule(Base):
     """Database model for analytics alerts"""
+
     __tablename__ = "alert_rules"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -252,8 +271,10 @@ class AlertRule(Base):
 
 # Response Models for API
 
+
 class MetricEntryResponse(BaseModel):
     """Response model for metric entries"""
+
     id: int
     metric_type: str
     timestamp: datetime
@@ -268,6 +289,7 @@ class MetricEntryResponse(BaseModel):
 
 class DashboardResponse(BaseModel):
     """Response model for dashboards"""
+
     id: str
     name: str
     description: Optional[str]
@@ -283,6 +305,7 @@ class DashboardResponse(BaseModel):
 
 class AnalyticsSummary(BaseModel):
     """Summary analytics for overview"""
+
     total_tasks: int
     successful_tasks: int
     failed_tasks: int
