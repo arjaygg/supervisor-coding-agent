@@ -129,4 +129,39 @@ export const api = {
   
   getDetailedHealth: () =>
     apiRequest<any>('/api/v1/health/detailed'),
+
+  // Analytics
+  getAnalyticsSummary: () =>
+    apiRequest<any>('/api/v1/analytics/summary'),
+
+  queryAnalytics: (query: any) =>
+    apiRequest<any>('/api/v1/analytics/query', {
+      method: 'POST',
+      body: JSON.stringify(query),
+    }),
+
+  getAnalyticsInsights: (timeframe?: string) =>
+    apiRequest<any[]>(`/api/v1/analytics/insights${timeframe ? `?timeframe=${timeframe}` : ''}`),
+
+  getAnalyticsTrends: (metricType: string, predictionHours?: number) =>
+    apiRequest<any>(`/api/v1/analytics/trends/${metricType}${predictionHours ? `?prediction_hours=${predictionHours}` : ''}`),
+
+  getAnalyticsMetrics: (metricType?: string, limit?: number) =>
+    apiRequest<any[]>(`/api/v1/analytics/metrics?${new URLSearchParams({
+      ...(metricType && { metric_type: metricType }),
+      ...(limit && { limit: limit.toString() })
+    }).toString()}`),
+
+  collectTaskMetrics: (taskId: number) =>
+    apiRequest<{ message: string }>(`/api/v1/analytics/collect/task/${taskId}`, {
+      method: 'POST',
+    }),
+
+  collectSystemMetrics: () =>
+    apiRequest<{ message: string }>('/api/v1/analytics/collect/system', {
+      method: 'POST',
+    }),
+
+  getAnalyticsHealth: () =>
+    apiRequest<any>('/api/v1/analytics/health'),
 };

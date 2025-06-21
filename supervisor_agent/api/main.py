@@ -9,7 +9,7 @@ from supervisor_agent.api.routes.health import router as health_router
 from supervisor_agent.api.routes.analytics import router as analytics_router
 from supervisor_agent.api.routes.workflows import router as workflows_router
 from supervisor_agent.api.websocket import websocket_endpoint
-from supervisor_agent.api.websocket.analytics_ws import router as analytics_ws_router
+from supervisor_agent.api.websocket_analytics import router as analytics_ws_router
 from supervisor_agent.db.database import engine
 from supervisor_agent.db.models import Base
 from supervisor_agent.core.quota import quota_manager

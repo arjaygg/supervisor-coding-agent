@@ -45,7 +45,7 @@ class TestMetricsCollector:
         
         with patch.object(metrics_collector, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = mock_task
             mock_db.query.return_value.params.return_value.first.return_value = None
             
@@ -63,7 +63,7 @@ class TestMetricsCollector:
         
         with patch.object(metrics_collector, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = None
             
             with pytest.raises(ValueError, match="Task 999 not found"):
@@ -82,7 +82,7 @@ class TestMetricsCollector:
                     
                     with patch.object(metrics_collector, 'session_factory') as mock_session:
                         mock_db = Mock()
-                        mock_session.return_value.__aenter__.return_value = mock_db
+                        mock_session.return_value = mock_db
                         mock_db.query.return_value.filter.return_value.count.return_value = 5
                         mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = []
                         
@@ -100,7 +100,7 @@ class TestMetricsCollector:
         
         with patch.object(metrics_collector, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             
             await metrics_collector.store_metric(
                 MetricType.TASK_EXECUTION,
@@ -118,7 +118,7 @@ class TestMetricsCollector:
         
         with patch.object(metrics_collector, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             
             await metrics_collector.store_metric(
                 MetricType.SYSTEM_PERFORMANCE,
@@ -157,7 +157,7 @@ class TestAnalyticsEngine:
         
         with patch.object(analytics_engine, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             
             # Mock cache miss
             mock_db.query.return_value.filter.return_value.first.return_value = None
@@ -179,7 +179,7 @@ class TestAnalyticsEngine:
         
         with patch.object(analytics_engine, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             
             # Mock cache hit
             mock_cache = Mock()
@@ -226,7 +226,7 @@ class TestAnalyticsEngine:
         
         with patch.object(analytics_engine, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
             
             prediction = await analytics_engine.predict_trends(MetricType.TASK_EXECUTION)
@@ -250,7 +250,7 @@ class TestAnalyticsEngine:
         
         with patch.object(analytics_engine, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = mock_data
             
             prediction = await analytics_engine.predict_trends(MetricType.TASK_EXECUTION, 12)
@@ -329,7 +329,7 @@ class TestAnalyticsIntegration:
         
         with patch.object(collector, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             
             # Simulate collecting metrics for multiple tasks
             task_ids = [1, 2, 3, 4, 5]
@@ -368,7 +368,7 @@ class TestAnalyticsIntegration:
         
         with patch.object(engine, 'session_factory') as mock_session:
             mock_db = Mock()
-            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = None
             
             # This should not raise an exception but handle gracefully

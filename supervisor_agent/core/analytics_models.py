@@ -220,7 +220,7 @@ class MetricEntry(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Indexes for efficient querying
-    __table_args__ = {"extend_existing": True, "mysql_engine": "InnoDB"}
+    __table_args__ = {"extend_existing": True}
 
 
 class Dashboard(Base):

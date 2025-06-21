@@ -145,3 +145,11 @@ from supervisor_agent.core.workflow_models import (
     TaskDependency,
     WorkflowSchedule
 )
+
+# Import analytics models to ensure they're included in Base metadata
+from supervisor_agent.core.analytics_models import (
+    MetricEntry,
+    Dashboard,
+    AnalyticsCache,
+    AlertRule
+)
