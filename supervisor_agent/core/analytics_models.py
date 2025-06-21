@@ -216,11 +216,11 @@ class MetricEntry(Base):
     value = Column(Float, nullable=False)
     string_value = Column(String, nullable=True)  # For non-numeric values
     labels = Column(JSON, nullable=False, default=dict)
-    metadata = Column(JSON, nullable=False, default=dict)
+    metric_metadata = Column(JSON, nullable=False, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Indexes for efficient querying
-    __table_args__ = {"extend_existing": True, "mysql_engine": "InnoDB"}
+    __table_args__ = {"extend_existing": True}
 
 
 class Dashboard(Base):

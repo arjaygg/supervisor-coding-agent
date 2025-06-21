@@ -329,7 +329,7 @@ class MetricsCollector(MetricsCollectorInterface):
                 value=float_value,
                 string_value=string_value,
                 labels=labels or {},
-                metadata=metadata or {},
+                metric_metadata=metadata or {},
             )
 
             session.add(metric_entry)
