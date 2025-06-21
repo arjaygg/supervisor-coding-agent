@@ -69,18 +69,18 @@
     // Update analytics object with real-time data
     if (analytics.costSummary) {
       analytics.costSummary.task_count = summary.total_tasks;
+      analytics.costSummary.total_cost = parseFloat(summary.cost_today_usd || '0');
     }
     
-    // Trigger reactive updates for charts
-    const mockDailyData = generateMockDailyData();
-    const mockTaskTypes = generateMockTaskTypeData();
+    // Update charts with real data from WebSocket summary
+    const realTaskTypes = generateTaskTypeDataFromSummary(summary);
     
-    // Update charts with latest task count influencing the data
-    dailyTasksChart = {
-      ...dailyTasksChart,
+    taskTypeChart = {
+      ...taskTypeChart,
+      labels: realTaskTypes.labels,
       datasets: [{
-        ...dailyTasksChart.datasets[0],
-        data: mockDailyData.values.map(v => v + Math.floor(summary.total_tasks * 0.1))
+        ...taskTypeChart.datasets[0],
+        data: realTaskTypes.values
       }]
     };
   }
@@ -91,88 +91,62 @@
 
     try {
       // Get analytics summary from the real API
-      const summaryResponse = await api.get("/analytics/summary");
-      summary = summaryResponse.data;
+      summary = await api.getAnalyticsSummary();
 
-      // For now, create mock trend data since we don't have historical data yet
-      const mockDailyData = generateMockDailyData();
-      const mockTaskTypes = generateMockTaskTypeData();
+      // Get real metrics data instead of using mocks
+      const metricsData = await api.getAnalyticsMetrics(undefined, 100);
+      const realDailyData = generateDailyDataFromMetrics(metricsData);
+      const realTaskTypes = generateTaskTypeDataFromSummary(summary);
 
-      // Update chart data
+      // Update chart data with real data
       dailyTasksChart = {
         ...dailyTasksChart,
-        labels: mockDailyData.labels,
+        labels: realDailyData.labels,
         datasets: [
           {
             ...dailyTasksChart.datasets[0],
-            data: mockDailyData.values,
+            data: realDailyData.values,
           },
         ],
       };
 
       taskTypeChart = {
         ...taskTypeChart,
-        labels: mockTaskTypes.labels,
+        labels: realTaskTypes.labels,
         datasets: [
           {
             ...taskTypeChart.datasets[0],
-            data: mockTaskTypes.values,
+            data: realTaskTypes.values,
           },
         ],
       };
 
-      // Update analytics object for compatibility
+      // Update analytics object with real data
       analytics = {
         costSummary: {
-          total_cost: 0,
-          total_input_tokens: 0,
+          total_cost: parseFloat(summary.cost_today_usd || '0'),
+          total_input_tokens: 0, // Would need cost tracking data
           total_output_tokens: 0,
           input_token_cost: 0,
           output_token_cost: 0,
           task_count: summary.total_tasks,
-          average_cost_per_task: 0,
+          average_cost_per_task: summary.total_tasks > 0 ? parseFloat(summary.cost_today_usd || '0') / summary.total_tasks : 0,
         },
         usageTrends: {
-          daily_usage: mockDailyData.labels.map((label, i) => ({
+          daily_usage: realDailyData.labels.map((label, i) => ({
             date: label,
-            task_count: mockDailyData.values[i],
+            task_count: realDailyData.values[i],
           })),
-          task_type_distribution: mockTaskTypes.labels.reduce(
+          task_type_distribution: realTaskTypes.labels.reduce(
             (acc, label, i) => {
               acc[label.toLowerCase().replace(" ", "_")] =
-                mockTaskTypes.values[i];
+                realTaskTypes.values[i];
               return acc;
             },
             {}
           ),
         },
-        agentPerformance: {
-          agents: [
-            {
-              agent_id: "agent-1",
-              task_count: Math.floor(summary.total_tasks * 0.4),
-              success_rate: 95.2,
-              avg_execution_time: summary.average_execution_time_ms / 1000,
-              total_cost: 0,
-            },
-            {
-              agent_id: "agent-2",
-              task_count: Math.floor(summary.total_tasks * 0.35),
-              success_rate: 98.1,
-              avg_execution_time:
-                (summary.average_execution_time_ms / 1000) * 0.8,
-              total_cost: 0,
-            },
-            {
-              agent_id: "agent-3",
-              task_count: Math.floor(summary.total_tasks * 0.25),
-              success_rate: 92.7,
-              avg_execution_time:
-                (summary.average_execution_time_ms / 1000) * 1.2,
-              total_cost: 0,
-            },
-          ],
-        },
+        agentPerformance: await generateAgentPerformanceData(summary),
       };
     } catch (err) {
       error = "Failed to load analytics data";
@@ -182,31 +156,93 @@
     }
   }
 
-  function generateMockDailyData() {
+  function generateDailyDataFromMetrics(metricsData) {
+    // Group metrics by date
+    const dateGroups = {};
+    
+    // If no metrics data, create placeholder for recent days
+    if (!metricsData || metricsData.length === 0) {
+      const labels = [];
+      const values = [];
+      
+      for (let i = timeRange - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        labels.push(date.toLocaleDateString());
+        values.push(0);
+      }
+      
+      return { labels, values };
+    }
+    
+    // Group metrics by date
+    metricsData.forEach(metric => {
+      const date = new Date(metric.timestamp).toLocaleDateString();
+      if (!dateGroups[date]) {
+        dateGroups[date] = 0;
+      }
+      if (metric.metric_type === 'task_execution') {
+        dateGroups[date]++;
+      }
+    });
+    
+    // Generate labels and values for the time range
     const labels = [];
     const values = [];
-
+    
     for (let i = timeRange - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      labels.push(date.toLocaleDateString());
-      values.push(Math.floor(Math.random() * 20) + 5);
+      const dateStr = date.toLocaleDateString();
+      labels.push(dateStr);
+      values.push(dateGroups[dateStr] || 0);
     }
 
     return { labels, values };
   }
 
-  function generateMockTaskTypeData() {
+  function generateTaskTypeDataFromSummary(summary) {
+    // Calculate task type distribution from summary data
     const taskTypes = [
-      "Code Review",
-      "Bug Fix",
-      "Feature Dev",
-      "Refactor",
-      "Testing",
+      "Completed",
+      "Failed",
+      "Pending"
     ];
-    const values = taskTypes.map(() => Math.floor(Math.random() * 30) + 10);
+    
+    const values = [
+      summary.successful_tasks || 0,
+      summary.failed_tasks || 0,
+      (summary.total_tasks || 0) - (summary.successful_tasks || 0) - (summary.failed_tasks || 0)
+    ];
 
     return { labels: taskTypes, values };
+  }
+
+  async function generateAgentPerformanceData(summary) {
+    try {
+      // Get agent data from the API
+      const agents = await api.getAgents();
+      
+      if (!agents || agents.length === 0) {
+        return {
+          agents: []
+        };
+      }
+      
+      // Calculate performance metrics for each agent
+      const agentPerformance = agents.map(agent => ({
+        agent_id: agent.id,
+        task_count: Math.floor(summary.total_tasks / agents.length), // Distribute evenly
+        success_rate: summary.total_tasks > 0 ? (summary.successful_tasks / summary.total_tasks) * 100 : 0,
+        avg_execution_time: summary.average_execution_time_ms / 1000,
+        total_cost: parseFloat(summary.cost_today_usd || '0') / agents.length,
+      }));
+      
+      return { agents: agentPerformance };
+    } catch (error) {
+      console.error('Error generating agent performance data:', error);
+      return { agents: [] };
+    }
   }
 
   async function handleTimeRangeChange(event) {
