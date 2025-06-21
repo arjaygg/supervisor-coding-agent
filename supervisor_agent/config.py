@@ -1,77 +1,69 @@
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    
     # Database
     database_url: str = Field(
         default="sqlite:///./supervisor_agent.db", 
-        env="DATABASE_URL",
         description="Database connection URL"
     )
 
     # Redis
     redis_url: str = Field(
         default="redis://localhost:6379/0", 
-        env="REDIS_URL",
         description="Redis connection URL"
     )
 
     # Celery
     celery_broker_url: str = Field(
         default="redis://localhost:6379/0", 
-        env="CELERY_BROKER_URL",
         description="Celery broker URL"
     )
     celery_result_backend: str = Field(
         default="redis://localhost:6379/0", 
-        env="CELERY_RESULT_BACKEND",
         description="Celery result backend URL"
     )
 
     # Claude Configuration
-    claude_cli_path: str = Field(default="claude", env="CLAUDE_CLI_PATH")
+    claude_cli_path: str = Field(default="claude")
     claude_api_keys: str = Field(
         default="", 
-        env="CLAUDE_API_KEYS",
         description="Comma-separated list of Claude API keys"
     )
-    claude_quota_limit_per_agent: int = Field(
-        default=1000, env="CLAUDE_QUOTA_LIMIT_PER_AGENT"
-    )
-    claude_quota_reset_hours: int = Field(default=24, env="CLAUDE_QUOTA_RESET_HOURS")
+    claude_quota_limit_per_agent: int = Field(default=1000)
+    claude_quota_reset_hours: int = Field(default=24)
 
     # Notifications
-    slack_bot_token: str = Field(default="", env="SLACK_BOT_TOKEN")
-    slack_channel: str = Field(default="#alerts", env="SLACK_CHANNEL")
-    email_smtp_host: str = Field(default="", env="EMAIL_SMTP_HOST")
-    email_smtp_port: int = Field(default=587, env="EMAIL_SMTP_PORT")
-    email_username: str = Field(default="", env="EMAIL_USERNAME")
-    email_password: str = Field(default="", env="EMAIL_PASSWORD")
-    email_from: str = Field(default="", env="EMAIL_FROM")
-    email_to: str = Field(default="", env="EMAIL_TO")
+    slack_bot_token: str = Field(default="")
+    slack_channel: str = Field(default="#alerts")
+    email_smtp_host: str = Field(default="")
+    email_smtp_port: int = Field(default=587)
+    email_username: str = Field(default="")
+    email_password: str = Field(default="")
+    email_from: str = Field(default="")
+    email_to: str = Field(default="")
 
     # Application
-    app_host: str = Field(default="0.0.0.0", env="APP_HOST")
-    app_port: int = Field(default=8000, env="APP_PORT")
-    app_debug: bool = Field(default=False, env="APP_DEBUG")
-    log_level: str = Field(default="INFO", env="LOG_LEVEL")
+    app_host: str = Field(default="0.0.0.0")
+    app_port: int = Field(default=8000)
+    app_debug: bool = Field(default=False)
+    log_level: str = Field(default="INFO")
 
     # Task Configuration
-    batch_size: int = Field(default=10, env="BATCH_SIZE")
-    batch_interval_seconds: int = Field(default=60, env="BATCH_INTERVAL_SECONDS")
-    max_retries: int = Field(default=3, env="MAX_RETRIES")
+    batch_size: int = Field(default=10)
+    batch_interval_seconds: int = Field(default=60)
+    max_retries: int = Field(default=3)
     
     # Development Features
-    redis_required: bool = Field(default=True, env="REDIS_REQUIRED")
-    celery_required: bool = Field(default=True, env="CELERY_REQUIRED")
-    enable_mock_responses: bool = Field(default=False, env="ENABLE_MOCK_RESPONSES")
-    enable_debug_endpoints: bool = Field(default=False, env="ENABLE_DEBUG_ENDPOINTS")
-    skip_auth_for_development: bool = Field(default=False, env="SKIP_AUTH_FOR_DEVELOPMENT")
-
-    class Config:
-        env_file = ".env"
+    redis_required: bool = Field(default=True)
+    celery_required: bool = Field(default=True)
+    enable_mock_responses: bool = Field(default=False)
+    enable_debug_endpoints: bool = Field(default=False)
+    skip_auth_for_development: bool = Field(default=False)
 
     @property
     def claude_api_keys_list(self) -> List[str]:
