@@ -1,7 +1,15 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime
-from supervisor_agent.db.models import TaskType, TaskStatus
+from uuid import UUID
+from supervisor_agent.db.models import (
+    TaskType, 
+    TaskStatus, 
+    ChatThreadStatus, 
+    MessageRole, 
+    MessageType, 
+    NotificationType
+)
 
 
 class TaskCreate(BaseModel):
@@ -178,3 +186,93 @@ class UsageAnalyticsResponse(BaseModel):
     trends: Dict[str, List[Dict[str, Any]]]
     top_agents: List[Dict[str, Any]]
     cost_efficiency: Dict[str, Any]
+
+
+# Chat System Schemas
+class ChatThreadCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    initial_message: Optional[str] = None
+
+
+class ChatThreadUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = None
+    status: Optional[ChatThreadStatus] = None
+
+
+class ChatThreadResponse(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str]
+    status: ChatThreadStatus
+    created_at: datetime
+    updated_at: Optional[datetime]
+    user_id: Optional[str]
+    metadata: Dict[str, Any]
+    unread_count: Optional[int] = 0
+    last_message: Optional[str] = None
+    last_message_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ChatMessageCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+    message_type: MessageType = MessageType.TEXT
+    parent_message_id: Optional[UUID] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ChatMessageResponse(BaseModel):
+    id: UUID
+    thread_id: UUID
+    role: MessageRole
+    content: str
+    message_type: MessageType
+    metadata: Dict[str, Any]
+    created_at: datetime
+    edited_at: Optional[datetime]
+    parent_message_id: Optional[UUID]
+
+    model_config = {"from_attributes": True}
+
+
+class ChatMessagesListResponse(BaseModel):
+    messages: List[ChatMessageResponse]
+    has_more: bool
+    total_count: int
+
+
+class ChatNotificationCreate(BaseModel):
+    thread_id: UUID
+    type: NotificationType
+    title: str = Field(..., min_length=1, max_length=255)
+    message: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ChatNotificationResponse(BaseModel):
+    id: UUID
+    thread_id: UUID
+    type: NotificationType
+    title: str
+    message: Optional[str]
+    is_read: bool
+    created_at: datetime
+    metadata: Dict[str, Any]
+
+    model_config = {"from_attributes": True}
+
+
+class ChatThreadListResponse(BaseModel):
+    threads: List[ChatThreadResponse]
+    total_count: int
+
+
+class TaskCreateFromChat(BaseModel):
+    content: str
+    thread_id: UUID
+    message_id: Optional[UUID] = None
+    task_type: Optional[TaskType] = None
+    priority: Optional[int] = 5
