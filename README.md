@@ -1,6 +1,6 @@
 # Supervisor Coding Agent
 
-A production-grade MVP for orchestrating and managing Claude AI coding tasks with async queueing, quota management, and comprehensive monitoring.
+A production-grade MVP for orchestrating and managing Claude AI coding tasks with async queueing, quota management, and comprehensive monitoring. Now featuring complete automated CI/CD pipeline with SSH deployment fixes.
 
 ## Features
 
