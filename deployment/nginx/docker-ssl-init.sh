@@ -74,8 +74,8 @@ fi
 
 echo "✅ nginx started successfully"
 
-# Only proceed with Let's Encrypt if we have a real domain
-if [ "$DOMAIN_NAME" != "localhost" ] && [[ "$DOMAIN_NAME" != *.local ]] && [ -n "$LETSENCRYPT_EMAIL" ]; then
+# Only proceed with Let's Encrypt if we have a real domain (skip localhost, *.local, and *.example.com)
+if [ "$DOMAIN_NAME" != "localhost" ] && [[ "$DOMAIN_NAME" != *.local ]] && [[ "$DOMAIN_NAME" != *.example.com ]] && [ -n "$LETSENCRYPT_EMAIL" ]; then
     echo "🌐 Requesting Let's Encrypt certificate for $DOMAIN_NAME..."
     
     # Create the certificate
@@ -105,8 +105,8 @@ if [ "$DOMAIN_NAME" != "localhost" ] && [[ "$DOMAIN_NAME" != *.local ]] && [ -n 
     fi
 else
     echo "ℹ️  Skipping Let's Encrypt certificate request"
-    echo "ℹ️  Reason: localhost domain or missing email configuration"
-    echo "ℹ️  Using self-signed certificates for local development"
+    echo "ℹ️  Reason: localhost, *.local, or *.example.com domain detected"
+    echo "ℹ️  Using self-signed certificates for development/testing"
 fi
 
 # Clean up temporary files
@@ -119,8 +119,8 @@ echo "📋 Service Status:"
 docker compose -f "$COMPOSE_FILE" ps nginx certbot
 echo ""
 echo "📋 Next steps:"
-if [ "$DOMAIN_NAME" = "localhost" ]; then
-    echo "   • For production use, set DOMAIN_NAME and LETSENCRYPT_EMAIL environment variables"
+if [ "$DOMAIN_NAME" = "localhost" ] || [[ "$DOMAIN_NAME" == *.local ]] || [[ "$DOMAIN_NAME" == *.example.com ]]; then
+    echo "   • For production use, set DOMAIN_NAME to a real domain and LETSENCRYPT_EMAIL"
     echo "   • Update DNS to point to your server"
     echo "   • Re-run this script with production settings"
 else
