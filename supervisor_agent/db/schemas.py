@@ -209,7 +209,7 @@ class ChatThreadResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
     user_id: Optional[str]
-    metadata: Dict[str, Any]
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     unread_count: Optional[int] = 0
     last_message: Optional[str] = None
     last_message_at: Optional[datetime] = None
@@ -230,7 +230,7 @@ class ChatMessageResponse(BaseModel):
     role: MessageRole
     content: str
     message_type: MessageType
-    metadata: Dict[str, Any]
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     edited_at: Optional[datetime]
     parent_message_id: Optional[UUID]
@@ -260,7 +260,7 @@ class ChatNotificationResponse(BaseModel):
     message: Optional[str]
     is_read: bool
     created_at: datetime
-    metadata: Dict[str, Any]
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
     model_config = {"from_attributes": True}
 

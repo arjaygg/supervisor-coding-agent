@@ -13,9 +13,52 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import TypeDecorator, CHAR
 from enum import Enum
 import uuid
 from supervisor_agent.db.database import Base
+
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+    Uses PostgreSQL's UUID type, otherwise uses CHAR(32), storing as stringified hex values.
+    """
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(UUID())
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        elif dialect.name == 'postgresql':
+            return str(value)
+        else:
+            if not isinstance(value, uuid.UUID):
+                return str(value)
+            else:
+                return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        else:
+            if not isinstance(value, uuid.UUID):
+                return uuid.UUID(value)
+            return value
+
+    @staticmethod
+    def _uuid_value(value):
+        if value is None:
+            return value
+        else:
+            if not isinstance(value, uuid.UUID):
+                value = uuid.UUID(value)
+            return value
 
 
 class TaskType(str, Enum):
@@ -76,8 +119,8 @@ class Task(Base):
     assigned_agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
     retry_count = Column(Integer, default=0)
     error_message = Column(Text, nullable=True)
-    chat_thread_id = Column(UUID(as_uuid=True), ForeignKey("chat_threads.id"), nullable=True)
-    source_message_id = Column(UUID(as_uuid=True), ForeignKey("chat_messages.id"), nullable=True)
+    chat_thread_id = Column(GUID(), ForeignKey("chat_threads.id"), nullable=True)
+    source_message_id = Column(GUID(), ForeignKey("chat_messages.id"), nullable=True)
 
     # Relationships
     agent = relationship("Agent", back_populates="tasks")
@@ -174,7 +217,7 @@ class UsageMetrics(Base):
 class ChatThread(Base):
     __tablename__ = "chat_threads"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     status = Column(SQLEnum(ChatThreadStatus), default=ChatThreadStatus.ACTIVE)
@@ -198,15 +241,15 @@ class ChatThread(Base):
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    thread_id = Column(UUID(as_uuid=True), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    thread_id = Column(GUID(), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False)
     role = Column(SQLEnum(MessageRole), nullable=False)
     content = Column(Text, nullable=False)
     message_type = Column(SQLEnum(MessageType), default=MessageType.TEXT)
     message_metadata = Column("metadata", JSON, default=dict)  # for storing task refs, progress data, etc.
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     edited_at = Column(DateTime(timezone=True), nullable=True)
-    parent_message_id = Column(UUID(as_uuid=True), ForeignKey("chat_messages.id"), nullable=True)
+    parent_message_id = Column(GUID(), ForeignKey("chat_messages.id"), nullable=True)
 
     # Relationships
     thread = relationship("ChatThread", back_populates="messages")
@@ -223,8 +266,8 @@ class ChatMessage(Base):
 class ChatNotification(Base):
     __tablename__ = "chat_notifications"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    thread_id = Column(UUID(as_uuid=True), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    thread_id = Column(GUID(), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False)
     type = Column(SQLEnum(NotificationType), nullable=False)
     title = Column(String(255), nullable=False)
     message = Column(Text, nullable=True)
