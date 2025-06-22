@@ -103,6 +103,17 @@ class WebSocketManager:
             f"Sent system notification: {notification.get('message', 'No message')}"
         )
 
+    async def send_chat_update(self, chat_data: Dict[str, Any]):
+        """Send a chat update to all connected clients."""
+        message = {
+            "type": "chat_update",
+            "data": chat_data,
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+        }
+
+        await self.broadcast(json.dumps(message))
+        logger.debug(f"Sent chat update: {chat_data.get('type', 'unknown')}")
+
 
 # Global WebSocket manager instance
 websocket_manager = WebSocketManager()
@@ -220,3 +231,8 @@ async def notify_system_event(
     }
 
     await websocket_manager.send_system_notification(notification)
+
+
+async def notify_chat_update(chat_data: Dict[str, Any]):
+    """Notify all WebSocket clients of a chat update."""
+    await websocket_manager.send_chat_update(chat_data)
