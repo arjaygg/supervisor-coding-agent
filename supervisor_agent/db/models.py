@@ -8,10 +8,13 @@ from sqlalchemy import (
     ForeignKey,
     Boolean,
     Enum as SQLEnum,
+    Index,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import UUID
 from enum import Enum
+import uuid
 from supervisor_agent.db.database import Base
 
 
@@ -33,6 +36,33 @@ class TaskStatus(str, Enum):
     RETRY = "RETRY"
 
 
+class ChatThreadStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+    COMPLETED = "COMPLETED"
+
+
+class MessageRole(str, Enum):
+    USER = "USER"
+    ASSISTANT = "ASSISTANT"
+    SYSTEM = "SYSTEM"
+
+
+class MessageType(str, Enum):
+    TEXT = "TEXT"
+    TASK_BREAKDOWN = "TASK_BREAKDOWN"
+    PROGRESS = "PROGRESS"
+    NOTIFICATION = "NOTIFICATION"
+    ERROR = "ERROR"
+
+
+class NotificationType(str, Enum):
+    TASK_COMPLETE = "TASK_COMPLETE"
+    TASK_FAILED = "TASK_FAILED"
+    AGENT_UPDATE = "AGENT_UPDATE"
+    SYSTEM_ALERT = "SYSTEM_ALERT"
+
+
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -46,10 +76,14 @@ class Task(Base):
     assigned_agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
     retry_count = Column(Integer, default=0)
     error_message = Column(Text, nullable=True)
+    chat_thread_id = Column(UUID(as_uuid=True), ForeignKey("chat_threads.id"), nullable=True)
+    source_message_id = Column(UUID(as_uuid=True), ForeignKey("chat_messages.id"), nullable=True)
 
     # Relationships
     agent = relationship("Agent", back_populates="tasks")
     sessions = relationship("TaskSession", back_populates="task")
+    chat_thread = relationship("ChatThread", back_populates="tasks")
+    source_message = relationship("ChatMessage", foreign_keys=[source_message_id])
 
 
 class TaskSession(Base):
@@ -135,6 +169,77 @@ class UsageMetrics(Base):
 
     # Composite index for efficient queries
     __table_args__ = {"extend_existing": True}
+
+
+class ChatThread(Base):
+    __tablename__ = "chat_threads"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(SQLEnum(ChatThreadStatus), default=ChatThreadStatus.ACTIVE)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    user_id = Column(String(255), nullable=True)  # for future multi-user support
+    metadata = Column(JSON, default=dict)
+
+    # Relationships
+    messages = relationship("ChatMessage", back_populates="thread", cascade="all, delete-orphan", order_by="ChatMessage.created_at")
+    tasks = relationship("Task", back_populates="chat_thread")
+    notifications = relationship("ChatNotification", back_populates="thread", cascade="all, delete-orphan")
+
+    # Indexes for performance
+    __table_args__ = (
+        Index('ix_chat_threads_status_updated', 'status', 'updated_at'),
+        Index('ix_chat_threads_user_status', 'user_id', 'status'),
+    )
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    thread_id = Column(UUID(as_uuid=True), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False)
+    role = Column(SQLEnum(MessageRole), nullable=False)
+    content = Column(Text, nullable=False)
+    message_type = Column(SQLEnum(MessageType), default=MessageType.TEXT)
+    metadata = Column(JSON, default=dict)  # for storing task refs, progress data, etc.
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    edited_at = Column(DateTime(timezone=True), nullable=True)
+    parent_message_id = Column(UUID(as_uuid=True), ForeignKey("chat_messages.id"), nullable=True)
+
+    # Relationships
+    thread = relationship("ChatThread", back_populates="messages")
+    parent_message = relationship("ChatMessage", remote_side=[id])
+    child_messages = relationship("ChatMessage", remote_side=[parent_message_id])
+
+    # Indexes for performance
+    __table_args__ = (
+        Index('ix_chat_messages_thread_created', 'thread_id', 'created_at'),
+        Index('ix_chat_messages_role_type', 'role', 'message_type'),
+    )
+
+
+class ChatNotification(Base):
+    __tablename__ = "chat_notifications"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    thread_id = Column(UUID(as_uuid=True), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False)
+    type = Column(SQLEnum(NotificationType), nullable=False)
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    metadata = Column(JSON, default=dict)
+
+    # Relationships
+    thread = relationship("ChatThread", back_populates="notifications")
+
+    # Indexes for performance
+    __table_args__ = (
+        Index('ix_chat_notifications_thread_unread', 'thread_id', 'is_read'),
+        Index('ix_chat_notifications_type_created', 'type', 'created_at'),
+    )
 
 
 # Import workflow models to ensure they're included in Base metadata
