@@ -422,19 +422,100 @@ jobs:
           
           echo "VM IP: $VM_IP"
           
-          # Deploy via SSH
+          # Set up SSH configuration for non-interactive deployment
+          echo "Setting up SSH configuration..."
+          mkdir -p ~/.ssh
+          echo "Host compute.*" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "  UserKnownHostsFile /dev/null" >> ~/.ssh/config
+          echo "  LogLevel ERROR" >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+          
+          # Pre-generate SSH keys non-interactively
+          echo "Pre-generating SSH keys..."
+          gcloud config set compute/region asia-southeast1
+          gcloud config set compute/zone ${{ secrets.GCP_ZONE }}
+          
+          # Generate SSH key pair if it doesn't exist
+          if [ ! -f ~/.ssh/google_compute_engine ]; then
+            ssh-keygen -t rsa -f ~/.ssh/google_compute_engine -N '' -q
+            echo "SSH key generated"
+          fi
+          
+          # Add SSH key to project metadata (non-interactive)
+          echo "Adding SSH key to project metadata..."
+          EXISTING_KEYS=$(gcloud compute project-info describe --format="value(commonInstanceMetadata.items.ssh-keys)" --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "")
+          NEW_KEY="runner:$(cat ~/.ssh/google_compute_engine.pub)"
+          
+          # Only add key if it doesn't already exist
+          if [[ "$EXISTING_KEYS" != *"$NEW_KEY"* ]]; then
+            if [[ -n "$EXISTING_KEYS" ]]; then
+              ALL_KEYS="$EXISTING_KEYS\n$NEW_KEY"
+            else
+              ALL_KEYS="$NEW_KEY"
+            fi
+            echo -e "$ALL_KEYS" > /tmp/ssh-keys
+            gcloud compute project-info add-metadata \
+              --metadata-from-file ssh-keys=/tmp/ssh-keys \
+              --project=${{ secrets.GCP_PROJECT_ID }}
+            echo "SSH key added to project metadata"
+          else
+            echo "SSH key already exists in project metadata"
+          fi
+          
+          # Wait for SSH key propagation
+          echo "Waiting for SSH key propagation..."
+          sleep 30
+          
+          # Test SSH connection first
+          echo "Testing SSH connection..."
+          max_retries=3
+          retry_count=0
+          
+          while [ $retry_count -lt $max_retries ]; do
+            if gcloud compute ssh "$VM_NAME" \
+              --zone=${{ secrets.GCP_ZONE }} \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --ssh-flag="-o StrictHostKeyChecking=no" \
+              --ssh-flag="-o UserKnownHostsFile=/dev/null" \
+              --ssh-flag="-o LogLevel=ERROR" \
+              --ssh-flag="-o ConnectTimeout=10" \
+              --command "echo 'SSH connection test successful'" > /dev/null 2>&1; then
+              echo "✅ SSH connection established"
+              break
+            else
+              retry_count=$((retry_count + 1))
+              echo "⚠️ SSH connection attempt $retry_count failed, retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+          
+          if [ $retry_count -eq $max_retries ]; then
+            echo "❌ SSH connection failed after $max_retries attempts"
+            exit 1
+          fi
+          
+          # Deploy via SSH with non-interactive options
           echo "Deploying application..."
           gcloud compute ssh "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
+            --ssh-flag="-o StrictHostKeyChecking=no" \
+            --ssh-flag="-o UserKnownHostsFile=/dev/null" \
+            --ssh-flag="-o LogLevel=ERROR" \
+            --ssh-flag="-o ConnectTimeout=30" \
             --command "
+              set -e
+              echo 'Starting deployment on VM...'
               sudo chown -R \$USER:\$USER /opt/dev-assist && \
               sudo usermod -aG docker \$USER && \
               cd /opt/dev-assist && \
               git config --global --add safe.directory /opt/dev-assist && \
+              echo 'Fetching latest code...' && \
               git fetch origin && \
               git checkout ${{ needs.check-promote-command.outputs.deploy_branch }} && \
               git pull origin ${{ needs.check-promote-command.outputs.deploy_branch }} && \
+              echo 'Setting up environment...' && \
               cp .env.sample .env && \
               export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
               export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }} && \
