@@ -21,7 +21,7 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   issues: write
   checks: write
@@ -642,6 +642,100 @@ jobs:
           echo "  - Slack #dev-deployments channel"
           echo "  - Email to development team"
           echo "  - GitHub status check"
+
+  # Auto-merge PR to main and cleanup on successful dev deployment
+  auto-merge-and-cleanup:
+    needs: [check-promote-command, validate-promotion, deploy-to-development, notify-success]
+    if: success() && needs.check-promote-command.outputs.pr_number != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-merge PR and cleanup branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = parseInt('${{ needs.check-promote-command.outputs.pr_number }}');
+            const deploy_branch = '${{ needs.check-promote-command.outputs.deploy_branch }}';
+            
+            try {
+              // Get PR details
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr_number
+              });
+              
+              // Only proceed if PR is still open and not already merged
+              if (pr.state === 'open' && !pr.merged) {
+                // Merge the PR
+                console.log(`Merging PR #${pr_number} to main...`);
+                const mergeResult = await github.rest.pulls.merge({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr_number,
+                  commit_title: `🚀 Auto-merge: ${pr.title}`,
+                  commit_message: `Auto-merged after successful development deployment.\n\n🎯 Deployment: dev.dev-assist.example.com\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>`,
+                  merge_method: 'squash'
+                });
+                
+                if (mergeResult.data.merged) {
+                  console.log(`✅ PR #${pr_number} successfully merged to main`);
+                  
+                  // Delete the feature branch if it's not main/master
+                  if (deploy_branch !== 'main' && deploy_branch !== 'master' && pr.head.repo.full_name === context.repo.full_name) {
+                    try {
+                      await github.rest.git.deleteRef({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        ref: `heads/${deploy_branch}`
+                      });
+                      console.log(`✅ Deleted branch: ${deploy_branch}`);
+                    } catch (error) {
+                      console.log(`⚠️ Could not delete branch ${deploy_branch}: ${error.message}`);
+                    }
+                  }
+                  
+                  // Add success comment
+                  await github.rest.issues.createComment({
+                    issue_number: pr_number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: `🎉 **Auto-merge Completed!**\n\n✅ PR successfully merged to main after successful development deployment\n✅ Feature branch \`${deploy_branch}\` has been deleted\n✅ Development environment is live at https://dev.dev-assist.example.com\n\n*This merge was automatically triggered by successful development deployment.*`
+                  });
+                  
+                } else {
+                  console.log(`❌ Failed to merge PR #${pr_number}`);
+                  
+                  // Add failure comment
+                  await github.rest.issues.createComment({
+                    issue_number: pr_number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: `⚠️ **Auto-merge Failed**\n\nDevelopment deployment was successful, but auto-merge to main failed. Please merge manually.\n\n**Development Environment**: https://dev.dev-assist.example.com`
+                  });
+                }
+              } else if (pr.merged) {
+                console.log(`PR #${pr_number} is already merged`);
+              } else {
+                console.log(`PR #${pr_number} is ${pr.state}, skipping auto-merge`);
+              }
+              
+            } catch (error) {
+              console.error(`Error in auto-merge process: ${error.message}`);
+              
+              // Add error comment
+              await github.rest.issues.createComment({
+                issue_number: pr_number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `❌ **Auto-merge Error**\n\nDevelopment deployment was successful, but auto-merge encountered an error:\n\n\`${error.message}\`\n\nPlease merge manually. Development environment is live at https://dev.dev-assist.example.com`
+              });
+            }
 
   # Handle deployment failure
   notify-failure:
