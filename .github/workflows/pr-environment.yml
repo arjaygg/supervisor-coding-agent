@@ -1,10 +1,6 @@
-name: 🚀 PR Environment (Parallel Deployment)
+name: 🚀 PR Environment (Manual Deployment)
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  pull_request_review:
-    types: [submitted]
   issue_comment:
     types: [created]
   workflow_dispatch:
@@ -23,7 +19,9 @@ permissions:
 jobs:
   # Skip if this is a comment and not a deploy command
   check-command:
-    if: github.event_name != 'issue_comment' || contains(github.event.comment.body, '/deploy') || contains(github.event.comment.body, '/test')
+    if: |
+      github.event_name != 'issue_comment' || 
+      (contains(github.event.comment.body, '/deploy') && !contains(github.event.comment.body, '/deploy-to-dev'))
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.check.outputs.should_deploy }}
@@ -34,7 +32,9 @@ jobs:
         id: check
         run: |
           if [[ "${{ github.event_name }}" == "issue_comment" ]]; then
-            if [[ "${{ github.event.comment.body }}" == *"/deploy"* ]] || [[ "${{ github.event.comment.body }}" == *"/test"* ]]; then
+            comment_body="${{ github.event.comment.body }}"
+            # Only deploy if comment contains '/deploy' but NOT '/deploy-to-dev'
+            if [[ "$comment_body" == *"/deploy"* && "$comment_body" != *"/deploy-to-dev"* ]]; then
               echo "should_deploy=true" >> $GITHUB_OUTPUT
               echo "pr_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
               echo "pr_ref=refs/pull/${{ github.event.issue.number }}/merge" >> $GITHUB_OUTPUT
@@ -487,7 +487,7 @@ jobs:
             - \`/cleanup\` - Manually cleanup environment
             
             ---
-            *Environment will auto-cleanup in 24 hours. Use \`/deploy-to-dev\` to promote to persistent development environment.*`;
+            *Environment will auto-cleanup in 24 hours. Comment \`/deploy-to-dev\` to promote to persistent development environment.*`;
             } else {
               comment_body = `❌ **Parallel Deployment Failed**
             
@@ -498,7 +498,9 @@ jobs:
             
             Please check the [workflow logs](${context.payload.repository.html_url}/actions/runs/${context.runId}) for details.
             
-            You can retry deployment by commenting \`/deploy\` on this PR.`;
+            **Available Commands:**
+            - \`/deploy\` - Retry PR environment deployment
+            - \`/deploy-to-dev\` - Deploy directly to development environment`;
             }
             
             github.rest.issues.createComment({
@@ -508,27 +510,6 @@ jobs:
               body: comment_body
             });
 
-  # Auto-trigger promotion to development on successful deployment
-  auto-promote-to-dev:
-    needs: [check-command, setup-environment, verify-deployment]
-    if: needs.verify-deployment.outputs.deployment-status == 'success' && needs.check-command.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Auto-trigger promotion to development
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const pr_number = ${{ needs.check-command.outputs.pr_number }};
-            
-            // Create comment to trigger promotion
-            await github.rest.issues.createComment({
-              issue_number: pr_number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '🚀 **Auto-promoting to development environment**\n\n/deploy-to-dev\n\n*This is an automatic promotion triggered by successful PR environment deployment.*'
-            });
-            
-            console.log(`Auto-promotion triggered for PR #${pr_number}`);
 
   # Cleanup job (runs when PR is closed)
   cleanup:
