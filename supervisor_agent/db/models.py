@@ -181,7 +181,7 @@ class ChatThread(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     user_id = Column(String(255), nullable=True)  # for future multi-user support
-    metadata = Column(JSON, default=dict)
+    thread_metadata = Column("metadata", JSON, default=dict)
 
     # Relationships
     messages = relationship("ChatMessage", back_populates="thread", cascade="all, delete-orphan", order_by="ChatMessage.created_at")
@@ -203,7 +203,7 @@ class ChatMessage(Base):
     role = Column(SQLEnum(MessageRole), nullable=False)
     content = Column(Text, nullable=False)
     message_type = Column(SQLEnum(MessageType), default=MessageType.TEXT)
-    metadata = Column(JSON, default=dict)  # for storing task refs, progress data, etc.
+    message_metadata = Column("metadata", JSON, default=dict)  # for storing task refs, progress data, etc.
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     edited_at = Column(DateTime(timezone=True), nullable=True)
     parent_message_id = Column(UUID(as_uuid=True), ForeignKey("chat_messages.id"), nullable=True)
@@ -230,7 +230,7 @@ class ChatNotification(Base):
     message = Column(Text, nullable=True)
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    metadata = Column(JSON, default=dict)
+    notification_metadata = Column("metadata", JSON, default=dict)
 
     # Relationships
     thread = relationship("ChatThread", back_populates="notifications")

@@ -371,7 +371,7 @@ class ChatThreadCRUD:
             title=thread.title,
             description=thread.description,
             user_id=user_id,
-            metadata={}
+            thread_metadata={}
         )
         db.add(db_thread)
         db.flush()  # Flush to get the ID
@@ -383,7 +383,7 @@ class ChatThreadCRUD:
                 role=models.MessageRole.USER,
                 content=thread.initial_message,
                 message_type=models.MessageType.TEXT,
-                metadata={}
+                message_metadata={}
             )
             db.add(initial_msg)
 
@@ -484,7 +484,7 @@ class ChatThreadCRUD:
                 "created_at": thread.created_at,
                 "updated_at": thread.updated_at,
                 "user_id": thread.user_id,
-                "metadata": thread.metadata,
+                "metadata": thread.thread_metadata,
                 "message_count": message_count or 0,
                 "unread_count": unread_count or 0,
                 "last_message_at": last_message_at
@@ -505,7 +505,7 @@ class ChatMessageCRUD:
             content=message.content,
             message_type=message.message_type,
             parent_message_id=message.parent_message_id,
-            metadata=message.metadata or {}
+            message_metadata=message.metadata or {}
         )
         db.add(db_message)
         
@@ -581,7 +581,7 @@ class ChatNotificationCRUD:
             type=notification.type,
             title=notification.title,
             message=notification.message,
-            metadata=notification.metadata or {}
+            notification_metadata=notification.metadata or {}
         )
         db.add(db_notification)
         db.commit()
