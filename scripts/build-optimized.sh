@@ -71,4 +71,96 @@ build_frontend() {
         --build-arg VITE_API_URL=${VITE_API_URL:-http://localhost:8000} \
         --build-arg VITE_WS_URL=${VITE_WS_URL:-ws://localhost:8000} \
         $([ "$PUSH" = "true" ] && echo "--push" || echo "--load") \
-        .\n    \n    log_success \"✅ Frontend build completed\"\n}\n\n# Build both in parallel\nbuild_parallel() {\n    log_info \"⚡ Building backend and frontend in parallel...\"\n    \n    build_backend &\n    backend_pid=$!\n    \n    build_frontend &\n    frontend_pid=$!\n    \n    # Wait for both builds to complete\n    wait $backend_pid\n    backend_result=$?\n    \n    wait $frontend_pid\n    frontend_result=$?\n    \n    if [ $backend_result -eq 0 ] && [ $frontend_result -eq 0 ]; then\n        log_success \"🎉 Parallel build completed successfully!\"\n        return 0\n    else\n        log_error \"❌ One or more builds failed\"\n        return 1\n    fi\n}\n\n# Analyze build cache efficiency\nanalyze_cache() {\n    log_info \"📊 Analyzing build cache efficiency...\"\n    \n    # Check cache usage\n    docker system df\n    \n    # Show build cache\n    docker buildx du\n    \n    log_info \"💡 Cache optimization tips:\"\n    echo \"  - Layer cache hit rate should be >80% for incremental builds\"\n    echo \"  - Use 'docker buildx prune' to clean old cache periodically\"\n    echo \"  - GitHub Actions cache is shared across CI runs\"\n}\n\n# Setup buildx if not exists\nsetup_buildx() {\n    if ! docker buildx inspect optimized-builder >/dev/null 2>&1; then\n        log_info \"🛠️ Setting up optimized buildx builder...\"\n        docker buildx create --name optimized-builder --driver docker-container --use\n        docker buildx inspect optimized-builder --bootstrap\n    else\n        docker buildx use optimized-builder\n    fi\n}\n\n# Main execution\ncase $TARGET in\n    \"backend\")\n        setup_buildx\n        build_backend\n        ;;\n    \"frontend\")\n        setup_buildx\n        build_frontend\n        ;;\n    \"parallel\"|\"all\")\n        setup_buildx\n        build_parallel\n        ;;\n    \"analyze\")\n        analyze_cache\n        ;;\n    *)\n        echo \"Usage: $0 [backend|frontend|parallel|all|analyze]\"\n        echo \"\"\n        echo \"Environment Variables:\"\n        echo \"  PLATFORM=linux/amd64     - Target platform\"\n        echo \"  PUSH=false               - Push to registry\"\n        echo \"  VITE_API_URL=...         - Frontend API URL\"\n        echo \"  VITE_WS_URL=...          - Frontend WebSocket URL\"\n        echo \"\"\n        echo \"Examples:\"\n        echo \"  $0 parallel              - Build both services in parallel\"\n        echo \"  PUSH=true $0 all         - Build and push to registry\"\n        echo \"  $0 analyze               - Analyze build cache efficiency\"\n        exit 1\n        ;;\nesac\n\nlog_success \"🎯 Build optimization completed!\""
+        .
+    
+    log_success "✅ Frontend build completed"
+}
+
+# Build both in parallel
+build_parallel() {
+    log_info "⚡ Building backend and frontend in parallel..."
+    
+    build_backend &
+    backend_pid=$!
+    
+    build_frontend &
+    frontend_pid=$!
+    
+    # Wait for both builds to complete
+    wait $backend_pid
+    backend_result=$?
+    
+    wait $frontend_pid
+    frontend_result=$?
+    
+    if [ $backend_result -eq 0 ] && [ $frontend_result -eq 0 ]; then
+        log_success "🎉 Parallel build completed successfully!"
+        return 0
+    else
+        log_error "❌ One or more builds failed"
+        return 1
+    fi
+}
+
+# Analyze build cache efficiency
+analyze_cache() {
+    log_info "📊 Analyzing build cache efficiency..."
+    
+    # Check cache usage
+    docker system df
+    
+    # Show build cache
+    docker buildx du
+    
+    log_info "💡 Cache optimization tips:"
+    echo "  - Layer cache hit rate should be >80% for incremental builds"
+    echo "  - Use 'docker buildx prune' to clean old cache periodically"
+    echo "  - GitHub Actions cache is shared across CI runs"
+}
+
+# Setup buildx if not exists
+setup_buildx() {
+    if ! docker buildx inspect optimized-builder >/dev/null 2>&1; then
+        log_info "🛠️ Setting up optimized buildx builder..."
+        docker buildx create --name optimized-builder --driver docker-container --use
+        docker buildx inspect optimized-builder --bootstrap
+    else
+        docker buildx use optimized-builder
+    fi
+}
+
+# Main execution
+case $TARGET in
+    "backend")
+        setup_buildx
+        build_backend
+        ;;
+    "frontend")
+        setup_buildx
+        build_frontend
+        ;;
+    "parallel"|"all")
+        setup_buildx
+        build_parallel
+        ;;
+    "analyze")
+        analyze_cache
+        ;;
+    *)
+        echo "Usage: $0 [backend|frontend|parallel|all|analyze]"
+        echo ""
+        echo "Environment Variables:"
+        echo "  PLATFORM=linux/amd64     - Target platform"
+        echo "  PUSH=false               - Push to registry"
+        echo "  VITE_API_URL=...         - Frontend API URL"
+        echo "  VITE_WS_URL=...          - Frontend WebSocket URL"
+        echo ""
+        echo "Examples:"
+        echo "  $0 parallel              - Build both services in parallel"
+        echo "  PUSH=true $0 all         - Build and push to registry"
+        echo "  $0 analyze               - Analyze build cache efficiency"
+        exit 1
+        ;;
+esac
+
+log_success "🎯 Build optimization completed!""

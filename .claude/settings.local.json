@@ -132,7 +132,11 @@
       "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db alembic -c supervisor_agent/db/alembic.ini downgrade 001_analytics)",
       "Bash(python:*)",
       "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db python scripts/setup_database.py)",
-      "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db python:*)"
+      "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db python:*)",
+      "Bash(./scripts/quick-deploy.sh:*)",
+      "Bash(./scripts/build-optimized.sh:*)",
+      "Bash(time docker buildx build:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": []
   },

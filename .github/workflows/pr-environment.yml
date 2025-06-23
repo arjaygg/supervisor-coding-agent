@@ -457,7 +457,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const pr_number = ${{ needs.check-command.outputs.pr_number }};
+            const pr_number = '${{ needs.check-command.outputs.pr_number }}';
             const deploy_success = '${{ needs.verify-deployment.outputs.deployment-status }}' === 'success';
             const api_port = '${{ needs.setup-environment.outputs.api_port }}';
             const frontend_port = '${{ needs.setup-environment.outputs.frontend_port }}';
