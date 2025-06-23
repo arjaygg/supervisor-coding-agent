@@ -140,7 +140,8 @@
       "Bash(gcloud run services list:*)",
       "Bash(gcloud artifacts repositories list:*)",
       "Bash(gcloud iam service-accounts:*)",
-      "Bash(gcloud secrets list:*)"
+      "Bash(gcloud secrets list:*)",
+      "Bash(gcloud projects get-iam-policy:*)"
     ],
     "deny": []
   },

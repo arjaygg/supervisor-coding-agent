@@ -26,6 +26,12 @@ The Cloud Run environment has been successfully set up with all required compone
 - ✅ development-github-token (placeholder)
 - ✅ development-letsencrypt-email
 
+### GitHub Actions Permissions
+- ✅ Cloud Run Developer role
+- ✅ Cloud Run Service Agent role  
+- ✅ Service Account User role
+- ✅ Cloud Build Service Account role
+
 ## 🚀 Ready for Deployment
 
 Test deployment command: `/deploy-cloud-run development`
@@ -34,3 +40,6 @@ Expected performance:
 - 💰 60-80% cost reduction vs VM
 - ⚡ 2-3 minute deployments
 - 📦 Auto-scaling 0-1000+ instances
+
+## ✅ DEPLOYMENT READY
+All setup complete - GitHub Actions can now deploy to Cloud Run!
