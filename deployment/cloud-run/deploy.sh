@@ -62,12 +62,17 @@ else
     echo "ℹ️  Frontend service account already exists"
 fi
 
-# Grant Secret Manager access to API service account
-echo "🔐 Granting Secret Manager permissions..."
-gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
-    --member="serviceAccount:dev-assist-api@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
-    --role="roles/secretmanager.secretAccessor" \
-    --quiet
+# Grant Secret Manager access to API service account (skip if running in CI/CD)
+if [ "${CI:-false}" = "true" ] || [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
+    echo "🔐 Skipping IAM permission granting in CI/CD environment..."
+    echo "ℹ️  Permissions should be pre-configured via setup script"
+else
+    echo "🔐 Granting Secret Manager permissions..."
+    gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
+        --member="serviceAccount:dev-assist-api@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+        --role="roles/secretmanager.secretAccessor" \
+        --quiet
+fi
 
 # Update service YAML files with project ID
 echo "📝 Updating service configurations..."
