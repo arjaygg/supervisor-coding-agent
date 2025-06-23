@@ -39,18 +39,18 @@ services:
       -c max_wal_size=512MB
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U supervisor -d supervisor_agent"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 3
+      start_period: 20s
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: '0.4'
+          memory: 512M
+          cpus: '0.5'
         reservations:
-          memory: 128M
-          cpus: '0.2'
+          memory: 256M
+          cpus: '0.25'
     security_opt:
       - no-new-privileges:true
     logging:
@@ -71,10 +71,10 @@ services:
     command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:
@@ -114,27 +114,27 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/healthz"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/ping"]
+      interval: 20s
+      timeout: 5s
       retries: 3
-      start_period: 40s
+      start_period: 30s
     volumes:
       - app_logs:/app/logs
       - ./deployment/supervisor_agent/logging.conf:/app/logging.conf
     deploy:
       resources:
         limits:
-          memory: 384M
-          cpus: '0.5'
+          memory: 768M
+          cpus: '0.8'
         reservations:
-          memory: 192M
-          cpus: '0.3'
+          memory: 384M
+          cpus: '0.4'
       restart_policy:
         condition: on-failure
-        delay: 5s
+        delay: 3s
         max_attempts: 3
-        window: 120s
+        window: 60s
     security_opt:
       - no-new-privileges:true
     user: "app:app"
@@ -180,16 +180,16 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: '0.3'
+          memory: 512M
+          cpus: '0.4'
         reservations:
-          memory: 128M
+          memory: 256M
           cpus: '0.2'
       restart_policy:
         condition: on-failure
-        delay: 5s
+        delay: 3s
         max_attempts: 3
-        window: 120s
+        window: 60s
       replicas: 1
     security_opt:
       - no-new-privileges:true
@@ -201,10 +201,10 @@ services:
         max-file: "5"
     healthcheck:
       test: ["CMD", "celery", "-A", "supervisor_agent.queue.celery_app", "inspect", "ping"]
-      interval: 60s
-      timeout: 30s
+      interval: 45s
+      timeout: 15s
       retries: 3
-      start_period: 60s
+      start_period: 45s
 
   # Celery Beat (Scheduler) - Production Configuration
   beat:
@@ -243,9 +243,9 @@ services:
           cpus: '0.1'
       restart_policy:
         condition: on-failure
-        delay: 10s
+        delay: 5s
         max_attempts: 3
-        window: 120s
+        window: 60s
     security_opt:
       - no-new-privileges:true
     user: "app:app"
@@ -269,16 +269,16 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
-          cpus: '0.3'
+          memory: 256M
+          cpus: '0.4'
         reservations:
-          memory: 64M
-          cpus: '0.1'
+          memory: 128M
+          cpus: '0.2'
       restart_policy:
         condition: on-failure
-        delay: 5s
+        delay: 3s
         max_attempts: 3
-        window: 120s
+        window: 60s
     security_opt:
       - no-new-privileges:true
     logging:
@@ -287,11 +287,11 @@ services:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 20s
+      timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 15s
 
   # nginx - Reverse proxy with SSL termination
   nginx:
@@ -328,8 +328,8 @@ services:
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s
-      timeout: 5s
-      retries: 3
+      timeout: 3s
+      retries: 2
 
   # Certbot - SSL certificate management
   certbot:

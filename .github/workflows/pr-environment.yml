@@ -1,4 +1,4 @@
-name: 🚀 PR Environment (Manual Deployment)
+name: 🚫 PR Environment (DISABLED - Use /deploy-to-dev instead)
 
 on:
   issue_comment:
@@ -17,11 +17,9 @@ permissions:
   checks: write
 
 jobs:
-  # Skip if this is a comment and not a deploy command
+  # DISABLED: Use /deploy-to-dev instead of /deploy-to-preview
   check-command:
-    if: |
-      github.event_name != 'issue_comment' || 
-      (contains(github.event.comment.body, '/deploy-to-preview') && !contains(github.event.comment.body, '/deploy-to-dev'))
+    if: false  # Workflow disabled - use promote-to-dev.yml instead
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.check.outputs.should_deploy }}
@@ -67,7 +65,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver-opts: network=host
+          driver-opts: |
+            network=host
+            image=moby/buildkit:v0.12.0
 
       - name: Build API image
         id: build
@@ -78,8 +78,11 @@ jobs:
           push: false
           load: true
           tags: dev-assist-api:pr-${{ needs.check-command.outputs.pr_number }}
-          cache-from: type=gha,scope=api
-          cache-to: type=gha,mode=max,scope=api
+          cache-from: |
+            type=gha,scope=api-pr
+            type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api-pr
+          platforms: linux/amd64
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
@@ -117,21 +120,27 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver-opts: network=host
+          driver-opts: |
+            network=host
+            image=moby/buildkit:v0.12.0
 
       - name: Build Frontend image
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
-          file: ./frontend/Dockerfile.dev
+          context: .
+          file: ./frontend/Dockerfile.prod
           push: false
           load: true
           tags: dev-assist-frontend:pr-${{ needs.check-command.outputs.pr_number }}
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
+          cache-from: |
+            type=gha,scope=frontend-pr
+            type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend-pr
+          platforms: linux/amd64
           build-args: |
             VITE_API_URL=http://localhost:${{ steps.ports.outputs.api_port }}
+            VITE_WS_URL=ws://localhost:${{ steps.ports.outputs.api_port }}
             BUILDKIT_INLINE_CACHE=1
 
       - name: Save Frontend image
@@ -483,8 +492,8 @@ jobs:
             - Frontend Service: ${{ needs.deploy-frontend.outputs.frontend-status }}
             
             **Available Commands:**
-            - \`/deploy-to-dev\` - Promote to development environment
-            - \`/cleanup\` - Manually cleanup environment
+            - \`/deploy-to-dev\` - Deploy to persistent development environment
+            - This workflow is deprecated - use /deploy-to-dev instead
             
             ---
             *Environment will auto-cleanup in 24 hours. Comment \`/deploy-to-dev\` to promote to persistent development environment.*`;

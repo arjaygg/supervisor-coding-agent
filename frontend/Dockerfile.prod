@@ -1,14 +1,15 @@
-# Multi-stage build for production frontend
+# syntax=docker/dockerfile:1
+
+# ==============================================================================
+# Build Stage: Install dependencies and build application
+# ==============================================================================
 FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files  
-COPY frontend/package*.json ./
-
-# Install all dependencies (including dev dependencies needed for build)
-RUN npm ci && npm cache clean --force
+# Install build dependencies
+RUN apk add --no-cache libc6-compat
 
 # Build arguments (must be before COPY to use in build)
 ARG NODE_ENV=production
@@ -19,38 +20,126 @@ ARG VITE_WS_URL=ws://localhost:8000
 ENV NODE_ENV=$NODE_ENV
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copy package files first for better caching
+COPY frontend/package*.json ./
+
+# Install dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production --silent && \
+    npm cache clean --force
 
 # Copy source code
 COPY frontend/ .
 
-# Build the application
+# Build the application with optimizations
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
+# ==============================================================================
+# Runtime Stage: Serve with minimal footprint
+# ==============================================================================
+FROM nginx:alpine AS runtime
 
-# Install serve for serving static files
-RUN npm install -g serve
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Set working directory
-WORKDIR /app
+# Copy custom nginx configuration
+COPY --chown=nodejs:nodejs <<EOF /etc/nginx/nginx.conf
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+    use epoll;
+    multi_accept on;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    
+    # Logging
+    log_format main '\$remote_addr - \$remote_user [\$time_local] "\$request" '
+                    '\$status \$body_bytes_sent "\$http_referer" '
+                    '"\$http_user_agent" "\$http_x_forwarded_for"';
+    access_log /var/log/nginx/access.log main;
+    
+    # Performance optimizations
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/json
+        application/javascript
+        application/xml+rss
+        application/atom+xml
+        image/svg+xml;
+    
+    server {
+        listen 3000;
+        server_name localhost;
+        
+        root /usr/share/nginx/html;
+        index index.html;
+        
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        
+        # Cache static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)\$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+            try_files \$uri =404;
+        }
+        
+        # Handle SPA routing
+        location / {
+            try_files \$uri \$uri/ /index.html;
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+        }
+        
+        # Health check endpoint
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+    }
+}
+EOF
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/build ./build
-
-# Switch to non-root user
-USER nodejs
+COPY --from=builder --chown=nodejs:nodejs /app/build /usr/share/nginx/html
 
 # Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
+# Improved health check with faster response
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
-# Start the application
-CMD ["serve", "-s", "build", "-l", "3000"]
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["nginx", "-g", "daemon off;"]

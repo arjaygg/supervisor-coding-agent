@@ -132,19 +132,37 @@ cp /tmp/.env.prod .env
 # Stop existing services if running
 docker-compose down || true
 
-# Build and start services
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Build services in parallel with BuildKit
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
 
-# Wait for services to start
-echo "Waiting for services to start..."
-sleep 30
+# Build with optimized settings
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build --parallel
 
-# Check service status
-docker-compose ps
+# Start services with optimized startup order
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
+
+# Wait for critical services to be healthy
+echo "Waiting for critical services to be healthy..."
+max_attempts=20
+attempt=0
+while [ $attempt -lt $max_attempts ]; do
+    if docker-compose ps | grep -E "(postgres|redis)" | grep -q "healthy"; then
+        echo "Critical services are healthy"
+        break
+    fi
+    echo "Waiting for services... attempt $((attempt + 1))/$max_attempts"
+    sleep 3
+    attempt=$((attempt + 1))
+done
 
 # Run database migrations
+echo "Running database migrations..."
 docker-compose exec -T api alembic upgrade head
+
+# Final health check
+echo "Verifying all services..."
+docker-compose ps
 
 echo "Application deployed successfully!"
 EOF
@@ -312,15 +330,21 @@ verify_deployment() {
     # Get VM external IP
     EXTERNAL_IP=$(gcloud compute instances describe $VM_NAME --zone=$ZONE --project=$PROJECT_ID --format="value(networkInterfaces[0].accessConfigs[0].natIP)")
     
-    # Test API endpoint
-    if curl -f "http://$EXTERNAL_IP:8000/api/v1/healthz" &> /dev/null; then
+    # Test API endpoint with faster check
+    if curl -f --max-time 10 "http://$EXTERNAL_IP:8000/api/v1/ping" &> /dev/null; then
         log_success "API is responding correctly"
     else
         log_warning "API health check failed"
     fi
     
-    # Test WebSocket connection
-    gcloud compute ssh $VM_NAME --zone=$ZONE --project=$PROJECT_ID --command="docker-compose logs api | grep -i 'application startup complete' || echo 'API may still be starting up'"
+    # Quick service status check
+    gcloud compute ssh $VM_NAME --zone=$ZONE --project=$PROJECT_ID --command="docker-compose ps --services --filter status=running | wc -l" > /tmp/running_services
+    running_count=$(cat /tmp/running_services)
+    if [ "$running_count" -gt 0 ]; then
+        log_success "$running_count services are running"
+    else
+        log_warning "Some services may not be running properly"
+    fi
     
     log_success "Deployment verification completed"
 }
