@@ -47,14 +47,24 @@ jobs:
           echo "Frontend version: ${{ steps.release.outputs['frontend--version'] }}"
           echo "Backend version: ${{ steps.release.outputs['supervisor_agent--version'] }}"
 
-  # Build and tag Docker images for releases
-  build-release-images:
+  # Parallel build jobs for faster CI/CD
+  build-api-image:
     needs: release-please
-    if: needs.release-please.outputs.releases-created
+    if: needs.release-please.outputs.backend-release-created
     runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tags: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            network=host
+            image=moby/buildkit:v0.12.0
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
@@ -62,63 +72,142 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api
+          tags: |
+            type=raw,value=latest
+            type=raw,value=v${{ needs.release-please.outputs.backend-version }}
+            type=raw,value=backend-v${{ needs.release-please.outputs.backend-version }}
+
+      - name: Build and push API image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=api
+            type=registry,ref=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest
+          cache-to: type=gha,mode=max,scope=api
+          platforms: linux/amd64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+  build-frontend-image:
+    needs: release-please
+    if: needs.release-please.outputs.frontend-release-created
+    runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            network=host
+            image=moby/buildkit:v0.12.0
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
 
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
 
-      - name: Build and tag API image
-        if: needs.release-please.outputs.backend-release-created
-        run: |
-          BACKEND_VERSION="${{ needs.release-please.outputs.backend-version }}"
-          echo "Building backend version: $BACKEND_VERSION"
-          
-          docker build -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
-            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:v$BACKEND_VERSION \
-            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:backend-v$BACKEND_VERSION .
-          
-          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest
-          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:v$BACKEND_VERSION
-          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:backend-v$BACKEND_VERSION
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend
+          tags: |
+            type=raw,value=latest
+            type=raw,value=v${{ needs.release-please.outputs.frontend-version }}
+            type=raw,value=frontend-v${{ needs.release-please.outputs.frontend-version }}
 
-      - name: Build and tag frontend image
-        if: needs.release-please.outputs.frontend-release-created
+      - name: Build and push Frontend image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./frontend/Dockerfile.prod
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=frontend
+            type=registry,ref=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest
+          cache-to: type=gha,mode=max,scope=frontend
+          platforms: linux/amd64
+          build-args: |
+            VITE_API_URL=https://dev.dev-assist.example.com/api
+            VITE_WS_URL=wss://dev.dev-assist.example.com/ws
+            BUILDKIT_INLINE_CACHE=1
+
+  # Collect build results
+  build-release-images:
+    needs: [release-please, build-api-image, build-frontend-image]
+    if: needs.release-please.outputs.releases-created
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect build results
         run: |
-          FRONTEND_VERSION="${{ needs.release-please.outputs.frontend-version }}"
-          echo "Building frontend version: $FRONTEND_VERSION"
-          
-          docker build -f frontend/Dockerfile.prod \
-            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
-            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:v$FRONTEND_VERSION \
-            -t ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:frontend-v$FRONTEND_VERSION \
-            --build-arg VITE_API_URL=https://dev.dev-assist.example.com/api \
-            --build-arg VITE_WS_URL=wss://dev.dev-assist.example.com/ws .
-          
-          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest
-          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:v$FRONTEND_VERSION
-          docker push ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:frontend-v$FRONTEND_VERSION
+          echo "🚀 Parallel build completed successfully!"
+          echo "📦 Images built:"
+          if [[ "${{ needs.release-please.outputs.backend-release-created }}" == "true" ]]; then
+            echo "  - API: ${{ needs.build-api-image.outputs.image-tags }}"
+            echo "  - Digest: ${{ needs.build-api-image.outputs.image-digest }}"
+          fi
+          if [[ "${{ needs.release-please.outputs.frontend-release-created }}" == "true" ]]; then
+            echo "  - Frontend: ${{ needs.build-frontend-image.outputs.image-tags }}"
+            echo "  - Digest: ${{ needs.build-frontend-image.outputs.image-digest }}"
+          fi
 
       - name: Create release summary
         if: needs.release-please.outputs.releases-created
         run: |
-          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Parallel Release Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "⚡ **Build Strategy**: Parallel execution for maximum speed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ needs.release-please.outputs.frontend-release-created }}" == "true" ]]; then
             echo "✅ **Frontend**: v${{ needs.release-please.outputs.frontend-version }}" >> $GITHUB_STEP_SUMMARY
             echo "📦 Docker: \`frontend:v${{ needs.release-please.outputs.frontend-version }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "🔗 Digest: \`${{ needs.build-frontend-image.outputs.image-digest }}\`" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ needs.release-please.outputs.backend-release-created }}" == "true" ]]; then
             echo "✅ **Backend**: v${{ needs.release-please.outputs.backend-version }}" >> $GITHUB_STEP_SUMMARY  
             echo "📦 Docker: \`api:v${{ needs.release-please.outputs.backend-version }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "🔗 Digest: \`${{ needs.build-api-image.outputs.image-digest }}\`" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🏷️ **Git Tags Created:**" >> $GITHUB_STEP_SUMMARY
           [[ "${{ needs.release-please.outputs.frontend-release-created }}" == "true" ]] && echo "- ${{ needs.release-please.outputs.frontend-tag-name }}" >> $GITHUB_STEP_SUMMARY
           [[ "${{ needs.release-please.outputs.backend-release-created }}" == "true" ]] && echo "- ${{ needs.release-please.outputs.backend-tag-name }}" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚡ **Performance Optimizations:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Multi-stage Docker builds with layer caching" >> $GITHUB_STEP_SUMMARY
+          echo "- Parallel API and Frontend builds" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Actions cache for dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "- BuildKit with advanced caching" >> $GITHUB_STEP_SUMMARY
 
   # Optional: Trigger deployment to staging environment for releases
   deploy-to-staging:

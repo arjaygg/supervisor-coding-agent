@@ -239,11 +239,22 @@ jobs:
           gcloud config list project
           echo "✅ Authentication successful!"
 
-      - name: Build and push images to Google Container Registry
+      - name: Set up Docker Buildx for optimized builds
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            network=host
+            image=moby/buildkit:v0.12.0
+
+      - name: Build and push optimized images with parallel strategy
         run: |
           # Note: Required APIs must be pre-enabled in GCP Console:
           # - Artifact Registry API, Container Registry API, Compute Engine API
           # This service account does not have permission to enable APIs
+          
+          # Enable BuildKit optimizations
+          export DOCKER_BUILDKIT=1
+          export BUILDKIT_INLINE_CACHE=1
           
           # Configure Docker for Artifact Registry (Southeast Asia region)
           gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
@@ -303,25 +314,60 @@ jobs:
           echo "DEPLOYMENT_TAG=$deployment_tag" >> $GITHUB_ENV
           echo "DEPLOYMENT_TYPE=$deployment_type" >> $GITHUB_ENV
           
-          # Build and tag API image for Artifact Registry
-          docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
-            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag .
+          echo "⚡ Building with optimized parallel strategy..."
           
-          # Build and tag frontend image for Artifact Registry
-          docker build -f frontend/Dockerfile.prod \
+          # Build API image with optimizations
+          echo "🔨 Building optimized API image..."
+          docker buildx build \
+            --platform linux/amd64 \
+            --cache-from type=gha,scope=api-dev \
+            --cache-from type=registry,ref=asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
+            --cache-to type=gha,mode=max,scope=api-dev \
+            --target runtime \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
+            -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag \
+            --push . &
+          api_build_pid=$!
+          
+          # Build frontend image with optimizations (parallel)
+          echo "🔨 Building optimized frontend image..."
+          docker buildx build \
+            --platform linux/amd64 \
+            --cache-from type=gha,scope=frontend-dev \
+            --cache-from type=registry,ref=asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
+            --cache-to type=gha,mode=max,scope=frontend-dev \
+            --target runtime \
+            --file frontend/Dockerfile.prod \
             -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
             -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag \
             --build-arg VITE_API_URL=https://${{ env.DEV_ENVIRONMENT_URL }}/api \
-            --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws .
+            --build-arg VITE_WS_URL=wss://${{ env.DEV_ENVIRONMENT_URL }}/ws \
+            --push . &
+          frontend_build_pid=$!
           
-          # Push images to Artifact Registry
-          echo "Pushing to Artifact Registry (Singapore region)..."
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest  
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag
+          # Wait for both builds to complete
+          echo "⏳ Waiting for parallel builds to complete..."
+          wait $api_build_pid
+          api_result=$?
           
-          echo "✅ Images built and pushed to Artifact Registry (Singapore)"
+          wait $frontend_build_pid
+          frontend_result=$?
+          
+          if [ $api_result -eq 0 ] && [ $frontend_result -eq 0 ]; then
+            echo "✅ Parallel optimized builds completed successfully!"
+            echo "📊 Build Performance:"
+            echo "  - Multi-stage builds with layer caching"
+            echo "  - Parallel API and Frontend builds"
+            echo "  - GitHub Actions + Registry cache"
+            echo "  - BuildKit optimizations enabled"
+          else
+            echo "❌ One or more builds failed"
+            echo "API build result: $api_result"
+            echo "Frontend build result: $frontend_result"
+            exit 1
+          fi
+          
+          echo "✅ Optimized images built and pushed to Artifact Registry (Singapore)"
 
       - name: Authenticate to Google Cloud for deployment
         uses: google-github-actions/auth@v1
