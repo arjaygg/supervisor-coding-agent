@@ -12,12 +12,11 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat
 
 # Build arguments (must be before COPY to use in build)
-ARG NODE_ENV=production
 ARG VITE_API_URL=http://localhost:8000
 ARG VITE_WS_URL=ws://localhost:8000
 
-# Set environment variables for build
-ENV NODE_ENV=$NODE_ENV
+# Set environment variables for build (NOT NODE_ENV=production during build)
+ENV NODE_ENV=development
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -25,16 +24,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Copy package files first for better caching
 COPY frontend/package*.json ./
 
-# Install dependencies with cache mount
+# Install all dependencies (including devDependencies for build tools)
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production --silent && \
+    npm ci --silent && \
     npm cache clean --force
 
 # Copy source code
 COPY frontend/ .
 
 # Build the application with optimizations
-RUN npm run build
+RUN npx vite build
 
 # ==============================================================================
 # Runtime Stage: Serve with minimal footprint
