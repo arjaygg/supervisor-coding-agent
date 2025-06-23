@@ -120,8 +120,21 @@
       "Bash(docker:*)",
       "Bash(cp:*)",
       "Bash(alembic revision:*)",
-      "Bash(venv/bin/python:*)"
+      "Bash(venv/bin/python:*)",
+      "Bash(git for-each-ref:*)",
+      "Bash(alembic:*)",
+      "Bash(git restore:*)",
+      "Bash(PYTHONPATH=/home/devag/git/dev-assist alembic -c db/alembic.ini upgrade head)",
+      "Bash(DATABASE_URL=\"sqlite:///./supervisor_agent.db\" python -m supervisor_agent.api.main)",
+      "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db alembic -c supervisor_agent/db/alembic.ini upgrade head)",
+      "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db alembic -c supervisor_agent/db/alembic.ini current)",
+      "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db alembic -c supervisor_agent/db/alembic.ini stamp 001_analytics)",
+      "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db alembic -c supervisor_agent/db/alembic.ini downgrade 001_analytics)",
+      "Bash(python:*)",
+      "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db python scripts/setup_database.py)",
+      "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db python:*)"
     ],
     "deny": []
-  }
+  },
+  "auto_approve": true
 }

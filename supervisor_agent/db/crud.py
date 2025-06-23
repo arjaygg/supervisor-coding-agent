@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, desc
+from sqlalchemy import and_, desc, func, or_
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 from supervisor_agent.db import models, schemas
 
 
@@ -359,3 +360,280 @@ class UsageMetricsCRUD:
             db.commit()
             db.refresh(new_metric)
             return new_metric
+
+
+class ChatThreadCRUD:
+    @staticmethod
+    def create_thread(
+        db: Session, thread: schemas.ChatThreadCreate, user_id: Optional[str] = None
+    ) -> models.ChatThread:
+        db_thread = models.ChatThread(
+            title=thread.title,
+            description=thread.description,
+            user_id=user_id,
+            thread_metadata={}
+        )
+        db.add(db_thread)
+        db.flush()  # Flush to get the ID
+
+        # Add initial message if provided
+        if thread.initial_message:
+            initial_msg = models.ChatMessage(
+                thread_id=db_thread.id,
+                role=models.MessageRole.USER,
+                content=thread.initial_message,
+                message_type=models.MessageType.TEXT,
+                message_metadata={}
+            )
+            db.add(initial_msg)
+
+        db.commit()
+        db.refresh(db_thread)
+        return db_thread
+
+    @staticmethod
+    def get_thread(db: Session, thread_id: UUID) -> Optional[models.ChatThread]:
+        return db.query(models.ChatThread).filter(models.ChatThread.id == thread_id).first()
+
+    @staticmethod
+    def get_threads(
+        db: Session,
+        skip: int = 0,
+        limit: int = 20,
+        status: Optional[models.ChatThreadStatus] = None,
+        user_id: Optional[str] = None
+    ) -> List[models.ChatThread]:
+        query = db.query(models.ChatThread)
+        
+        if status:
+            query = query.filter(models.ChatThread.status == status)
+        if user_id:
+            query = query.filter(models.ChatThread.user_id == user_id)
+            
+        return (
+            query.order_by(desc(models.ChatThread.updated_at))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def update_thread(
+        db: Session, thread_id: UUID, thread_update: schemas.ChatThreadUpdate
+    ) -> Optional[models.ChatThread]:
+        db_thread = db.query(models.ChatThread).filter(models.ChatThread.id == thread_id).first()
+        if db_thread:
+            update_data = thread_update.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(db_thread, field, value)
+            db_thread.updated_at = datetime.now(timezone.utc)
+            db.commit()
+            db.refresh(db_thread)
+        return db_thread
+
+    @staticmethod
+    def delete_thread(db: Session, thread_id: UUID) -> bool:
+        db_thread = db.query(models.ChatThread).filter(models.ChatThread.id == thread_id).first()
+        if db_thread:
+            db.delete(db_thread)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    def get_threads_with_stats(
+        db: Session,
+        skip: int = 0,
+        limit: int = 20,
+        status: Optional[models.ChatThreadStatus] = None,
+        user_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get threads with message count and unread notifications"""
+        query = db.query(
+            models.ChatThread,
+            func.count(models.ChatMessage.id).label('message_count'),
+            func.count(models.ChatNotification.id.distinct()).filter(
+                models.ChatNotification.is_read == False
+            ).label('unread_count'),
+            func.max(models.ChatMessage.created_at).label('last_message_at')
+        ).outerjoin(
+            models.ChatMessage, models.ChatThread.id == models.ChatMessage.thread_id
+        ).outerjoin(
+            models.ChatNotification, models.ChatThread.id == models.ChatNotification.thread_id
+        ).group_by(models.ChatThread.id)
+
+        if status:
+            query = query.filter(models.ChatThread.status == status)
+        if user_id:
+            query = query.filter(models.ChatThread.user_id == user_id)
+
+        results = (
+            query.order_by(desc(models.ChatThread.updated_at))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+        threads = []
+        for thread, message_count, unread_count, last_message_at in results:
+            thread_dict = {
+                "id": thread.id,
+                "title": thread.title,
+                "description": thread.description,
+                "status": thread.status,
+                "created_at": thread.created_at,
+                "updated_at": thread.updated_at,
+                "user_id": thread.user_id,
+                "metadata": thread.thread_metadata,
+                "message_count": message_count or 0,
+                "unread_count": unread_count or 0,
+                "last_message_at": last_message_at
+            }
+            threads.append(thread_dict)
+
+        return threads
+
+
+class ChatMessageCRUD:
+    @staticmethod
+    def create_message(
+        db: Session, thread_id: UUID, message: schemas.ChatMessageCreate, role: models.MessageRole
+    ) -> models.ChatMessage:
+        db_message = models.ChatMessage(
+            thread_id=thread_id,
+            role=role,
+            content=message.content,
+            message_type=message.message_type,
+            parent_message_id=message.parent_message_id,
+            message_metadata=message.metadata or {}
+        )
+        db.add(db_message)
+        
+        # Update thread's updated_at timestamp
+        db.query(models.ChatThread).filter(models.ChatThread.id == thread_id).update(
+            {"updated_at": datetime.now(timezone.utc)}
+        )
+        
+        db.commit()
+        db.refresh(db_message)
+        return db_message
+
+    @staticmethod
+    def get_message(db: Session, message_id: UUID) -> Optional[models.ChatMessage]:
+        return db.query(models.ChatMessage).filter(models.ChatMessage.id == message_id).first()
+
+    @staticmethod
+    def get_messages(
+        db: Session,
+        thread_id: UUID,
+        skip: int = 0,
+        limit: int = 50,
+        before: Optional[UUID] = None
+    ) -> List[models.ChatMessage]:
+        query = db.query(models.ChatMessage).filter(models.ChatMessage.thread_id == thread_id)
+        
+        if before:
+            # Get messages before a specific message (for pagination)
+            before_message = db.query(models.ChatMessage).filter(models.ChatMessage.id == before).first()
+            if before_message:
+                query = query.filter(models.ChatMessage.created_at < before_message.created_at)
+        
+        return (
+            query.order_by(desc(models.ChatMessage.created_at))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def update_message(
+        db: Session, message_id: UUID, content: str
+    ) -> Optional[models.ChatMessage]:
+        db_message = db.query(models.ChatMessage).filter(models.ChatMessage.id == message_id).first()
+        if db_message:
+            db_message.content = content
+            db_message.edited_at = datetime.now(timezone.utc)
+            db.commit()
+            db.refresh(db_message)
+        return db_message
+
+    @staticmethod
+    def delete_message(db: Session, message_id: UUID) -> bool:
+        db_message = db.query(models.ChatMessage).filter(models.ChatMessage.id == message_id).first()
+        if db_message:
+            db.delete(db_message)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    def get_messages_count(db: Session, thread_id: UUID) -> int:
+        return db.query(models.ChatMessage).filter(models.ChatMessage.thread_id == thread_id).count()
+
+
+class ChatNotificationCRUD:
+    @staticmethod
+    def create_notification(
+        db: Session, notification: schemas.ChatNotificationCreate
+    ) -> models.ChatNotification:
+        db_notification = models.ChatNotification(
+            thread_id=notification.thread_id,
+            type=notification.type,
+            title=notification.title,
+            message=notification.message,
+            notification_metadata=notification.metadata or {}
+        )
+        db.add(db_notification)
+        db.commit()
+        db.refresh(db_notification)
+        return db_notification
+
+    @staticmethod
+    def get_notifications(
+        db: Session,
+        thread_id: Optional[UUID] = None,
+        skip: int = 0,
+        limit: int = 50,
+        unread_only: bool = False
+    ) -> List[models.ChatNotification]:
+        query = db.query(models.ChatNotification)
+        
+        if thread_id:
+            query = query.filter(models.ChatNotification.thread_id == thread_id)
+        if unread_only:
+            query = query.filter(models.ChatNotification.is_read == False)
+            
+        return (
+            query.order_by(desc(models.ChatNotification.created_at))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def mark_notification_read(db: Session, notification_id: UUID) -> bool:
+        db_notification = db.query(models.ChatNotification).filter(
+            models.ChatNotification.id == notification_id
+        ).first()
+        if db_notification:
+            db_notification.is_read = True
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    def mark_thread_notifications_read(db: Session, thread_id: UUID) -> int:
+        """Mark all notifications in a thread as read. Returns count of updated notifications."""
+        updated_count = db.query(models.ChatNotification).filter(
+            models.ChatNotification.thread_id == thread_id,
+            models.ChatNotification.is_read == False
+        ).update({"is_read": True})
+        db.commit()
+        return updated_count
+
+    @staticmethod
+    def get_unread_count(db: Session, thread_id: Optional[UUID] = None) -> int:
+        query = db.query(models.ChatNotification).filter(models.ChatNotification.is_read == False)
+        if thread_id:
+            query = query.filter(models.ChatNotification.thread_id == thread_id)
+        return query.count()

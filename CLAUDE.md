@@ -1,3 +1,19 @@
+# Claude Code Configuration
+
+## Auto-Approval Settings
+- **Auto-approve plans**: ENABLED - Claude should automatically proceed with approved technical plans without asking for confirmation
+- **Auto-approve code changes**: ENABLED - Proceed with code implementations once the plan is approved
+- **Auto-approve testing**: ENABLED - Run tests and deploy to staging automatically
+
+## Git Workflow Reminder
+ALWAYS create feature branches for new work:
+1. git checkout -b feature/your-feature-name
+2. Make changes and commit frequently  
+3. Push to remote and create PR
+4. Deploy → test → merge to main → delete branch
+
+Every User Story/Feature/PBI/Milestone should follow this pattern.
+
 Release Managent Best Practices and Guide
 use -> ./RELEASE_GUIDE.md
 

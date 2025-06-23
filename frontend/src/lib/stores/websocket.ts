@@ -24,6 +24,7 @@ function createWebSocketStore() {
   let reconnectTimer: number | null = null;
   const maxReconnectAttempts = 5;
   const reconnectDelay = 2000;
+  const messageHandlers: ((message: any) => void)[] = [];
 
   const connect = () => {
     if (!browser) return;
@@ -41,9 +42,10 @@ function createWebSocketStore() {
 
       ws.onmessage = (event) => {
         try {
+          const parsedData = JSON.parse(event.data);
           const message: WebSocketMessage = {
             type: 'message',
-            data: JSON.parse(event.data),
+            data: parsedData,
             timestamp: Date.now()
           };
           
@@ -51,6 +53,15 @@ function createWebSocketStore() {
             ...state,
             lastMessage: message
           }));
+
+          // Call registered message handlers
+          messageHandlers.forEach(handler => {
+            try {
+              handler(parsedData);
+            } catch (error) {
+              console.error('Error in message handler:', error);
+            }
+          });
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }
@@ -103,11 +114,24 @@ function createWebSocketStore() {
     }
   };
 
+  const addMessageHandler = (handler: (message: any) => void) => {
+    messageHandlers.push(handler);
+    
+    // Return unsubscribe function
+    return () => {
+      const index = messageHandlers.indexOf(handler);
+      if (index > -1) {
+        messageHandlers.splice(index, 1);
+      }
+    };
+  };
+
   return {
     subscribe,
     connect,
     disconnect,
-    send
+    send,
+    addMessageHandler
   };
 }
 
