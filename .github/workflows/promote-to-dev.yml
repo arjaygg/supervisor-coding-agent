@@ -378,26 +378,44 @@ jobs:
       - name: Set up Cloud SDK for deployment
         uses: google-github-actions/setup-gcloud@v1
 
-      - name: Deploy to development environment
+      - name: Deploy to development environment with parallel optimizations
         run: |
-          echo "🚀 Deploying to development environment..."
+          echo "🚀 Deploying to development environment with parallel optimizations..."
           
           # Use the actual VM name from secrets or fallback to supervisor-agent
           VM_NAME="${{ secrets.DEV_VM_NAME }}"
           VM_NAME=${VM_NAME:-"supervisor-agent"}
           echo "Using VM name: $VM_NAME"
           
-          # Ensure VM exists and is running
+          # Phase 1: Parallel VM preparation and SSH setup
+          echo "⚡ Phase 1: Parallel VM preparation..."
+          
+          # Check VM status and prepare firewall rules in parallel
           VM_STATUS=$(gcloud compute instances describe "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
-            --format="value(status)" 2>/dev/null || echo "NOT_FOUND")
+            --format="value(status)" 2>/dev/null || echo "NOT_FOUND") &
+          vm_check_pid=$!
+          
+          # Prepare firewall rules in parallel (idempotent)
+          echo "Ensuring firewall rules exist..."
+          if ! gcloud compute firewall-rules describe allow-dev-http --project=${{ secrets.GCP_PROJECT_ID }} >/dev/null 2>&1; then
+            echo "Creating firewall rule for HTTP/HTTPS access..."
+            gcloud compute firewall-rules create allow-dev-http \
+              --allow tcp:80,tcp:443,tcp:3000,tcp:8000,tcp:8080 \
+              --source-ranges 0.0.0.0/0 \
+              --target-tags http-server,https-server \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --description="Allow HTTP/HTTPS access for dev environment" &
+            firewall_pid=$!
+          fi
+          
+          # Wait for VM status check
+          wait $vm_check_pid
+          VM_STATUS=$?
           
           if [[ "$VM_STATUS" == "NOT_FOUND" ]]; then
             echo "VM not found. Creating development VM..."
-            
-            # Note: Compute Engine API must be pre-enabled in GCP Console
-            # This service account does not have permission to enable APIs
             
             # Create the VM using our optimized specifications
             echo "Creating VM in zone: ${{ secrets.GCP_ZONE }}"
@@ -421,21 +439,6 @@ jobs:
                 git clone https://github.com/arjaygg/supervisor-coding-agent.git .
               '; then
               echo "✅ VM created successfully"
-              
-              # Create firewall rules if they don't exist (essential for external access)
-              if ! gcloud compute firewall-rules describe allow-dev-http --project=${{ secrets.GCP_PROJECT_ID }} >/dev/null 2>&1; then
-                echo "Creating firewall rule for HTTP/HTTPS access..."
-                gcloud compute firewall-rules create allow-dev-http \
-                  --allow tcp:80,tcp:443,tcp:3000,tcp:8000,tcp:8080 \
-                  --source-ranges 0.0.0.0/0 \
-                  --target-tags http-server,https-server \
-                  --project=${{ secrets.GCP_PROJECT_ID }} \
-                  --description="Allow HTTP/HTTPS access for dev environment"
-                echo "✅ Firewall rule created"
-              else
-                echo "Firewall rule already exists"
-              fi
-              
               echo "VM created. Waiting for startup script to complete..."
               sleep 120
             else
@@ -460,15 +463,23 @@ jobs:
             echo "VM is already running"
           fi
           
-          # Get VM external IP
+          # Wait for firewall creation if it was started
+          if [[ -n "$firewall_pid" ]]; then
+            wait $firewall_pid
+            echo "✅ Firewall rule created"
+          fi
+          
+          # Phase 2: Parallel SSH setup and VM IP retrieval
+          echo "⚡ Phase 2: Parallel SSH and networking setup..."
+          
+          # Get VM external IP in background
           VM_IP=$(gcloud compute instances describe "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
-            --format="value(networkInterfaces[0].accessConfigs[0].natIP)")
+            --format="value(networkInterfaces[0].accessConfigs[0].natIP)") &
+          vm_ip_pid=$!
           
-          echo "VM IP: $VM_IP"
-          
-          # Set up SSH configuration for non-interactive deployment
+          # Set up SSH configuration in parallel
           echo "Setting up SSH configuration..."
           mkdir -p ~/.ssh
           echo "Host compute.*" >> ~/.ssh/config
@@ -509,6 +520,14 @@ jobs:
             echo "SSH key already exists in project metadata"
           fi
           
+          # Wait for VM IP retrieval
+          wait $vm_ip_pid
+          VM_IP=$(gcloud compute instances describe "$VM_NAME" \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --format="value(networkInterfaces[0].accessConfigs[0].natIP)")
+          echo "VM IP: $VM_IP"
+          
           # Wait for SSH key propagation
           echo "Waiting for SSH key propagation..."
           sleep 30
@@ -541,8 +560,11 @@ jobs:
             exit 1
           fi
           
-          # Deploy via SSH with non-interactive options
-          echo "Deploying application..."
+          # Phase 3: Parallel deployment execution
+          echo "⚡ Phase 3: Parallel deployment execution..."
+          
+          # Deploy with optimized parallel operations
+          echo "Deploying application with parallel optimizations..."
           gcloud compute ssh "$VM_NAME" \
             --zone=${{ secrets.GCP_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
@@ -552,98 +574,159 @@ jobs:
             --ssh-flag="-o ConnectTimeout=30" \
             --command "
               set -e
-              echo 'Starting deployment on VM...'
-              sudo chown -R \$USER:\$USER /opt/dev-assist && \
-              sudo usermod -aG docker \$USER && \
-              cd /opt/dev-assist && \
-              git config --global --add safe.directory /opt/dev-assist && \
-              echo 'Fetching latest code...' && \
-              git fetch origin && \
-              git checkout ${{ needs.check-promote-command.outputs.deploy_branch }} && \
-              git pull origin ${{ needs.check-promote-command.outputs.deploy_branch }} && \
-              echo 'Setting up environment...' && \
-              cp .env.sample .env && \
-              export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} && \
-              export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }} && \
-              export LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }} && \
-              echo \"\" >> .env && \
-              echo \"# Deployment Configuration\" >> .env && \
-              echo \"GCP_PROJECT_ID=\$GCP_PROJECT_ID\" >> .env && \
-              echo \"DOMAIN_NAME=\$DOMAIN_NAME\" >> .env && \
-              echo \"LETSENCRYPT_EMAIL=\$LETSENCRYPT_EMAIL\" >> .env && \
-              echo 'Configuring Docker for Artifact Registry...' && \
-              gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet && \
-              echo 'Pulling latest images...' && \
-              sudo -E docker compose -f docker-compose.prod.yml pull && \
-              echo 'Initializing SSL and starting nginx services...' && \
-              chmod +x ./deployment/nginx/docker-ssl-init.sh && \
-              sudo -E ./deployment/nginx/docker-ssl-init.sh && \
-              echo '✅ Deployment completed successfully'
+              echo '🚀 Starting optimized deployment on VM...'
+              
+              # Phase 3a: Environment preparation (parallel)
+              echo '⚡ Phase 3a: Environment preparation...'
+              sudo chown -R \$USER:\$USER /opt/dev-assist &
+              sudo usermod -aG docker \$USER &
+              wait
+              
+              cd /opt/dev-assist
+              git config --global --add safe.directory /opt/dev-assist
+              
+              # Phase 3b: Code and environment setup (parallel)
+              echo '⚡ Phase 3b: Code and environment setup...'
+              (
+                echo 'Fetching latest code...'
+                git fetch origin
+                git checkout ${{ needs.check-promote-command.outputs.deploy_branch }}
+                git pull origin ${{ needs.check-promote-command.outputs.deploy_branch }}
+              ) &
+              git_update_pid=\$!
+              
+              (
+                echo 'Setting up environment...'
+                cp .env.sample .env
+                export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+                export DOMAIN_NAME=${{ env.DEV_ENVIRONMENT_URL }}
+                export LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}
+                echo \"\" >> .env
+                echo \"# Deployment Configuration\" >> .env
+                echo \"GCP_PROJECT_ID=\$GCP_PROJECT_ID\" >> .env
+                echo \"DOMAIN_NAME=\$DOMAIN_NAME\" >> .env
+                echo \"LETSENCRYPT_EMAIL=\$LETSENCRYPT_EMAIL\" >> .env
+                echo 'Configuring Docker for Artifact Registry...'
+                gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+              ) &
+              env_setup_pid=\$!
+              
+              # Wait for parallel operations
+              wait \$git_update_pid
+              wait \$env_setup_pid
+              
+              # Phase 3c: Service deployment (optimized)
+              echo '⚡ Phase 3c: Service deployment...'
+              echo 'Pulling latest images...'
+              sudo -E docker compose -f docker-compose.prod.yml pull
+              
+              echo 'Initializing SSL and starting services...'
+              chmod +x ./deployment/nginx/docker-ssl-init.sh
+              sudo -E ./deployment/nginx/docker-ssl-init.sh
+              
+              echo '✅ Optimized deployment completed successfully'
             "
           
           # Set deployment metadata
           echo "DEPLOYMENT_URL=https://${{ env.DEV_ENVIRONMENT_URL }}" >> $GITHUB_ENV
           echo "VM_IP=$VM_IP" >> $GITHUB_ENV
 
-      - name: Run post-deployment tests
+      - name: Run parallel post-deployment health checks
         run: |
-          echo "🧪 Running post-deployment validation..."
+          echo "🧪 Running parallel post-deployment validation..."
           
           # Wait for services to be ready
           echo "Waiting for services to start..."
           sleep 30
           
-          # Test reverse proxy health (works for both nginx and Traefik)
-          echo "Testing reverse proxy health endpoint..."
-          if curl -f -s "http://${{ env.VM_IP }}/health" > /dev/null; then
-            echo "  ✅ Reverse proxy health check passed"
-          else
-            echo "  ⚠️  Reverse proxy health check failed (may be normal for new deployments)"
-          fi
+          # Parallel health check execution
+          echo "⚡ Running parallel health checks..."
           
-          # Health check API through reverse proxy (primary test)
-          echo "Testing API health through reverse proxy..."
-          if curl -f -s "http://${{ env.VM_IP }}/api/v1/healthz" > /dev/null; then
-            echo "  ✅ API health check through reverse proxy passed"
-          else
-            echo "  ❌ API health check through reverse proxy failed"
-            
-            # Fallback: try direct API access for debugging
-            echo "  🔍 Trying direct API access for debugging..."
-            if curl -f -s "http://${{ env.VM_IP }}:8000/api/v1/healthz" > /dev/null; then
-              echo "  ✅ Direct API access works - reverse proxy routing issue"
+          # Test reverse proxy health in background
+          (
+            echo "Testing reverse proxy health endpoint..."
+            if curl -f -s "http://${{ env.VM_IP }}/health" > /dev/null; then
+              echo "  ✅ Reverse proxy health check passed"
             else
-              echo "  ❌ Direct API access also failed - API service issue"
+              echo "  ⚠️  Reverse proxy health check failed (may be normal for new deployments)"
             fi
+          ) &
+          proxy_health_pid=$!
+          
+          # Test API health through reverse proxy in background
+          (
+            echo "Testing API health through reverse proxy..."
+            if curl -f -s "http://${{ env.VM_IP }}/api/v1/healthz" > /dev/null; then
+              echo "  ✅ API health check through reverse proxy passed"
+              echo "0" > /tmp/api_status
+            else
+              echo "  ❌ API health check through reverse proxy failed"
+              
+              # Fallback: try direct API access for debugging
+              echo "  🔍 Trying direct API access for debugging..."
+              if curl -f -s "http://${{ env.VM_IP }}:8000/api/v1/healthz" > /dev/null; then
+                echo "  ✅ Direct API access works - reverse proxy routing issue"
+                echo "0" > /tmp/api_status
+              else
+                echo "  ❌ Direct API access also failed - API service issue"
+                echo "1" > /tmp/api_status
+              fi
+            fi
+          ) &
+          api_health_pid=$!
+          
+          # Test frontend through reverse proxy in background
+          (
+            echo "Testing frontend through reverse proxy..."
+            if curl -f -s "http://${{ env.VM_IP }}/" > /dev/null; then
+              echo "  ✅ Frontend accessible through reverse proxy"
+              echo "0" > /tmp/frontend_status
+            else
+              echo "  ❌ Frontend through reverse proxy failed"
+              
+              # Fallback: try direct frontend access for debugging
+              echo "  🔍 Trying direct frontend access for debugging..."
+              if curl -f -s "http://${{ env.VM_IP }}:3000" > /dev/null; then
+                echo "  ✅ Direct frontend access works - reverse proxy routing issue"
+                echo "0" > /tmp/frontend_status
+              else
+                echo "  ❌ Direct frontend access also failed - frontend service issue"
+                echo "1" > /tmp/frontend_status
+              fi
+            fi
+          ) &
+          frontend_health_pid=$!
+          
+          # Test reverse proxy dashboard/status in background
+          (
+            echo "Testing reverse proxy dashboard/status..."
+            if curl -f -s "http://${{ env.VM_IP }}:8080" > /dev/null; then
+              echo "  ✅ Traefik dashboard accessible (using Traefik)"
+            else
+              echo "  ℹ️  Traefik dashboard not accessible (likely using nginx - this is normal)"
+            fi
+          ) &
+          dashboard_health_pid=$!
+          
+          # Wait for all parallel health checks to complete
+          wait $proxy_health_pid
+          wait $api_health_pid
+          wait $frontend_health_pid  
+          wait $dashboard_health_pid
+          
+          # Check if critical services passed
+          api_status=$(cat /tmp/api_status 2>/dev/null || echo "1")
+          frontend_status=$(cat /tmp/frontend_status 2>/dev/null || echo "1")
+          
+          if [[ "$api_status" == "1" ]] || [[ "$frontend_status" == "1" ]]; then
+            echo "❌ Critical health checks failed"
             exit 1
           fi
           
-          # Test frontend through reverse proxy (primary test)
-          echo "Testing frontend through reverse proxy..."
-          if curl -f -s "http://${{ env.VM_IP }}/" > /dev/null; then
-            echo "  ✅ Frontend accessible through reverse proxy"
-          else
-            echo "  ❌ Frontend through reverse proxy failed"
-            
-            # Fallback: try direct frontend access for debugging
-            echo "  🔍 Trying direct frontend access for debugging..."
-            if curl -f -s "http://${{ env.VM_IP }}:3000" > /dev/null; then
-              echo "  ✅ Direct frontend access works - reverse proxy routing issue"
-            else
-              echo "  ❌ Direct frontend access also failed - frontend service issue"
-            fi
-            exit 1
-          fi
+          # Cleanup temporary status files
+          rm -f /tmp/api_status /tmp/frontend_status
           
-          # Test reverse proxy dashboard/status (nginx or Traefik)
-          echo "Testing reverse proxy dashboard/status..."
-          if curl -f -s "http://${{ env.VM_IP }}:8080" > /dev/null; then
-            echo "  ✅ Traefik dashboard accessible (using Traefik)"
-          else
-            echo "  ℹ️  Traefik dashboard not accessible (likely using nginx - this is normal)"
-          fi
-          
-          echo "✅ Basic health checks completed successfully"
+          echo "✅ Parallel health checks completed successfully"
 
       - name: Update environment state
         run: |
