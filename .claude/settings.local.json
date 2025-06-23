@@ -141,7 +141,13 @@
       "Bash(gcloud artifacts repositories list:*)",
       "Bash(gcloud iam service-accounts:*)",
       "Bash(gcloud secrets list:*)",
-      "Bash(gcloud projects get-iam-policy:*)"
+      "Bash(gcloud projects get-iam-policy:*)",
+      "Bash(export GCP_PROJECT_ID=\"gen-lang-client-0274960249\")",
+      "Bash(export GCP_REGION=\"asia-southeast1\")",
+      "Bash(export ENVIRONMENT=\"development\")",
+      "Bash(./deploy.sh)",
+      "Bash(gcloud run services logs read:*)",
+      "Bash(gcloud secrets versions access:*)"
     ],
     "deny": []
   },

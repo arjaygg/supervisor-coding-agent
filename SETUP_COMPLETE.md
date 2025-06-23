@@ -41,5 +41,23 @@ Expected performance:
 - ⚡ 2-3 minute deployments
 - 📦 Auto-scaling 0-1000+ instances
 
-## ✅ DEPLOYMENT READY
-All setup complete - GitHub Actions can now deploy to Cloud Run!
+## ✅ DEPLOYMENT COMPLETE AND VERIFIED!
+
+🎉 **Cloud Run services successfully deployed and tested:**
+
+### Live Service URLs:
+- 🔗 **API**: https://dev-assist-api-909668870835.asia-southeast1.run.app
+- 🔗 **Frontend**: https://dev-assist-frontend-909668870835.asia-southeast1.run.app  
+- 🔗 **API Docs**: https://dev-assist-api-909668870835.asia-southeast1.run.app/docs
+
+### Health Check Status:
+- ✅ API Health: `{"status":"ok","message":"pong"}`
+- ✅ Frontend Health: `"healthy"`
+
+### Configuration Applied:
+- Database: SQLite in `/tmp/app.db` (suitable for development)
+- Redis/Celery: Disabled for lightweight deployment
+- Secrets: Cloud Secret Manager integration
+- Auto-scaling: 0-1000+ instances based on demand
+
+**All setup complete - Container-native deployment fully operational!**

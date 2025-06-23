@@ -81,7 +81,7 @@ gcloud run deploy dev-assist-api \
     --region=$GCP_REGION \
     --platform=managed \
     --service-account=dev-assist-api@$GCP_PROJECT_ID.iam.gserviceaccount.com \
-    --set-env-vars="APP_DEBUG=false,LOG_LEVEL=INFO,PYTHONPATH=/app,PORT=8000" \
+    --set-env-vars="APP_DEBUG=false,LOG_LEVEL=INFO,PYTHONPATH=/app,REDIS_REQUIRED=false,CELERY_REQUIRED=false" \
     --set-secrets="DATABASE_URL=development-db-url:latest,REDIS_URL=development-redis-url:latest,CELERY_BROKER_URL=development-redis-url:latest,CELERY_RESULT_BACKEND=development-redis-url:latest,JWT_SECRET_KEY=development-jwt-secret:latest,OPENAI_API_KEY=development-openai-api-key:latest,GITHUB_TOKEN=development-github-token:latest" \
     --cpu=1 \
     --memory=1Gi \
@@ -100,8 +100,8 @@ gcloud run deploy dev-assist-frontend \
     --region=$GCP_REGION \
     --platform=managed \
     --service-account=dev-assist-frontend@$GCP_PROJECT_ID.iam.gserviceaccount.com \
-    --set-env-vars="NODE_ENV=production,PORT=80" \
-    --cpu=0.5 \
+    --set-env-vars="NODE_ENV=production" \
+    --cpu=1 \
     --memory=512Mi \
     --min-instances=1 \
     --max-instances=5 \
