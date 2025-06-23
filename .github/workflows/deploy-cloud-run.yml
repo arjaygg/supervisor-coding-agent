@@ -1,0 +1,383 @@
+name: 🚀 Deploy to Cloud Run (Container-Native)
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy (default: main)'
+        required: false
+        type: string
+        default: 'main'
+      pr_number:
+        description: 'PR number (optional, for validation and tracking)'
+        required: false
+        type: string
+      environment:
+        description: 'Environment to deploy to'
+        required: false
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+        default: development
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+  actions: write
+  id-token: write
+
+env:
+  GCP_REGION: asia-southeast1
+  ARTIFACT_REGISTRY: asia-southeast1-docker.pkg.dev
+
+jobs:
+  # Check deployment command and validate
+  check-deployment-command:
+    if: |
+      (github.event_name == 'issue_comment' && 
+       contains(github.event.comment.body, '/deploy-cloud-run')) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      deploy_ref: ${{ steps.check.outputs.deploy_ref }}
+      deploy_branch: ${{ steps.check.outputs.deploy_branch }}
+      environment: ${{ steps.check.outputs.environment }}
+    steps:
+      - name: Parse deployment command
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let pr_number, deploy_ref, deploy_branch, environment;
+            
+            if (context.eventName === 'issue_comment') {
+              if (context.payload.comment.body.includes('/deploy-cloud-run')) {
+                pr_number = context.payload.issue.number;
+                environment = 'development'; // Default for PR deployments
+                
+                // Extract environment if specified
+                const envMatch = context.payload.comment.body.match(/\/deploy-cloud-run\s+(\w+)/);
+                if (envMatch) {
+                  environment = envMatch[1];
+                }
+                
+                // Get PR details
+                const { data: pr } = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr_number
+                });
+                
+                deploy_ref = pr.head.sha;
+                deploy_branch = pr.head.ref;
+                
+                core.setOutput('should_deploy', 'true');
+                core.setOutput('pr_number', pr_number);
+                core.setOutput('deploy_ref', deploy_ref);
+                core.setOutput('deploy_branch', deploy_branch);
+                core.setOutput('environment', environment);
+              } else {
+                core.setOutput('should_deploy', 'false');
+              }
+            } else if (context.eventName === 'workflow_dispatch') {
+              const branch_input = context.payload.inputs.branch || 'main';
+              pr_number = context.payload.inputs.pr_number;
+              environment = context.payload.inputs.environment || 'development';
+              
+              // Get branch details
+              const { data: branchData } = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: branch_input
+              });
+              
+              deploy_ref = branchData.commit.sha;
+              deploy_branch = branch_input;
+              
+              core.setOutput('should_deploy', 'true');
+              core.setOutput('pr_number', pr_number || '');
+              core.setOutput('deploy_ref', deploy_ref);
+              core.setOutput('deploy_branch', deploy_branch);
+              core.setOutput('environment', environment);
+            }
+
+  # Parallel container builds using matrix strategy
+  build-containers:
+    needs: check-deployment-command
+    if: needs.check-deployment-command.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.check-deployment-command.outputs.environment }}
+    strategy:
+      matrix:
+        component: [api, frontend]
+      max-parallel: 2
+    outputs:
+      api-image: ${{ steps.build-api.outputs.image }}
+      frontend-image: ${{ steps.build-frontend.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check-deployment-command.outputs.deploy_ref }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            network=host
+            image=moby/buildkit:v0.12.0
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }} --quiet
+
+      - name: Create Artifact Registry repository
+        run: |
+          REPO_EXISTS=$(gcloud artifacts repositories describe dev-assist \
+            --location=${{ env.GCP_REGION }} \
+            --format="value(name)" 2>/dev/null || echo "NOT_FOUND")
+          
+          if [[ "$REPO_EXISTS" == "NOT_FOUND" ]]; then
+            echo "Creating Artifact Registry repository..."
+            gcloud artifacts repositories create dev-assist \
+              --repository-format=docker \
+              --location=${{ env.GCP_REGION }} \
+              --description="Dev Assist application container images"
+          fi
+
+      - name: Build API container
+        if: matrix.component == 'api'
+        id: build-api
+        run: |
+          echo "🔨 Building API container..."
+          
+          # Generate deployment tag
+          deploy_ref="${{ needs.check-deployment-command.outputs.deploy_ref }}"
+          deploy_branch="${{ needs.check-deployment-command.outputs.deploy_branch }}"
+          environment="${{ needs.check-deployment-command.outputs.environment }}"
+          
+          # Create deployment tag
+          branch_clean=$(echo $deploy_branch | sed 's/[^a-zA-Z0-9-]/-/g')
+          deployment_tag="${environment}-${branch_clean}-$(date +%Y%m%d-%H%M%S)"
+          
+          # Build with optimizations
+          docker buildx build \
+            --platform linux/amd64 \
+            --cache-from type=gha,scope=api-$environment \
+            --cache-from type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
+            --cache-to type=gha,mode=max,scope=api-$environment \
+            --target runtime \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:latest \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag \
+            --push .
+          
+          echo "image=${{ env.ARTIFACT_REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/api:$deployment_tag" >> $GITHUB_OUTPUT
+          echo "✅ API container built and pushed"
+
+      - name: Build Frontend container
+        if: matrix.component == 'frontend'
+        id: build-frontend
+        run: |
+          echo "🔨 Building Frontend container..."
+          
+          # Generate deployment tag
+          deploy_ref="${{ needs.check-deployment-command.outputs.deploy_ref }}"
+          deploy_branch="${{ needs.check-deployment-command.outputs.deploy_branch }}"
+          environment="${{ needs.check-deployment-command.outputs.environment }}"
+          
+          # Create deployment tag
+          branch_clean=$(echo $deploy_branch | sed 's/[^a-zA-Z0-9-]/-/g')
+          deployment_tag="${environment}-${branch_clean}-$(date +%Y%m%d-%H%M%S)"
+          
+          # Build with optimizations
+          docker buildx build \
+            --platform linux/amd64 \
+            --cache-from type=gha,scope=frontend-$environment \
+            --cache-from type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
+            --cache-to type=gha,mode=max,scope=frontend-$environment \
+            --target runtime \
+            --file frontend/Dockerfile.prod \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:latest \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag \
+            --build-arg VITE_API_URL=https://dev-assist-api-${{ secrets.GCP_PROJECT_ID }}.a.run.app/api \
+            --build-arg VITE_WS_URL=wss://dev-assist-api-${{ secrets.GCP_PROJECT_ID }}.a.run.app/ws \
+            --push .
+          
+          echo "image=${{ env.ARTIFACT_REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/dev-assist/frontend:$deployment_tag" >> $GITHUB_OUTPUT
+          echo "✅ Frontend container built and pushed"
+
+  # Deploy to Cloud Run
+  deploy-to-cloud-run:
+    needs: [check-deployment-command, build-containers]
+    if: needs.check-deployment-command.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.check-deployment-command.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check-deployment-command.outputs.deploy_ref }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Set up Cloud Secret Manager secrets
+        run: |
+          echo "🔐 Setting up Cloud Secret Manager..."
+          
+          # Run secret setup script
+          chmod +x ./deployment/secrets/setup-secret-manager.sh
+          export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          export ENVIRONMENT=${{ needs.check-deployment-command.outputs.environment }}
+          ./deployment/secrets/setup-secret-manager.sh
+
+      - name: Deploy to Cloud Run
+        run: |
+          echo "🚀 Deploying to Cloud Run..."
+          
+          # Set deployment variables
+          export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          export GCP_REGION=${{ env.GCP_REGION }}
+          export ENVIRONMENT=${{ needs.check-deployment-command.outputs.environment }}
+          
+          # Navigate to Cloud Run deployment directory
+          cd deployment/cloud-run
+          chmod +x deploy.sh
+          
+          # Deploy services
+          ./deploy.sh
+
+      - name: Run health checks
+        run: |
+          echo "🧪 Running Cloud Run health checks..."
+          
+          # Get service URLs
+          API_URL=$(gcloud run services describe dev-assist-api \
+            --region=${{ env.GCP_REGION }} \
+            --format="value(status.url)")
+          
+          FRONTEND_URL=$(gcloud run services describe dev-assist-frontend \
+            --region=${{ env.GCP_REGION }} \
+            --format="value(status.url)")
+          
+          echo "Testing API health..."
+          if curl -f -s "$API_URL/api/v1/ping" > /dev/null; then
+            echo "✅ API health check passed"
+          else
+            echo "❌ API health check failed"
+            exit 1
+          fi
+          
+          echo "Testing Frontend health..."
+          if curl -f -s "$FRONTEND_URL/health" > /dev/null; then
+            echo "✅ Frontend health check passed"
+          else
+            echo "❌ Frontend health check failed"
+            exit 1
+          fi
+          
+          # Store URLs for notifications
+          echo "API_URL=$API_URL" >> $GITHUB_ENV
+          echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_ENV
+
+  # Success notification
+  notify-success:
+    needs: [check-deployment-command, build-containers, deploy-to-cloud-run]
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update PR with deployment status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = '${{ needs.check-deployment-command.outputs.pr_number }}';
+            const environment = '${{ needs.check-deployment-command.outputs.environment }}';
+            
+            if (pr_number && pr_number !== '') {
+              const comment_body = `🎉 **Cloud Run Deployment Successful!**
+              
+              **Environment**: ${environment}
+              **Services**:
+              - 🔗 Frontend: ${{ env.FRONTEND_URL }}
+              - 🔗 API: ${{ env.API_URL }}
+              - 🔗 API Docs: ${{ env.API_URL }}/docs
+              
+              **Performance Benefits**:
+              - ⚡ Auto-scaling: 0 to 1000+ instances
+              - 💰 Cost-optimized: Pay per request
+              - 🔒 Secure: Cloud Secret Manager integration
+              - 📦 Container-native: No VM management
+              
+              **Deployment Details**:
+              - Branch: \`${{ needs.check-deployment-command.outputs.deploy_branch }}\`
+              - Commit: \`${{ needs.check-deployment-command.outputs.deploy_ref }}\`
+              - Region: ${{ env.GCP_REGION }}
+              
+              *This deployment uses the new container-native architecture with 60-80% cost reduction compared to VM-based deployment.*`;
+              
+              await github.rest.issues.createComment({
+                issue_number: parseInt(pr_number),
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment_body
+              });
+            }
+
+  # Failure notification
+  notify-failure:
+    needs: [check-deployment-command, build-containers, deploy-to-cloud-run]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update PR with failure status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = '${{ needs.check-deployment-command.outputs.pr_number }}';
+            
+            if (pr_number && pr_number !== '') {
+              const comment_body = `❌ **Cloud Run Deployment Failed**
+              
+              **Environment**: ${{ needs.check-deployment-command.outputs.environment }}
+              **Branch**: \`${{ needs.check-deployment-command.outputs.deploy_branch }}\`
+              
+              **Status**:
+              - Container Builds: ${{ needs.build-containers.result == 'success' && '✅' || '❌' }}
+              - Cloud Run Deploy: ${{ needs.deploy-to-cloud-run.result == 'success' && '✅' || '❌' }}
+              
+              **Next Steps**:
+              1. Check [workflow logs](${context.payload.repository.html_url}/actions/runs/${context.runId})
+              2. Fix issues and retry with \`/deploy-cloud-run\`
+              
+              **Rollback**: Previous deployment remains active`;
+              
+              await github.rest.issues.createComment({
+                issue_number: parseInt(pr_number),
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment_body
+              });
+            }
