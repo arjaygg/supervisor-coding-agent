@@ -25,9 +25,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Copy package files first for better caching
 COPY frontend/package*.json ./
 
-# Install dependencies with cache mount
+# Install all dependencies (including devDependencies for build tools)
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production --silent && \
+    npm ci --silent && \
     npm cache clean --force
 
 # Copy source code
