@@ -74,52 +74,45 @@ else
         --quiet
 fi
 
-# Update service YAML files with project ID
-echo "📝 Updating service configurations..."
-sed -i "s/PROJECT_ID/$GCP_PROJECT_ID/g" service.yaml
-sed -i "s/PROJECT_ID/$GCP_PROJECT_ID/g" frontend-service.yaml
-sed -i "s/REGION/$GCP_REGION/g" service.yaml
-
-# Deploy API service
+# Deploy API service using gcloud run deploy
 echo "🚀 Deploying API service..."
-gcloud run services replace service.yaml \
-    --region=$GCP_REGION \
-    --quiet
-
-# Update API service to use latest image
-gcloud run services update dev-assist-api \
+gcloud run deploy dev-assist-api \
     --image=asia-southeast1-docker.pkg.dev/$GCP_PROJECT_ID/dev-assist/api:$IMAGE_TAG \
     --region=$GCP_REGION \
+    --platform=managed \
+    --service-account=dev-assist-api@$GCP_PROJECT_ID.iam.gserviceaccount.com \
+    --set-env-vars="APP_DEBUG=false,LOG_LEVEL=INFO,PYTHONPATH=/app,PORT=8000" \
+    --set-secrets="DATABASE_URL=development-db-url:latest,REDIS_URL=development-redis-url:latest,CELERY_BROKER_URL=development-redis-url:latest,CELERY_RESULT_BACKEND=development-redis-url:latest,JWT_SECRET_KEY=development-jwt-secret:latest,OPENAI_API_KEY=development-openai-api-key:latest,GITHUB_TOKEN=development-github-token:latest" \
+    --cpu=1 \
+    --memory=1Gi \
+    --min-instances=1 \
+    --max-instances=10 \
+    --concurrency=100 \
+    --timeout=900 \
+    --port=8000 \
+    --allow-unauthenticated \
     --quiet
 
 # Deploy Frontend service
 echo "🚀 Deploying Frontend service..."
-gcloud run services replace frontend-service.yaml \
-    --region=$GCP_REGION \
-    --quiet
-
-# Update Frontend service to use latest image
-gcloud run services update dev-assist-frontend \
+gcloud run deploy dev-assist-frontend \
     --image=asia-southeast1-docker.pkg.dev/$GCP_PROJECT_ID/dev-assist/frontend:$IMAGE_TAG \
     --region=$GCP_REGION \
+    --platform=managed \
+    --service-account=dev-assist-frontend@$GCP_PROJECT_ID.iam.gserviceaccount.com \
+    --set-env-vars="NODE_ENV=production,PORT=80" \
+    --cpu=0.5 \
+    --memory=512Mi \
+    --min-instances=1 \
+    --max-instances=5 \
+    --concurrency=1000 \
+    --timeout=300 \
+    --port=80 \
+    --allow-unauthenticated \
     --quiet
 
-# Configure traffic and IAM
-echo "🌐 Configuring public access..."
-
-# Allow unauthenticated access to frontend
-gcloud run services add-iam-policy-binding dev-assist-frontend \
-    --member="allUsers" \
-    --role="roles/run.invoker" \
-    --region=$GCP_REGION \
-    --quiet
-
-# Allow unauthenticated access to API (you may want to restrict this in production)
-gcloud run services add-iam-policy-binding dev-assist-api \
-    --member="allUsers" \
-    --role="roles/run.invoker" \
-    --region=$GCP_REGION \
-    --quiet
+# Services deployed with --allow-unauthenticated flag
+echo "🌐 Services are publicly accessible..."
 
 # Get service URLs
 API_URL=$(gcloud run services describe dev-assist-api \
