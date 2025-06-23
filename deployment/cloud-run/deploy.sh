@@ -27,12 +27,17 @@ fi
 gcloud config set project $GCP_PROJECT_ID
 gcloud config set run/region $GCP_REGION
 
-# Enable required APIs
-echo "📡 Enabling required APIs..."
-gcloud services enable run.googleapis.com --quiet
-gcloud services enable cloudbuild.googleapis.com --quiet
-gcloud services enable secretmanager.googleapis.com --quiet
-gcloud services enable sqladmin.googleapis.com --quiet
+# Enable required APIs (skip if running in CI/CD)
+if [ "${CI:-false}" = "true" ] || [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
+    echo "📡 Skipping API enablement in CI/CD environment..."
+    echo "ℹ️  APIs should be pre-enabled via setup script"
+else
+    echo "📡 Enabling required APIs..."
+    gcloud services enable run.googleapis.com --quiet
+    gcloud services enable cloudbuild.googleapis.com --quiet
+    gcloud services enable secretmanager.googleapis.com --quiet
+    gcloud services enable sqladmin.googleapis.com --quiet
+fi
 
 # Create service accounts if they don't exist
 echo "👤 Setting up service accounts..."
