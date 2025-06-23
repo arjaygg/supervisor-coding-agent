@@ -9,19 +9,23 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   body {
     @apply font-mono antialiased bg-gray-900 text-gray-100;
     /* CLI-like dark theme by default */
     font-size: 14px;
     line-height: 1.5;
   }
-  
+
   /* Optimize for touch on mobile */
-  button, [role="button"], input, select, textarea {
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea {
     touch-action: manipulation;
   }
-  
+
   /* Better iOS Safari experience */
   @supports (-webkit-touch-callout: none) {
     body {
@@ -30,8 +34,10 @@
       -webkit-user-select: none;
       user-select: none;
     }
-    
-    input, textarea, [contenteditable] {
+
+    input,
+    textarea,
+    [contenteditable] {
       -webkit-user-select: auto;
       user-select: auto;
     }
@@ -44,7 +50,7 @@
     @apply bg-gray-800 rounded border border-gray-700 p-4 md:p-6;
     /* Smaller padding on mobile */
   }
-  
+
   /* Mobile-optimized buttons */
   .btn {
     @apply px-3 py-2 md:px-4 md:py-2 rounded font-medium transition-colors duration-200;
@@ -52,87 +58,88 @@
     min-height: 44px;
     min-width: 44px;
   }
-  
+
   .btn-primary {
     @apply btn bg-green-600 text-white hover:bg-green-700 active:bg-green-800;
     /* Green for CLI success theme */
   }
-  
+
   .btn-secondary {
     @apply btn bg-gray-700 text-gray-100 hover:bg-gray-600 active:bg-gray-500;
   }
-  
+
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-700 active:bg-red-800;
   }
-  
+
   /* CLI-style status badges */
   .status-badge {
     @apply px-2 py-1 rounded text-xs font-mono font-medium;
     /* Monospace for CLI consistency */
   }
-  
+
   .status-pending {
     @apply status-badge bg-yellow-900/30 text-yellow-400 border border-yellow-700;
   }
-  
+
   .status-queued {
     @apply status-badge bg-blue-900/30 text-blue-400 border border-blue-700;
   }
-  
+
   .status-in-progress {
     @apply status-badge bg-blue-900/30 text-blue-400 border border-blue-700 animate-pulse;
   }
-  
+
   .status-completed {
     @apply status-badge bg-green-900/30 text-green-400 border border-green-700;
   }
-  
+
   .status-failed {
     @apply status-badge bg-red-900/30 text-red-400 border border-red-700;
   }
-  
+
   /* CLI-style tables for mobile */
   .table-mobile {
     @apply w-full text-sm;
   }
-  
-  .table-mobile td, .table-mobile th {
+
+  .table-mobile td,
+  .table-mobile th {
     @apply px-2 py-3 border-b border-gray-700;
   }
-  
+
   /* Touch-friendly list items */
   .list-item {
     @apply p-3 border-b border-gray-700 hover:bg-gray-700/50 active:bg-gray-600/50;
     /* Minimum touch target */
     min-height: 44px;
   }
-  
+
   /* Mobile terminal-like text */
   .terminal-text {
     @apply font-mono text-sm text-gray-300 leading-relaxed;
   }
-  
+
   /* Progress indicators */
   .progress-bar {
     @apply w-full bg-gray-700 rounded-full h-2;
   }
-  
+
   .progress-fill {
     @apply bg-green-500 h-2 rounded-full transition-all duration-300;
   }
-  
+
   /* Mobile navigation */
   .nav-mobile {
     @apply fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-2;
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   .nav-item {
     @apply flex-1 text-center p-2 rounded text-gray-400 hover:text-gray-100 hover:bg-gray-700;
     min-height: 44px;
   }
-  
+
   .nav-item.active {
     @apply text-green-400 bg-gray-700;
   }

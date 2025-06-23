@@ -52,12 +52,12 @@
 
   onMount(async () => {
     await loadAnalytics();
-    
+
     // Request initial analytics data via WebSocket
     analyticsStore.requestAnalytics();
-    
+
     // Subscribe to specific metrics
-    analyticsStore.subscribeToMetrics(['task_execution', 'system_metrics']);
+    analyticsStore.subscribeToMetrics(["task_execution", "system_metrics"]);
   });
 
   onDestroy(() => {
@@ -69,19 +69,23 @@
     // Update analytics object with real-time data
     if (analytics.costSummary) {
       analytics.costSummary.task_count = summary.total_tasks;
-      analytics.costSummary.total_cost = parseFloat(summary.cost_today_usd || '0');
+      analytics.costSummary.total_cost = parseFloat(
+        summary.cost_today_usd || "0"
+      );
     }
-    
+
     // Update charts with real data from WebSocket summary
     const realTaskTypes = generateTaskTypeDataFromSummary(summary);
-    
+
     taskTypeChart = {
       ...taskTypeChart,
       labels: realTaskTypes.labels,
-      datasets: [{
-        ...taskTypeChart.datasets[0],
-        data: realTaskTypes.values
-      }]
+      datasets: [
+        {
+          ...taskTypeChart.datasets[0],
+          data: realTaskTypes.values,
+        },
+      ],
     };
   }
 
@@ -124,13 +128,16 @@
       // Update analytics object with real data
       analytics = {
         costSummary: {
-          total_cost: parseFloat(summary.cost_today_usd || '0'),
+          total_cost: parseFloat(summary.cost_today_usd || "0"),
           total_input_tokens: 0, // Would need cost tracking data
           total_output_tokens: 0,
           input_token_cost: 0,
           output_token_cost: 0,
           task_count: summary.total_tasks,
-          average_cost_per_task: summary.total_tasks > 0 ? parseFloat(summary.cost_today_usd || '0') / summary.total_tasks : 0,
+          average_cost_per_task:
+            summary.total_tasks > 0
+              ? parseFloat(summary.cost_today_usd || "0") / summary.total_tasks
+              : 0,
         },
         usageTrends: {
           daily_usage: realDailyData.labels.map((label, i) => ({
@@ -159,37 +166,37 @@
   function generateDailyDataFromMetrics(metricsData) {
     // Group metrics by date
     const dateGroups = {};
-    
+
     // If no metrics data, create placeholder for recent days
     if (!metricsData || metricsData.length === 0) {
       const labels = [];
       const values = [];
-      
+
       for (let i = timeRange - 1; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
         labels.push(date.toLocaleDateString());
         values.push(0);
       }
-      
+
       return { labels, values };
     }
-    
+
     // Group metrics by date
-    metricsData.forEach(metric => {
+    metricsData.forEach((metric) => {
       const date = new Date(metric.timestamp).toLocaleDateString();
       if (!dateGroups[date]) {
         dateGroups[date] = 0;
       }
-      if (metric.metric_type === 'task_execution') {
+      if (metric.metric_type === "task_execution") {
         dateGroups[date]++;
       }
     });
-    
+
     // Generate labels and values for the time range
     const labels = [];
     const values = [];
-    
+
     for (let i = timeRange - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -203,16 +210,14 @@
 
   function generateTaskTypeDataFromSummary(summary) {
     // Calculate task type distribution from summary data
-    const taskTypes = [
-      "Completed",
-      "Failed",
-      "Pending"
-    ];
-    
+    const taskTypes = ["Completed", "Failed", "Pending"];
+
     const values = [
       summary.successful_tasks || 0,
       summary.failed_tasks || 0,
-      (summary.total_tasks || 0) - (summary.successful_tasks || 0) - (summary.failed_tasks || 0)
+      (summary.total_tasks || 0) -
+        (summary.successful_tasks || 0) -
+        (summary.failed_tasks || 0),
     ];
 
     return { labels: taskTypes, values };
@@ -222,25 +227,28 @@
     try {
       // Get agent data from the API
       const agents = await api.getAgents();
-      
+
       if (!agents || agents.length === 0) {
         return {
-          agents: []
+          agents: [],
         };
       }
-      
+
       // Calculate performance metrics for each agent
-      const agentPerformance = agents.map(agent => ({
+      const agentPerformance = agents.map((agent) => ({
         agent_id: agent.id,
         task_count: Math.floor(summary.total_tasks / agents.length), // Distribute evenly
-        success_rate: summary.total_tasks > 0 ? (summary.successful_tasks / summary.total_tasks) * 100 : 0,
+        success_rate:
+          summary.total_tasks > 0
+            ? (summary.successful_tasks / summary.total_tasks) * 100
+            : 0,
         avg_execution_time: summary.average_execution_time_ms / 1000,
-        total_cost: parseFloat(summary.cost_today_usd || '0') / agents.length,
+        total_cost: parseFloat(summary.cost_today_usd || "0") / agents.length,
       }));
-      
+
       return { agents: agentPerformance };
     } catch (error) {
-      console.error('Error generating agent performance data:', error);
+      console.error("Error generating agent performance data:", error);
       return { agents: [] };
     }
   }
@@ -277,12 +285,16 @@
     <div class="flex items-center gap-4">
       <!-- Real-time connection status -->
       <div class="flex items-center gap-2">
-        <div class="w-2 h-2 rounded-full {$analyticsStore.connected ? 'bg-green-500' : 'bg-red-500'}"></div>
+        <div
+          class="w-2 h-2 rounded-full {$analyticsStore.connected
+            ? 'bg-green-500'
+            : 'bg-red-500'}"
+        />
         <span class="text-xs text-gray-400">
-          {$analyticsStore.connected ? 'Live' : 'Offline'}
+          {$analyticsStore.connected ? "Live" : "Offline"}
         </span>
       </div>
-      
+
       <div class="flex items-center gap-2">
         <label for="timeRange" class="text-gray-400 text-sm">Time Range:</label>
         <select
