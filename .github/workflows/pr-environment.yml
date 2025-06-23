@@ -21,7 +21,7 @@ jobs:
   check-command:
     if: |
       github.event_name != 'issue_comment' || 
-      (contains(github.event.comment.body, '/deploy') && !contains(github.event.comment.body, '/deploy-to-dev'))
+      (contains(github.event.comment.body, '/deploy-to-preview') && !contains(github.event.comment.body, '/deploy-to-dev'))
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.check.outputs.should_deploy }}
@@ -33,8 +33,8 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "issue_comment" ]]; then
             comment_body="${{ github.event.comment.body }}"
-            # Only deploy if comment contains '/deploy' but NOT '/deploy-to-dev'
-            if [[ "$comment_body" == *"/deploy"* && "$comment_body" != *"/deploy-to-dev"* ]]; then
+            # Only deploy if comment contains '/deploy-to-preview' but NOT '/deploy-to-dev'
+            if [[ "$comment_body" == *"/deploy-to-preview"* && "$comment_body" != *"/deploy-to-dev"* ]]; then
               echo "should_deploy=true" >> $GITHUB_OUTPUT
               echo "pr_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
               echo "pr_ref=refs/pull/${{ github.event.issue.number }}/merge" >> $GITHUB_OUTPUT
@@ -499,7 +499,7 @@ jobs:
             Please check the [workflow logs](${context.payload.repository.html_url}/actions/runs/${context.runId}) for details.
             
             **Available Commands:**
-            - \`/deploy\` - Retry PR environment deployment
+            - \`/deploy-to-preview\` - Retry PR environment deployment
             - \`/deploy-to-dev\` - Deploy directly to development environment`;
             }
             

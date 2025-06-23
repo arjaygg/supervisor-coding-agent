@@ -7,14 +7,14 @@ The deployment workflow has been updated to provide more control over when envir
 ## PR Environment (Manual)
 
 **Trigger**: Comment-based deployment only
-- **Command**: `/deploy`
+- **Command**: `/deploy-to-preview`
 - **Purpose**: Creates temporary PR environment for testing
 - **Lifecycle**: Auto-cleanup after 24 hours
 - **URL**: `http://localhost:{dynamic-port}`
 
 ### Usage
 1. Create or update a PR
-2. Comment `/deploy` on the PR to create environment
+2. Comment `/deploy-to-preview` on the PR to create environment
 3. Test the changes in the temporary environment
 4. Comment `/deploy-to-dev` to promote to development (optional)
 5. Environment auto-cleans up after 24 hours
@@ -37,7 +37,7 @@ The deployment workflow has been updated to provide more control over when envir
 
 | Command | Purpose | Environment | Lifecycle |
 |---------|---------|-------------|-----------|
-| `/deploy` | Create PR environment | Temporary | 24 hours |
+| `/deploy-to-preview` | Create PR environment | Temporary | 24 hours |
 | `/deploy-to-dev` | Promote to development | Persistent | Until next deployment |
 | `/cleanup` | Manual cleanup of PR environment | N/A | Immediate |
 | `/rollback-dev` | Rollback development environment | Persistent | Immediate |
@@ -53,6 +53,6 @@ The deployment workflow has been updated to provide more control over when envir
 ## Migration Notes
 
 - **Previous behavior**: PR environments were created automatically on PR open/update
-- **New behavior**: PR environments are created only when `/deploy` is commented
+- **New behavior**: PR environments are created only when `/deploy-to-preview` is commented
 - **Promotion**: `/deploy-to-dev` must be manually triggered via comment
 - **Cleanup**: PR environments still auto-cleanup after 24 hours
