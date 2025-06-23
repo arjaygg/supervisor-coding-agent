@@ -136,7 +136,11 @@
       "Bash(./scripts/quick-deploy.sh:*)",
       "Bash(./scripts/build-optimized.sh:*)",
       "Bash(time docker buildx build:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(gcloud run services list:*)",
+      "Bash(gcloud artifacts repositories list:*)",
+      "Bash(gcloud iam service-accounts:*)",
+      "Bash(gcloud secrets list:*)"
     ],
     "deny": []
   },
