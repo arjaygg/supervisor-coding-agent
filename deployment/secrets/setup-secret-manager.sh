@@ -19,9 +19,16 @@ if [ -z "$GCP_PROJECT_ID" ]; then
     exit 1
 fi
 
-# Enable Secret Manager API if not already enabled
-echo "📡 Enabling Secret Manager API..."
-gcloud services enable secretmanager.googleapis.com --project=$GCP_PROJECT_ID
+# Enable Secret Manager API if not already enabled (skip if running in CI/CD)
+if [ "${CI:-false}" = "true" ] || [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
+    echo "📡 Skipping API enablement in CI/CD environment..."
+    echo "ℹ️  APIs should be pre-enabled via setup script"
+else
+    echo "📡 Enabling Secret Manager API..."
+    if ! gcloud services enable secretmanager.googleapis.com --project=$GCP_PROJECT_ID; then
+        echo "⚠️  API enablement failed - continuing if API is already enabled"
+    fi
+fi
 
 # Create secrets with environment prefix
 echo "🔑 Creating application secrets..."
