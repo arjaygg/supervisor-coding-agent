@@ -1,4 +1,4 @@
-name: 🚀 Deploy to Cloud Run (Container-Native)
+name: 🚀 Deploy Apps
 
 on:
   issue_comment:
@@ -19,10 +19,10 @@ on:
         required: false
         type: choice
         options:
-          - development
+          - dev
           - staging
           - production
-        default: development
+        default: dev
 
 permissions:
   contents: write
@@ -41,7 +41,7 @@ jobs:
   check-deployment-command:
     if: |
       (github.event_name == 'issue_comment' && 
-       contains(github.event.comment.body, '/deploy-cloud-run')) ||
+       contains(github.event.comment.body, '/deploy')) ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
@@ -59,12 +59,12 @@ jobs:
             let pr_number, deploy_ref, deploy_branch, environment;
             
             if (context.eventName === 'issue_comment') {
-              if (context.payload.comment.body.includes('/deploy-cloud-run')) {
+              if (context.payload.comment.body.includes('/deploy')) {
                 pr_number = context.payload.issue.number;
-                environment = 'development'; // Default for PR deployments
+                environment = 'dev'; // Default for PR deployments
                 
                 // Extract environment if specified
-                const envMatch = context.payload.comment.body.match(/\/deploy-cloud-run\s+(\w+)/);
+                const envMatch = context.payload.comment.body.match(/\/deploy\s+(\w+)/);
                 if (envMatch) {
                   environment = envMatch[1];
                 }
@@ -90,7 +90,7 @@ jobs:
             } else if (context.eventName === 'workflow_dispatch') {
               const branch_input = context.payload.inputs.branch || 'main';
               pr_number = context.payload.inputs.pr_number;
-              environment = context.payload.inputs.environment || 'development';
+              environment = context.payload.inputs.environment || 'dev';
               
               // Get branch details
               const { data: branchData } = await github.rest.repos.getBranch({
@@ -248,20 +248,44 @@ jobs:
         run: |
           echo "🔐 Setting up Cloud Secret Manager..."
           
+          # Map environment aliases to full names
+          DEPLOY_ENV="${{ needs.check-deployment-command.outputs.environment }}"
+          case "$DEPLOY_ENV" in
+            "dev")
+              ENVIRONMENT="development"
+              ;;
+            *)
+              ENVIRONMENT="$DEPLOY_ENV"
+              ;;
+          esac
+          
+          echo "Environment mapping: $DEPLOY_ENV -> $ENVIRONMENT"
+          
           # Run secret setup script
           chmod +x ./deployment/secrets/setup-secret-manager.sh
           export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
-          export ENVIRONMENT=${{ needs.check-deployment-command.outputs.environment }}
+          export ENVIRONMENT=$ENVIRONMENT
           ./deployment/secrets/setup-secret-manager.sh
 
       - name: Deploy to Cloud Run
         run: |
           echo "🚀 Deploying to Cloud Run..."
           
+          # Map environment aliases to full names
+          DEPLOY_ENV="${{ needs.check-deployment-command.outputs.environment }}"
+          case "$DEPLOY_ENV" in
+            "dev")
+              ENVIRONMENT="development"
+              ;;
+            *)
+              ENVIRONMENT="$DEPLOY_ENV"
+              ;;
+          esac
+          
           # Set deployment variables
           export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
           export GCP_REGION=${{ env.GCP_REGION }}
-          export ENVIRONMENT=${{ needs.check-deployment-command.outputs.environment }}
+          export ENVIRONMENT=$ENVIRONMENT
           
           # Navigate to Cloud Run deployment directory
           cd deployment/cloud-run
