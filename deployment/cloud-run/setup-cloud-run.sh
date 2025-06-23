@@ -321,7 +321,7 @@ if [ "$API_CHECK_PASSED" = true ] && [ "$SA_CHECK_PASSED" = true ] && [ "$REGIST
     echo -e "${GREEN}✅ IAM permissions granted${NC}"
     echo ""
     echo -e "${BLUE}🚀 Ready to deploy with:${NC}"
-    echo -e "   ${YELLOW}Comment on PR: /deploy-cloud-run development${NC}"
+    echo -e "   ${YELLOW}Comment on PR: /deploy dev${NC}"
     echo -e "   ${YELLOW}Or use GitHub Actions workflow dispatch${NC}"
     echo ""
     echo -e "${BLUE}📊 Expected benefits:${NC}"
