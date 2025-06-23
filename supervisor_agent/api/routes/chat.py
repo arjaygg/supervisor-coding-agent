@@ -21,6 +21,7 @@ async def create_chat_thread(
     db: Session = Depends(get_db)
 ):
     """Create a new chat thread"""
+    logger.info(f"Creating new chat thread: {thread.title}")
     try:
         # Create thread in database
         db_thread = crud.ChatThreadCRUD.create_thread(db, thread)

@@ -254,7 +254,7 @@ class ChatMessage(Base):
     # Relationships
     thread = relationship("ChatThread", back_populates="messages")
     parent_message = relationship("ChatMessage", remote_side=[id])
-    child_messages = relationship("ChatMessage", remote_side=[parent_message_id])
+    child_messages = relationship("ChatMessage", remote_side=[parent_message_id], overlaps="parent_message")
 
     # Indexes for performance
     __table_args__ = (
