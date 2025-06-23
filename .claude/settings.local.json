@@ -133,6 +133,7 @@
       "Bash(python:*)",
       "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db python scripts/setup_database.py)",
       "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db python:*)",
+<<<<<<< Updated upstream
       "Bash(./scripts/quick-deploy.sh:*)",
       "Bash(./scripts/build-optimized.sh:*)",
       "Bash(time docker buildx build:*)",
@@ -148,6 +149,16 @@
       "Bash(./deploy.sh)",
       "Bash(gcloud run services logs read:*)",
       "Bash(gcloud secrets versions access:*)"
+||||||| Stash base
+      "Bash(DATABASE_URL=sqlite:///./supervisor_agent.db python:*)"
+=======
+      "Bash(npm run lint)",
+      "Bash(npx eslint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run format:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git rebase:*)"
+>>>>>>> Stashed changes
     ],
     "deny": []
   },

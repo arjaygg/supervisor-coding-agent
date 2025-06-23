@@ -1,13 +1,13 @@
-import { writable, derived, get } from 'svelte/store';
-import { websocket } from './websocket';
-import type { UUID } from 'crypto';
+import { writable, derived, get } from "svelte/store";
+import { websocket } from "./websocket";
+import type { UUID } from "crypto";
 
 // Types
 export interface ChatThread {
   id: string;
   title: string;
   description?: string;
-  status: 'ACTIVE' | 'ARCHIVED' | 'COMPLETED';
+  status: "ACTIVE" | "ARCHIVED" | "COMPLETED";
   created_at: string;
   updated_at?: string;
   user_id?: string;
@@ -20,9 +20,14 @@ export interface ChatThread {
 export interface ChatMessage {
   id: string;
   thread_id: string;
-  role: 'USER' | 'ASSISTANT' | 'SYSTEM';
+  role: "USER" | "ASSISTANT" | "SYSTEM";
   content: string;
-  message_type: 'TEXT' | 'TASK_BREAKDOWN' | 'PROGRESS' | 'NOTIFICATION' | 'ERROR';
+  message_type:
+    | "TEXT"
+    | "TASK_BREAKDOWN"
+    | "PROGRESS"
+    | "NOTIFICATION"
+    | "ERROR";
   metadata: Record<string, any>;
   created_at: string;
   edited_at?: string;
@@ -32,7 +37,7 @@ export interface ChatMessage {
 export interface ChatNotification {
   id: string;
   thread_id: string;
-  type: 'TASK_COMPLETE' | 'TASK_FAILED' | 'AGENT_UPDATE' | 'SYSTEM_ALERT';
+  type: "TASK_COMPLETE" | "TASK_FAILED" | "AGENT_UPDATE" | "SYSTEM_ALERT";
   title: string;
   message?: string;
   is_read: boolean;
@@ -51,7 +56,7 @@ interface ChatState {
 }
 
 // Base URL for API calls
-const API_BASE = '/api/v1/chat';
+const API_BASE = "/api/v1/chat";
 
 // Create the main chat store
 function createChatStore() {
@@ -62,21 +67,24 @@ function createChatStore() {
     notifications: [],
     loading: false,
     error: null,
-    connected: false
+    connected: false,
   });
 
   return {
     subscribe,
-    
+
     // Thread management
-    async createThread(title: string, initialMessage?: string): Promise<ChatThread> {
-      update(state => ({ ...state, loading: true, error: null }));
-      
+    async createThread(
+      title: string,
+      initialMessage?: string
+    ): Promise<ChatThread> {
+      update((state) => ({ ...state, loading: true, error: null }));
+
       try {
         const response = await fetch(`${API_BASE}/threads`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, initial_message: initialMessage })
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, initial_message: initialMessage }),
         });
 
         if (!response.ok) {
@@ -84,71 +92,71 @@ function createChatStore() {
         }
 
         const newThread: ChatThread = await response.json();
-        
-        update(state => ({
+
+        update((state) => ({
           ...state,
           threads: [newThread, ...state.threads],
           currentThreadId: newThread.id,
-          loading: false
+          loading: false,
         }));
 
         return newThread;
       } catch (error) {
-        update(state => ({ 
-          ...state, 
-          loading: false, 
-          error: error instanceof Error ? error.message : 'Failed to create thread' 
+        update((state) => ({
+          ...state,
+          loading: false,
+          error:
+            error instanceof Error ? error.message : "Failed to create thread",
         }));
         throw error;
       }
     },
 
     async fetchThreads(): Promise<void> {
-      update(state => ({ ...state, loading: true, error: null }));
-      
+      update((state) => ({ ...state, loading: true, error: null }));
+
       try {
         const response = await fetch(`${API_BASE}/threads`);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch threads: ${response.statusText}`);
         }
 
         const data = await response.json();
-        
-        update(state => ({
+
+        update((state) => ({
           ...state,
           threads: data.threads || [],
-          loading: false
+          loading: false,
         }));
       } catch (error) {
-        update(state => ({ 
-          ...state, 
-          loading: false, 
-          error: error instanceof Error ? error.message : 'Failed to fetch threads' 
+        update((state) => ({
+          ...state,
+          loading: false,
+          error:
+            error instanceof Error ? error.message : "Failed to fetch threads",
         }));
       }
     },
 
     async selectThread(threadId: string): Promise<void> {
-      update(state => ({ ...state, currentThreadId: threadId }));
-      
+      update((state) => ({ ...state, currentThreadId: threadId }));
+
       // Mark notifications as read for this thread
       try {
         await fetch(`${API_BASE}/threads/${threadId}/notifications/read`, {
-          method: 'POST'
+          method: "POST",
         });
-        
+
         // Update unread count locally
-        update(state => ({
+        update((state) => ({
           ...state,
-          threads: state.threads.map(thread => 
-            thread.id === threadId 
-              ? { ...thread, unread_count: 0 }
-              : thread
-          )
+          threads: state.threads.map((thread) =>
+            thread.id === threadId ? { ...thread, unread_count: 0 } : thread
+          ),
         }));
       } catch (error) {
-        console.warn('Failed to mark notifications as read:', error);
+        console.warn("Failed to mark notifications as read:", error);
       }
 
       // Fetch messages if not already loaded
@@ -158,12 +166,15 @@ function createChatStore() {
       }
     },
 
-    async updateThread(threadId: string, updates: Partial<ChatThread>): Promise<void> {
+    async updateThread(
+      threadId: string,
+      updates: Partial<ChatThread>
+    ): Promise<void> {
       try {
         const response = await fetch(`${API_BASE}/threads/${threadId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updates)
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updates),
         });
 
         if (!response.ok) {
@@ -171,17 +182,18 @@ function createChatStore() {
         }
 
         const updatedThread: ChatThread = await response.json();
-        
-        update(state => ({
+
+        update((state) => ({
           ...state,
-          threads: state.threads.map(thread => 
+          threads: state.threads.map((thread) =>
             thread.id === threadId ? updatedThread : thread
-          )
+          ),
         }));
       } catch (error) {
-        update(state => ({ 
-          ...state, 
-          error: error instanceof Error ? error.message : 'Failed to update thread' 
+        update((state) => ({
+          ...state,
+          error:
+            error instanceof Error ? error.message : "Failed to update thread",
         }));
         throw error;
       }
@@ -190,23 +202,25 @@ function createChatStore() {
     async deleteThread(threadId: string): Promise<void> {
       try {
         const response = await fetch(`${API_BASE}/threads/${threadId}`, {
-          method: 'DELETE'
+          method: "DELETE",
         });
 
         if (!response.ok) {
           throw new Error(`Failed to delete thread: ${response.statusText}`);
         }
 
-        update(state => ({
+        update((state) => ({
           ...state,
-          threads: state.threads.filter(thread => thread.id !== threadId),
-          currentThreadId: state.currentThreadId === threadId ? null : state.currentThreadId,
-          messages: { ...state.messages, [threadId]: undefined }
+          threads: state.threads.filter((thread) => thread.id !== threadId),
+          currentThreadId:
+            state.currentThreadId === threadId ? null : state.currentThreadId,
+          messages: { ...state.messages, [threadId]: undefined },
         }));
       } catch (error) {
-        update(state => ({ 
-          ...state, 
-          error: error instanceof Error ? error.message : 'Failed to delete thread' 
+        update((state) => ({
+          ...state,
+          error:
+            error instanceof Error ? error.message : "Failed to delete thread",
         }));
         throw error;
       }
@@ -215,63 +229,70 @@ function createChatStore() {
     // Message management
     async fetchMessages(threadId: string, before?: string): Promise<void> {
       try {
-        const url = new URL(`${window.location.origin}${API_BASE}/threads/${threadId}/messages`);
+        const url = new URL(
+          `${window.location.origin}${API_BASE}/threads/${threadId}/messages`
+        );
         if (before) {
-          url.searchParams.set('before', before);
+          url.searchParams.set("before", before);
         }
 
         const response = await fetch(url.toString());
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch messages: ${response.statusText}`);
         }
 
         const data = await response.json();
-        
-        update(state => ({
+
+        update((state) => ({
           ...state,
           messages: {
             ...state.messages,
-            [threadId]: before 
+            [threadId]: before
               ? [...(state.messages[threadId] || []), ...data.messages]
-              : data.messages.reverse() // Reverse to show oldest first
-          }
+              : data.messages.reverse(), // Reverse to show oldest first
+          },
         }));
       } catch (error) {
-        update(state => ({ 
-          ...state, 
-          error: error instanceof Error ? error.message : 'Failed to fetch messages' 
+        update((state) => ({
+          ...state,
+          error:
+            error instanceof Error ? error.message : "Failed to fetch messages",
         }));
       }
     },
 
     async sendMessage(threadId: string, content: string): Promise<ChatMessage> {
       try {
-        const response = await fetch(`${API_BASE}/threads/${threadId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content })
-        });
+        const response = await fetch(
+          `${API_BASE}/threads/${threadId}/messages`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content }),
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`Failed to send message: ${response.statusText}`);
         }
 
         const newMessage: ChatMessage = await response.json();
-        
-        update(state => ({
+
+        update((state) => ({
           ...state,
           messages: {
             ...state.messages,
-            [threadId]: [...(state.messages[threadId] || []), newMessage]
-          }
+            [threadId]: [...(state.messages[threadId] || []), newMessage],
+          },
         }));
 
         return newMessage;
       } catch (error) {
-        update(state => ({ 
-          ...state, 
-          error: error instanceof Error ? error.message : 'Failed to send message' 
+        update((state) => ({
+          ...state,
+          error:
+            error instanceof Error ? error.message : "Failed to send message",
         }));
         throw error;
       }
@@ -280,95 +301,115 @@ function createChatStore() {
     // Notification management
     async fetchNotifications(): Promise<void> {
       try {
-        const response = await fetch(`${API_BASE}/notifications?unread_only=true`);
-        
+        const response = await fetch(
+          `${API_BASE}/notifications?unread_only=true`
+        );
+
         if (!response.ok) {
-          throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+          throw new Error(
+            `Failed to fetch notifications: ${response.statusText}`
+          );
         }
 
         const notifications: ChatNotification[] = await response.json();
-        
-        update(state => ({ ...state, notifications }));
+
+        update((state) => ({ ...state, notifications }));
       } catch (error) {
-        console.warn('Failed to fetch notifications:', error);
+        console.warn("Failed to fetch notifications:", error);
       }
     },
 
     // WebSocket event handlers
     handleWebSocketMessage(event: any): void {
-      if (event.type === 'chat_update') {
+      if (event.type === "chat_update") {
         const { data } = event;
-        
+
         switch (data.type) {
-          case 'thread_created':
-            update(state => ({
+          case "thread_created":
+            update((state) => ({
               ...state,
-              threads: state.threads.some(t => t.id === data.thread_id)
+              threads: state.threads.some((t) => t.id === data.thread_id)
                 ? state.threads
-                : [{ 
-                    id: data.thread_id, 
-                    title: data.title, 
-                    status: 'ACTIVE' as const,
-                    created_at: data.created_at,
-                    metadata: {}
-                  }, ...state.threads]
+                : [
+                    {
+                      id: data.thread_id,
+                      title: data.title,
+                      status: "ACTIVE" as const,
+                      created_at: data.created_at,
+                      metadata: {},
+                    },
+                    ...state.threads,
+                  ],
             }));
             break;
 
-          case 'message_sent':
+          case "message_sent":
             const threadId = data.thread_id;
-            update(state => {
+            update((state) => {
               const messages = state.messages[threadId] || [];
-              const messageExists = messages.some(m => m.id === data.message_id);
-              
+              const messageExists = messages.some(
+                (m) => m.id === data.message_id
+              );
+
               if (!messageExists) {
                 return {
                   ...state,
                   messages: {
                     ...state.messages,
-                    [threadId]: [...messages, {
-                      id: data.message_id,
-                      thread_id: threadId,
-                      role: data.role.toUpperCase() as 'USER' | 'ASSISTANT' | 'SYSTEM',
-                      content: data.content,
-                      message_type: 'TEXT' as const,
-                      metadata: {},
-                      created_at: data.created_at
-                    }]
-                  }
+                    [threadId]: [
+                      ...messages,
+                      {
+                        id: data.message_id,
+                        thread_id: threadId,
+                        role: data.role.toUpperCase() as
+                          | "USER"
+                          | "ASSISTANT"
+                          | "SYSTEM",
+                        content: data.content,
+                        message_type: "TEXT" as const,
+                        metadata: {},
+                        created_at: data.created_at,
+                      },
+                    ],
+                  },
                 };
               }
               return state;
             });
             break;
 
-          case 'thread_updated':
-            update(state => ({
+          case "thread_updated":
+            update((state) => ({
               ...state,
-              threads: state.threads.map(thread => 
-                thread.id === data.thread_id 
+              threads: state.threads.map((thread) =>
+                thread.id === data.thread_id
                   ? { ...thread, title: data.title, status: data.status }
                   : thread
-              )
+              ),
             }));
             break;
 
-          case 'thread_deleted':
-            update(state => ({
+          case "thread_deleted":
+            update((state) => ({
               ...state,
-              threads: state.threads.filter(thread => thread.id !== data.thread_id),
-              currentThreadId: state.currentThreadId === data.thread_id ? null : state.currentThreadId
+              threads: state.threads.filter(
+                (thread) => thread.id !== data.thread_id
+              ),
+              currentThreadId:
+                state.currentThreadId === data.thread_id
+                  ? null
+                  : state.currentThreadId,
             }));
             break;
 
-          case 'notifications_read':
-            update(state => ({
+          case "notifications_read":
+            update((state) => ({
               ...state,
-              threads: state.threads.map(thread => 
-                thread.id === data.thread_id 
+              threads: state.threads.map((thread) =>
+                thread.id === data.thread_id
                   ? { ...thread, unread_count: 0 }
                   : thread
-              )
+              ),
             }));
             break;
         }
@@ -377,12 +418,12 @@ function createChatStore() {
 
     // Utility methods
     clearError(): void {
-      update(state => ({ ...state, error: null }));
+      update((state) => ({ ...state, error: null }));
     },
 
     setConnected(connected: boolean): void {
-      update(state => ({ ...state, connected }));
-    }
+      update((state) => ({ ...state, connected }));
+    },
   };
 }
 
@@ -391,22 +432,19 @@ export const chat = createChatStore();
 // Derived stores for convenient access
 export const currentThread = derived(
   chat,
-  $chat => $chat.threads.find(t => t.id === $chat.currentThreadId) || null
+  ($chat) => $chat.threads.find((t) => t.id === $chat.currentThreadId) || null
 );
 
-export const currentMessages = derived(
-  chat,
-  $chat => $chat.currentThreadId ? $chat.messages[$chat.currentThreadId] || [] : []
+export const currentMessages = derived(chat, ($chat) =>
+  $chat.currentThreadId ? $chat.messages[$chat.currentThreadId] || [] : []
 );
 
-export const activeThreads = derived(
-  chat,
-  $chat => $chat.threads.filter(t => t.status === 'ACTIVE')
+export const activeThreads = derived(chat, ($chat) =>
+  $chat.threads.filter((t) => t.status === "ACTIVE")
 );
 
-export const totalUnreadCount = derived(
-  chat,
-  $chat => $chat.threads.reduce((sum, thread) => sum + (thread.unread_count || 0), 0)
+export const totalUnreadCount = derived(chat, ($chat) =>
+  $chat.threads.reduce((sum, thread) => sum + (thread.unread_count || 0), 0)
 );
 
 // Initialize WebSocket handlers
@@ -419,7 +457,7 @@ websocket.subscribe(($websocket) => {
 });
 
 // Handle WebSocket messages
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   websocket.addMessageHandler((event) => {
     chat.handleWebSocketMessage(event);
   });

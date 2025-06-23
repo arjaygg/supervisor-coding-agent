@@ -1,5 +1,5 @@
-import { writable } from 'svelte/store';
-import { browser } from '$app/environment';
+import { writable } from "svelte/store";
+import { browser } from "$app/environment";
 
 export interface WebSocketMessage {
   type: string;
@@ -17,7 +17,7 @@ function createWebSocketStore() {
   const { subscribe, set, update } = writable<WebSocketState>({
     connected: false,
     reconnectAttempts: 0,
-    lastMessage: null
+    lastMessage: null,
   });
 
   let ws: WebSocket | null = null;
@@ -29,14 +29,14 @@ function createWebSocketStore() {
   const connect = () => {
     if (!browser) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
+
     try {
       ws = new WebSocket(wsUrl);
-      
+
       ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log("WebSocket connected");
         set({ connected: true, reconnectAttempts: 0, lastMessage: null });
       };
 
@@ -44,40 +44,40 @@ function createWebSocketStore() {
         try {
           const parsedData = JSON.parse(event.data);
           const message: WebSocketMessage = {
-            type: 'message',
+            type: "message",
             data: parsedData,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
-          
-          update(state => ({
+
+          update((state) => ({
             ...state,
-            lastMessage: message
+            lastMessage: message,
           }));
 
           // Call registered message handlers
-          messageHandlers.forEach(handler => {
+          messageHandlers.forEach((handler) => {
             try {
               handler(parsedData);
             } catch (error) {
-              console.error('Error in message handler:', error);
+              console.error("Error in message handler:", error);
             }
           });
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error("Error parsing WebSocket message:", error);
         }
       };
 
       ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        update(state => ({ ...state, connected: false }));
-        
+        console.log("WebSocket disconnected");
+        update((state) => ({ ...state, connected: false }));
+
         // Attempt to reconnect
-        update(state => {
+        update((state) => {
           if (state.reconnectAttempts < maxReconnectAttempts) {
             reconnectTimer = window.setTimeout(() => {
               connect();
             }, reconnectDelay);
-            
+
             return { ...state, reconnectAttempts: state.reconnectAttempts + 1 };
           }
           return state;
@@ -85,10 +85,10 @@ function createWebSocketStore() {
       };
 
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error("WebSocket error:", error);
       };
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
+      console.error("Failed to create WebSocket connection:", error);
     }
   };
 
@@ -97,12 +97,12 @@ function createWebSocketStore() {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
-    
+
     if (ws) {
       ws.close();
       ws = null;
     }
-    
+
     set({ connected: false, reconnectAttempts: 0, lastMessage: null });
   };
 
@@ -110,13 +110,13 @@ function createWebSocketStore() {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(data));
     } else {
-      console.warn('WebSocket not connected, cannot send message');
+      console.warn("WebSocket not connected, cannot send message");
     }
   };
 
   const addMessageHandler = (handler: (message: any) => void) => {
     messageHandlers.push(handler);
-    
+
     // Return unsubscribe function
     return () => {
       const index = messageHandlers.indexOf(handler);
@@ -131,7 +131,7 @@ function createWebSocketStore() {
     connect,
     disconnect,
     send,
-    addMessageHandler
+    addMessageHandler,
   };
 }
 
