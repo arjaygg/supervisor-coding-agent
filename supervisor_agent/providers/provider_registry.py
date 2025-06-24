@@ -27,22 +27,7 @@ from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Register provider classes on module import
-def _register_default_providers():
-    """Register default provider implementations."""
-    try:
-        from .claude_cli_provider import ClaudeCliProvider
-        from .local_mock_provider import LocalMockProvider
-        
-        ProviderFactory.register_provider_class(ProviderType.CLAUDE_CLI, ClaudeCliProvider)
-        ProviderFactory.register_provider_class(ProviderType.LOCAL_MOCK, LocalMockProvider)
-        
-        logger.info("Default provider classes registered successfully")
-    except ImportError as e:
-        logger.warning(f"Failed to register some provider classes: {e}")
-
-# Register providers on module import
-_register_default_providers()
+# Provider registration will be done after class definitions
 
 
 class LoadBalancingStrategy(str, Enum):
@@ -525,3 +510,22 @@ class ProviderRegistry:
             except Exception as e:
                 logger.error(f"Error in health check loop: {str(e)}")
                 await asyncio.sleep(min(check_interval_seconds, 30))  # Retry after shorter interval on error
+
+
+# Register default provider classes after definitions
+def register_default_providers():
+    """Register default provider implementations."""
+    try:
+        from .claude_cli_provider import ClaudeCliProvider
+        from .local_mock_provider import LocalMockProvider
+        
+        ProviderFactory.register_provider_class(ProviderType.CLAUDE_CLI, ClaudeCliProvider)
+        ProviderFactory.register_provider_class(ProviderType.LOCAL_MOCK, LocalMockProvider)
+        
+        logger.info("Default provider classes registered successfully")
+    except ImportError as e:
+        logger.warning(f"Failed to register some provider classes: {e}")
+
+
+# Register providers on module load
+register_default_providers()
