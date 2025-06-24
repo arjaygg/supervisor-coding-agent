@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from supervisor_agent.db import models, schemas
+from supervisor_agent.providers.base_provider import ProviderType, ProviderStatus
 
 
 class TaskCRUD:
@@ -637,3 +638,271 @@ class ChatNotificationCRUD:
         if thread_id:
             query = query.filter(models.ChatNotification.thread_id == thread_id)
         return query.count()
+
+
+class ProviderCRUD:
+    @staticmethod
+    def create_provider(db: Session, provider_data: Dict[str, Any]) -> models.Provider:
+        """Create a new provider."""
+        db_provider = models.Provider(**provider_data)
+        db.add(db_provider)
+        db.commit()
+        db.refresh(db_provider)
+        return db_provider
+
+    @staticmethod
+    def get_provider(db: Session, provider_id: str) -> Optional[models.Provider]:
+        """Get a provider by ID."""
+        return db.query(models.Provider).filter(models.Provider.id == provider_id).first()
+
+    @staticmethod
+    def get_providers(
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+        provider_type: Optional[ProviderType] = None,
+        status: Optional[ProviderStatus] = None,
+        enabled_only: bool = False
+    ) -> List[models.Provider]:
+        """Get providers with optional filtering."""
+        query = db.query(models.Provider)
+        
+        if provider_type:
+            query = query.filter(models.Provider.type == provider_type)
+        if status:
+            query = query.filter(models.Provider.status == status)
+        if enabled_only:
+            query = query.filter(models.Provider.is_enabled == True)
+            
+        return (
+            query.order_by(models.Provider.priority.asc(), models.Provider.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def get_available_providers(db: Session, task_type: Optional[str] = None) -> List[models.Provider]:
+        """Get providers that are enabled and have healthy status."""
+        query = db.query(models.Provider).filter(
+            models.Provider.is_enabled == True,
+            models.Provider.status.in_([ProviderStatus.ACTIVE, ProviderStatus.DEGRADED])
+        )
+        
+        # If task_type is provided, filter by capabilities
+        if task_type:
+            # Use JSON path query to check if task_type is in supported_tasks array
+            query = query.filter(
+                func.json_extract_path_text(models.Provider.capabilities, 'supported_tasks').contains(task_type)
+            )
+        
+        return query.order_by(models.Provider.priority.asc()).all()
+
+    @staticmethod
+    def update_provider(
+        db: Session, provider_id: str, update_data: Dict[str, Any]
+    ) -> Optional[models.Provider]:
+        """Update a provider."""
+        db_provider = db.query(models.Provider).filter(models.Provider.id == provider_id).first()
+        if db_provider:
+            for field, value in update_data.items():
+                setattr(db_provider, field, value)
+            db_provider.updated_at = datetime.now(timezone.utc)
+            db.commit()
+            db.refresh(db_provider)
+        return db_provider
+
+    @staticmethod
+    def update_provider_health(
+        db: Session, provider_id: str, health_data: Dict[str, Any]
+    ) -> Optional[models.Provider]:
+        """Update provider health status."""
+        db_provider = db.query(models.Provider).filter(models.Provider.id == provider_id).first()
+        if db_provider:
+            db_provider.health_status = health_data
+            db_provider.last_health_check = datetime.now(timezone.utc)
+            db.commit()
+            db.refresh(db_provider)
+        return db_provider
+
+    @staticmethod
+    def delete_provider(db: Session, provider_id: str) -> bool:
+        """Delete a provider and all associated usage records."""
+        db_provider = db.query(models.Provider).filter(models.Provider.id == provider_id).first()
+        if db_provider:
+            db.delete(db_provider)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    def get_provider_stats(db: Session, provider_id: str, days: int = 30) -> Dict[str, Any]:
+        """Get usage statistics for a provider."""
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        
+        # Get usage statistics
+        usage_stats = (
+            db.query(
+                func.count(models.ProviderUsage.id).label('total_requests'),
+                func.sum(models.ProviderUsage.tokens_used).label('total_tokens'),
+                func.sum(func.cast(models.ProviderUsage.cost_usd, db.Integer)).label('total_cost'),
+                func.avg(models.ProviderUsage.execution_time_ms).label('avg_response_time'),
+                func.count(models.ProviderUsage.id).filter(models.ProviderUsage.success == True).label('successful_requests')
+            )
+            .filter(
+                models.ProviderUsage.provider_id == provider_id,
+                models.ProviderUsage.timestamp >= cutoff_date
+            )
+            .first()
+        )
+        
+        total_requests = usage_stats.total_requests or 0
+        successful_requests = usage_stats.successful_requests or 0
+        success_rate = (successful_requests / total_requests * 100) if total_requests > 0 else 100.0
+        
+        return {
+            "total_requests": total_requests,
+            "successful_requests": successful_requests,
+            "failed_requests": total_requests - successful_requests,
+            "success_rate": round(success_rate, 2),
+            "total_tokens": usage_stats.total_tokens or 0,
+            "total_cost_usd": f"{float(usage_stats.total_cost or 0):.4f}",
+            "avg_response_time_ms": round(float(usage_stats.avg_response_time or 0), 2),
+            "period_days": days
+        }
+
+
+class ProviderUsageCRUD:
+    @staticmethod
+    def create_usage_entry(db: Session, usage_data: Dict[str, Any]) -> models.ProviderUsage:
+        """Create a provider usage entry."""
+        db_usage = models.ProviderUsage(**usage_data)
+        db.add(db_usage)
+        db.commit()
+        db.refresh(db_usage)
+        return db_usage
+
+    @staticmethod
+    def get_usage_entries(
+        db: Session,
+        provider_id: Optional[str] = None,
+        task_id: Optional[int] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[models.ProviderUsage]:
+        """Get usage entries with optional filtering."""
+        query = db.query(models.ProviderUsage)
+        
+        if provider_id:
+            query = query.filter(models.ProviderUsage.provider_id == provider_id)
+        if task_id:
+            query = query.filter(models.ProviderUsage.task_id == task_id)
+        if start_date:
+            query = query.filter(models.ProviderUsage.timestamp >= start_date)
+        if end_date:
+            query = query.filter(models.ProviderUsage.timestamp <= end_date)
+            
+        return (
+            query.order_by(desc(models.ProviderUsage.timestamp))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def get_provider_daily_usage(
+        db: Session, provider_id: str, days: int = 7
+    ) -> List[Dict[str, Any]]:
+        """Get daily usage breakdown for a provider."""
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        
+        daily_stats = (
+            db.query(
+                func.date(models.ProviderUsage.timestamp).label('date'),
+                func.count(models.ProviderUsage.id).label('requests'),
+                func.sum(models.ProviderUsage.tokens_used).label('tokens'),
+                func.sum(func.cast(models.ProviderUsage.cost_usd, db.Float)).label('cost'),
+                func.count(models.ProviderUsage.id).filter(models.ProviderUsage.success == True).label('successful')
+            )
+            .filter(
+                models.ProviderUsage.provider_id == provider_id,
+                models.ProviderUsage.timestamp >= cutoff_date
+            )
+            .group_by(func.date(models.ProviderUsage.timestamp))
+            .order_by(func.date(models.ProviderUsage.timestamp))
+            .all()
+        )
+        
+        results = []
+        for stat in daily_stats:
+            success_rate = (stat.successful / stat.requests * 100) if stat.requests > 0 else 0
+            results.append({
+                "date": stat.date.isoformat(),
+                "requests": stat.requests,
+                "successful_requests": stat.successful,
+                "success_rate": round(success_rate, 2),
+                "tokens_used": stat.tokens or 0,
+                "cost_usd": f"{float(stat.cost or 0):.4f}"
+            })
+        
+        return results
+
+    @staticmethod
+    def get_usage_summary(
+        db: Session,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ) -> Dict[str, Any]:
+        """Get overall usage summary across all providers."""
+        query = db.query(
+            models.ProviderUsage.provider_id,
+            func.count(models.ProviderUsage.id).label('requests'),
+            func.sum(models.ProviderUsage.tokens_used).label('tokens'),
+            func.sum(func.cast(models.ProviderUsage.cost_usd, db.Float)).label('cost'),
+            func.count(models.ProviderUsage.id).filter(models.ProviderUsage.success == True).label('successful')
+        )
+        
+        if start_date:
+            query = query.filter(models.ProviderUsage.timestamp >= start_date)
+        if end_date:
+            query = query.filter(models.ProviderUsage.timestamp <= end_date)
+            
+        results = query.group_by(models.ProviderUsage.provider_id).all()
+        
+        provider_summary = {}
+        total_requests = 0
+        total_tokens = 0
+        total_cost = 0.0
+        total_successful = 0
+        
+        for result in results:
+            requests = result.requests
+            tokens = result.tokens or 0
+            cost = float(result.cost or 0)
+            successful = result.successful
+            
+            provider_summary[result.provider_id] = {
+                "requests": requests,
+                "successful_requests": successful,
+                "success_rate": round((successful / requests * 100) if requests > 0 else 0, 2),
+                "tokens_used": tokens,
+                "cost_usd": f"{cost:.4f}"
+            }
+            
+            total_requests += requests
+            total_tokens += tokens
+            total_cost += cost
+            total_successful += successful
+        
+        overall_success_rate = (total_successful / total_requests * 100) if total_requests > 0 else 0
+        
+        return {
+            "total_requests": total_requests,
+            "total_successful_requests": total_successful,
+            "overall_success_rate": round(overall_success_rate, 2),
+            "total_tokens_used": total_tokens,
+            "total_cost_usd": f"{total_cost:.4f}",
+            "provider_breakdown": provider_summary
+        }

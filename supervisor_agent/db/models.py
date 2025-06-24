@@ -99,11 +99,87 @@ class MessageType(str, Enum):
     ERROR = "ERROR"
 
 
+class ProviderType(str, Enum):
+    CLAUDE_CLI = "claude_cli"
+    LOCAL_MOCK = "local_mock"
+    OPENAI = "openai"
+    ANTHROPIC_API = "anthropic_api"
+    CUSTOM = "custom"
+
+
+class ProviderStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DEGRADED = "degraded"
+    MAINTENANCE = "maintenance"
+    ERROR = "error"
+
+
 class NotificationType(str, Enum):
     TASK_COMPLETE = "TASK_COMPLETE"
     TASK_FAILED = "TASK_FAILED"
     AGENT_UPDATE = "AGENT_UPDATE"
     SYSTEM_ALERT = "SYSTEM_ALERT"
+
+
+class Provider(Base):
+    __tablename__ = "providers"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    type = Column(SQLEnum(ProviderType), nullable=False)
+    status = Column(SQLEnum(ProviderStatus), default=ProviderStatus.ACTIVE)
+    priority = Column(Integer, default=5)
+    config = Column(JSON, nullable=False, default=dict)
+    capabilities = Column(JSON, nullable=False, default=dict)
+    max_concurrent_requests = Column(Integer, default=10)
+    rate_limit_per_minute = Column(Integer, default=60)
+    rate_limit_per_hour = Column(Integer, default=1000)
+    rate_limit_per_day = Column(Integer, default=10000)
+    is_enabled = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    last_health_check = Column(DateTime(timezone=True), nullable=True)
+    health_status = Column(JSON, nullable=True, default=dict)
+    provider_metadata = Column("metadata", JSON, default=dict)
+
+    # Relationships
+    tasks = relationship("Task", back_populates="provider")
+    usage_entries = relationship("ProviderUsage", back_populates="provider", cascade="all, delete-orphan")
+
+    # Indexes for performance
+    __table_args__ = (
+        Index('ix_providers_type_status', 'type', 'status'),
+        Index('ix_providers_priority_enabled', 'priority', 'is_enabled'),
+    )
+
+
+class ProviderUsage(Base):
+    __tablename__ = "provider_usage"
+
+    id = Column(Integer, primary_key=True, index=True)
+    provider_id = Column(String, ForeignKey("providers.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
+    request_id = Column(String, nullable=True)  # For tracking individual requests
+    tokens_used = Column(Integer, nullable=False, default=0)
+    cost_usd = Column(String, nullable=False, default="0.00")  # Store as string for precision
+    execution_time_ms = Column(Integer, nullable=False, default=0)
+    model_used = Column(String, nullable=True)
+    success = Column(Boolean, nullable=False, default=True)
+    error_message = Column(Text, nullable=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    usage_metadata = Column("metadata", JSON, default=dict)
+
+    # Relationships
+    provider = relationship("Provider", back_populates="usage_entries")
+    task = relationship("Task", backref="provider_usage_entries")
+
+    # Indexes for efficient queries
+    __table_args__ = (
+        Index('ix_provider_usage_provider_timestamp', 'provider_id', 'timestamp'),
+        Index('ix_provider_usage_task_provider', 'task_id', 'provider_id'),
+        Index('ix_provider_usage_success_timestamp', 'success', 'timestamp'),
+    )
 
 
 class Task(Base):
@@ -117,6 +193,7 @@ class Task(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     assigned_agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
+    assigned_provider_id = Column(String, ForeignKey("providers.id"), nullable=True)
     retry_count = Column(Integer, default=0)
     error_message = Column(Text, nullable=True)
     chat_thread_id = Column(GUID(), ForeignKey("chat_threads.id"), nullable=True)
@@ -124,6 +201,7 @@ class Task(Base):
 
     # Relationships
     agent = relationship("Agent", back_populates="tasks")
+    provider = relationship("Provider", back_populates="tasks")
     sessions = relationship("TaskSession", back_populates="task")
     chat_thread = relationship("ChatThread", back_populates="tasks")
     source_message = relationship("ChatMessage", foreign_keys=[source_message_id])
