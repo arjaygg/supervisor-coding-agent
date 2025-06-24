@@ -20,16 +20,28 @@
   // Check screen size
   function checkScreenSize() {
     if (typeof window !== "undefined") {
+      const previousMobile = isMobile;
       isMobile = window.innerWidth < 768;
-      if (isMobile) {
+
+      // Auto-collapse sidebar when becoming mobile
+      if (isMobile && !previousMobile) {
         sidebarCollapsed = true;
+      }
+      // Auto-expand sidebar when becoming desktop (optional)
+      else if (!isMobile && previousMobile) {
+        sidebarCollapsed = false;
       }
     }
   }
 
   // Initialize and fetch data
   onMount(async () => {
-    checkScreenSize();
+    // Initialize mobile state and sidebar
+    if (typeof window !== "undefined") {
+      isMobile = window.innerWidth < 768;
+      sidebarCollapsed = isMobile; // Sidebar starts collapsed on mobile
+    }
+
     window.addEventListener("resize", checkScreenSize);
 
     // Connect WebSocket
@@ -103,13 +115,15 @@
 <div class="flex h-screen bg-gray-900 text-white overflow-hidden">
   <!-- Sidebar -->
   <div class="relative">
-    <!-- Mobile overlay -->
-    {#if isMobile && !sidebarCollapsed}
+    <!-- Mobile overlay - only show when mobile AND sidebar is expanded -->
+    {#if isMobile && !sidebarCollapsed && typeof window !== "undefined" && window.innerWidth < 768}
       <div
         class="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
         on:click={toggleSidebar}
+        on:keydown={(e) => e.key === "Enter" && toggleSidebar()}
         role="button"
         tabindex="0"
+        aria-label="Close sidebar"
       />
     {/if}
 
