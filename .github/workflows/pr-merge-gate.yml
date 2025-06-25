@@ -1,0 +1,491 @@
+name: PR Merge Gate - Integration Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+# Prevent concurrent runs on the same PR
+concurrency:
+  group: pr-merge-gate-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Static Analysis and Linting
+  static-analysis:
+    name: 🔍 Static Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 black isort mypy bandit
+      
+      - name: Run Black formatting check
+        run: black --check --diff supervisor_agent/
+      
+      - name: Run isort import sorting check
+        run: isort --check-only --diff supervisor_agent/
+      
+      - name: Run flake8 linting
+        run: flake8 supervisor_agent/ --max-line-length=100 --extend-ignore=E203,W503
+      
+      - name: Run type checking with mypy
+        run: mypy supervisor_agent/ --ignore-missing-imports --no-strict-optional
+        continue-on-error: true  # Don't fail on type issues for now
+      
+      - name: Run security scan with bandit
+        run: bandit -r supervisor_agent/ -f json -o bandit-report.json
+        continue-on-error: true
+      
+      - name: Upload security scan results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-scan-results
+          path: bandit-report.json
+
+  # Job 2: Unit Tests
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov pytest-mock
+      
+      - name: Run unit tests with coverage
+        run: |
+          pytest supervisor_agent/tests/ \
+            --cov=supervisor_agent \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=term \
+            --junitxml=test-results.xml \
+            -v
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: |
+            test-results.xml
+            htmlcov/
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        if: matrix.python-version == '3.11'
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  # Job 3: Integration and Smoke Tests
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [static-analysis]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: testuser
+          POSTGRES_DB: supervisor_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Set up test environment
+        run: |
+          cp .env.example .env
+          echo "DATABASE_URL=postgresql://testuser:testpass@localhost:5432/supervisor_test" >> .env
+          echo "REDIS_URL=redis://localhost:6379/0" >> .env
+          echo "CLAUDE_CLI_PATH=mock" >> .env
+          echo "ENABLE_MULTI_PROVIDER=true" >> .env
+      
+      - name: Run database migrations
+        run: |
+          python -c "
+          from supervisor_agent.db.database import engine
+          from supervisor_agent.db.models import Base
+          Base.metadata.create_all(bind=engine)
+          print('Database tables created successfully')
+          "
+      
+      - name: Run integration tests
+        run: python3 integration_test.py
+        timeout-minutes: 5
+      
+      - name: Run smoke tests (critical only)
+        run: |
+          python3 tests/e2e_smoke_tests.py \
+            --env local \
+            --critical-only \
+            --output smoke-test-results.json
+        timeout-minutes: 10
+      
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: integration-test-results
+          path: smoke-test-results.json
+
+  # Job 4: Security and Dependency Checks
+  security-checks:
+    name: 🔒 Security Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety pip-audit
+      
+      - name: Check for known security vulnerabilities
+        run: safety check --json --output safety-report.json
+        continue-on-error: true
+      
+      - name: Audit dependencies
+        run: pip-audit --format=json --output=pip-audit-report.json
+        continue-on-error: true
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            safety-report.json
+            pip-audit-report.json
+
+  # Job 5: Build and Package Validation
+  build-validation:
+    name: 🏗️ Build Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Test package installation
+        run: |
+          pip install -e .
+          python -c "import supervisor_agent; print('Package installation successful')"
+      
+      - name: Validate Docker build (if Dockerfile exists)
+        if: hashFiles('Dockerfile') != ''
+        run: |
+          docker build -t supervisor-agent-test .
+          echo "Docker build successful"
+      
+      - name: Test migration tool
+        run: |
+          python3 migrate_to_multi_provider.py --analyze-only > migration-analysis.json
+          echo "Migration tool validation successful"
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: build-validation
+          path: migration-analysis.json
+
+  # Job 6: Performance Benchmarks
+  performance-tests:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [unit-tests]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install memory-profiler psutil
+      
+      - name: Run performance tests
+        run: |
+          python3 tests/e2e_smoke_tests.py \
+            --env local \
+            --output performance-results.json
+        timeout-minutes: 10
+      
+      - name: Analyze performance results
+        run: |
+          python3 -c "
+          import json
+          with open('performance-results.json') as f:
+              results = json.load(f)
+          
+          metrics = results['performance_metrics']
+          total_time = metrics['total_execution_time']
+          avg_time = metrics['average_test_time']
+          
+          print(f'Total execution time: {total_time:.2f}s')
+          print(f'Average test time: {avg_time:.2f}s')
+          
+          # Performance thresholds
+          if total_time > 60:
+              print('WARNING: Total execution time exceeds 60s threshold')
+              exit(1)
+          if avg_time > 5:
+              print('WARNING: Average test time exceeds 5s threshold')
+              exit(1)
+          
+          print('Performance tests passed')
+          "
+      
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-results
+          path: performance-results.json
+
+  # Job 7: Final Merge Gate Decision
+  merge-gate:
+    name: 🎯 Merge Gate Decision
+    runs-on: ubuntu-latest
+    needs: [static-analysis, unit-tests, integration-tests, security-checks, build-validation, performance-tests]
+    if: always()
+    
+    steps:
+      - name: Check job results
+        run: |
+          echo "Static Analysis: ${{ needs.static-analysis.result }}"
+          echo "Unit Tests: ${{ needs.unit-tests.result }}"
+          echo "Integration Tests: ${{ needs.integration-tests.result }}"
+          echo "Security Checks: ${{ needs.security-checks.result }}"
+          echo "Build Validation: ${{ needs.build-validation.result }}"
+          echo "Performance Tests: ${{ needs.performance-tests.result }}"
+      
+      - name: Determine merge eligibility
+        run: |
+          # Critical jobs that must pass
+          critical_jobs=(
+            "${{ needs.static-analysis.result }}"
+            "${{ needs.unit-tests.result }}"
+            "${{ needs.integration-tests.result }}"
+            "${{ needs.build-validation.result }}"
+          )
+          
+          # Optional jobs (can fail without blocking merge)
+          optional_jobs=(
+            "${{ needs.security-checks.result }}"
+            "${{ needs.performance-tests.result }}"
+          )
+          
+          failed_critical=0
+          failed_optional=0
+          
+          for result in "${critical_jobs[@]}"; do
+            if [[ "$result" != "success" ]]; then
+              failed_critical=$((failed_critical + 1))
+            fi
+          done
+          
+          for result in "${optional_jobs[@]}"; do
+            if [[ "$result" != "success" ]]; then
+              failed_optional=$((failed_optional + 1))
+            fi
+          done
+          
+          echo "Failed critical jobs: $failed_critical"
+          echo "Failed optional jobs: $failed_optional"
+          
+          if [[ $failed_critical -gt 0 ]]; then
+            echo "❌ MERGE BLOCKED: Critical job failures detected"
+            echo "::error::Cannot merge - critical tests failed"
+            exit 1
+          elif [[ $failed_optional -gt 0 ]]; then
+            echo "⚠️ MERGE ALLOWED WITH WARNINGS: Optional job failures detected"
+            echo "::warning::Merge allowed but review optional job failures"
+          else
+            echo "✅ MERGE APPROVED: All checks passed"
+          fi
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const critical_success = [
+              '${{ needs.static-analysis.result }}',
+              '${{ needs.unit-tests.result }}',
+              '${{ needs.integration-tests.result }}',
+              '${{ needs.build-validation.result }}'
+            ].every(result => result === 'success');
+            
+            const optional_success = [
+              '${{ needs.security-checks.result }}',
+              '${{ needs.performance-tests.result }}'
+            ].every(result => result === 'success');
+            
+            let status_icon, message;
+            
+            if (critical_success && optional_success) {
+              status_icon = '✅';
+              message = 'All merge gate checks passed! This PR is ready to merge.';
+            } else if (critical_success) {
+              status_icon = '⚠️';
+              message = 'Critical checks passed but some optional checks failed. Review before merging.';
+            } else {
+              status_icon = '❌';
+              message = 'Critical checks failed. This PR cannot be merged until issues are resolved.';
+            }
+            
+            const comment = `## ${status_icon} Merge Gate Results
+            
+            ${message}
+            
+            ### Check Results:
+            - Static Analysis: ${{ needs.static-analysis.result == 'success' && '✅' || '❌' }}
+            - Unit Tests: ${{ needs.unit-tests.result == 'success' && '✅' || '❌' }}
+            - Integration Tests: ${{ needs.integration-tests.result == 'success' && '✅' || '❌' }}
+            - Security Checks: ${{ needs.security-checks.result == 'success' && '✅' || '❌' }}
+            - Build Validation: ${{ needs.build-validation.result == 'success' && '✅' || '❌' }}
+            - Performance Tests: ${{ needs.performance-tests.result == 'success' && '✅' || '❌' }}
+            
+            ### Next Steps:
+            ${critical_success ? 
+              '🎉 **Ready to merge!** All critical checks passed.' : 
+              '🔧 **Fix required issues** before merging.'
+            }
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Job 8: Auto-cleanup on success
+  cleanup:
+    name: 🧹 Cleanup
+    runs-on: ubuntu-latest
+    needs: [merge-gate]
+    if: success() && github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    
+    steps:
+      - name: Delete feature branch
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const branchName = context.payload.pull_request.head.ref;
+            
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${branchName}`
+              });
+              
+              console.log(`✅ Deleted branch: ${branchName}`);
+            } catch (error) {
+              console.log(`⚠️ Could not delete branch ${branchName}: ${error.message}`);
+            }
