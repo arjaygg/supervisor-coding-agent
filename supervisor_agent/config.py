@@ -265,6 +265,11 @@ class Settings(BaseSettings):
             })
         
         return info
+    
+    @property
+    def multi_provider_enabled(self) -> bool:
+        """Check if multi-provider functionality is enabled"""
+        return self.enable_multi_provider
 
 
 def create_settings():

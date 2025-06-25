@@ -9,6 +9,7 @@ from supervisor_agent.api.routes.health import router as health_router
 from supervisor_agent.api.routes.analytics import router as analytics_router
 from supervisor_agent.api.routes.workflows import router as workflows_router
 from supervisor_agent.api.routes.chat import router as chat_router
+from supervisor_agent.api.routes.providers import router as providers_router
 from supervisor_agent.api.websocket import websocket_endpoint
 from supervisor_agent.api.websocket_analytics import router as analytics_ws_router
 from supervisor_agent.db.database import engine
@@ -57,6 +58,16 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
+    # Initialize multi-provider service if enabled
+    if settings.multi_provider_enabled:
+        try:
+            from supervisor_agent.core.multi_provider_service import multi_provider_service
+            await multi_provider_service.initialize()
+            logger.info("Multi-provider service initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize multi-provider service: {str(e)}")
+            logger.warning("Multi-provider features will not be available")
+
     yield
 
     # Shutdown
@@ -101,6 +112,7 @@ app.include_router(health_router, prefix="/api/v1", tags=["health"])
 app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
 app.include_router(workflows_router, prefix="/api/v1", tags=["workflows"])
 app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"])
+app.include_router(providers_router, tags=["providers"])
 app.include_router(analytics_ws_router, tags=["analytics-websocket"])
 
 
