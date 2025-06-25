@@ -14,6 +14,13 @@
   let error = null;
   let timeRange = 7; // days
 
+  // Multi-provider analytics
+  let providerDashboard = null;
+  let providerPerformance = null;
+  let costOptimization = null;
+  let multiProviderEnabled = false;
+  let loadingProviders = false;
+
   // Chart data
   let dailyTasksChart = {
     labels: [],
@@ -45,6 +52,37 @@
     ],
   };
 
+  // Provider charts
+  let providerHealthChart = {
+    labels: [],
+    datasets: [
+      {
+        label: "Health Score",
+        data: [],
+        backgroundColor: "rgba(16, 185, 129, 0.6)",
+        borderColor: "rgb(16, 185, 129)",
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  let providerCostChart = {
+    labels: [],
+    datasets: [
+      {
+        label: "Cost Distribution",
+        data: [],
+        backgroundColor: [
+          "rgb(59, 130, 246)",
+          "rgb(16, 185, 129)",
+          "rgb(245, 158, 11)",
+          "rgb(239, 68, 68)",
+          "rgb(139, 92, 246)",
+        ],
+      },
+    ],
+  };
+
   // Subscribe to real-time analytics updates
   $: if ($analyticsStore.summary) {
     updateAnalyticsFromWebSocket($analyticsStore.summary);
@@ -52,6 +90,9 @@
 
   onMount(async () => {
     await loadAnalytics();
+
+    // Check if multi-provider is enabled and load provider analytics
+    await loadProviderAnalytics();
 
     // Request initial analytics data via WebSocket
     analyticsStore.requestAnalytics();
@@ -86,6 +127,85 @@
           data: realTaskTypes.values,
         },
       ],
+    };
+  }
+
+  async function loadProviderAnalytics() {
+    if (!multiProviderEnabled) {
+      // First check if multi-provider is available
+      try {
+        const response = await fetch('/api/v1/analytics/providers/dashboard');
+        if (response.status === 400) {
+          // Multi-provider is not enabled
+          multiProviderEnabled = false;
+          return;
+        }
+        multiProviderEnabled = true;
+      } catch (error) {
+        console.log('Multi-provider not available:', error);
+        multiProviderEnabled = false;
+        return;
+      }
+    }
+
+    if (!multiProviderEnabled) return;
+
+    loadingProviders = true;
+    try {
+      // Load provider dashboard data
+      const dashboardResponse = await fetch('/api/v1/analytics/providers/dashboard');
+      if (dashboardResponse.ok) {
+        providerDashboard = await dashboardResponse.json();
+        
+        // Update provider charts
+        updateProviderCharts();
+      }
+
+      // Load provider performance comparison
+      const performanceResponse = await fetch('/api/v1/analytics/providers/performance-comparison');
+      if (performanceResponse.ok) {
+        providerPerformance = await performanceResponse.json();
+      }
+
+      // Load cost optimization recommendations
+      const costResponse = await fetch('/api/v1/analytics/providers/cost-optimization');
+      if (costResponse.ok) {
+        costOptimization = await costResponse.json();
+      }
+
+    } catch (error) {
+      console.error('Error loading provider analytics:', error);
+      // Gracefully handle when multi-provider is not available
+      multiProviderEnabled = false;
+    } finally {
+      loadingProviders = false;
+    }
+  }
+
+  function updateProviderCharts() {
+    if (!providerDashboard) return;
+
+    const providers = Object.values(providerDashboard.providers || {});
+    
+    // Update provider health chart
+    providerHealthChart = {
+      ...providerHealthChart,
+      labels: providers.map(p => p.name || p.id),
+      datasets: [{
+        ...providerHealthChart.datasets[0],
+        data: providers.map(p => (p.health_score * 100).toFixed(1))
+      }]
+    };
+
+    // Update provider cost chart
+    const costData = Object.entries(providerDashboard.cost_breakdown || {});
+    providerCostChart = {
+      ...providerCostChart,
+      labels: costData.map(([name]) => name),
+      datasets: [{
+        ...providerCostChart.datasets[0],
+        data: costData.map(([, cost]) => cost)
+      }]
     };
   }
 
@@ -256,6 +376,9 @@
   async function handleTimeRangeChange(event) {
     timeRange = parseInt(event.target.value);
     await loadAnalytics();
+    if (multiProviderEnabled) {
+      await loadProviderAnalytics();
+    }
   }
 
   function formatCurrency(amount) {
@@ -428,7 +551,7 @@
 
     <!-- Agent Performance -->
     {#if analytics.agentPerformance}
-      <div class="bg-gray-800 rounded-lg p-6">
+      <div class="bg-gray-800 rounded-lg p-6 mb-8">
         <h2 class="text-xl font-semibold text-white mb-4">Agent Performance</h2>
 
         {#if analytics.agentPerformance.agents && analytics.agentPerformance.agents.length > 0}
@@ -479,6 +602,230 @@
         {:else}
           <div class="text-center py-8 text-gray-500">
             <p>No agent performance data available</p>
+          </div>
+        {/if}
+      </div>
+    {/if}
+
+    <!-- Multi-Provider Analytics (if enabled) -->
+    {#if multiProviderEnabled}
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+          <span class="bg-gradient-to-r from-blue-500 to-purple-500 w-1 h-8 rounded"></span>
+          Multi-Provider Analytics
+          {#if loadingProviders}
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+          {/if}
+        </h2>
+
+        <!-- Provider Overview Cards -->
+        {#if providerDashboard}
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="stat-card">
+              <h3 class="stat-title">Total Providers</h3>
+              <p class="stat-value">{providerDashboard.overview.total_providers}</p>
+              <p class="stat-subtitle">
+                {providerDashboard.overview.healthy_providers} healthy, 
+                {providerDashboard.overview.unhealthy_providers} issues
+              </p>
+            </div>
+
+            <div class="stat-card">
+              <h3 class="stat-title">Tasks Today</h3>
+              <p class="stat-value">{formatNumber(providerDashboard.overview.total_tasks_today)}</p>
+              <p class="stat-subtitle">
+                {(providerDashboard.overview.success_rate * 100).toFixed(1)}% success rate
+              </p>
+            </div>
+
+            <div class="stat-card">
+              <h3 class="stat-title">Cost Today</h3>
+              <p class="stat-value">{formatCurrency(providerDashboard.overview.total_cost_today)}</p>
+              <p class="stat-subtitle">
+                Avg: {(providerDashboard.overview.average_response_time / 1000).toFixed(2)}s response
+              </p>
+            </div>
+
+            <div class="stat-card">
+              <h3 class="stat-title">System Health</h3>
+              <p class="stat-value">
+                {(providerDashboard.system_health.overall_status === 'healthy' ? '✓' : '⚠')} 
+                {providerDashboard.system_health.overall_status}
+              </p>
+              <p class="stat-subtitle">
+                {providerDashboard.system_health.legacy_system.agents} legacy agents
+              </p>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Provider Health & Cost Charts -->
+        {#if providerDashboard && Object.keys(providerDashboard.providers).length > 0}
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Provider Health Chart -->
+            <div class="bg-gray-800 rounded-lg p-6">
+              <h3 class="text-xl font-semibold text-white mb-4">Provider Health Scores</h3>
+              <div class="h-64">
+                <Chart
+                  type="bar"
+                  data={providerHealthChart}
+                  width={400}
+                  height={256}
+                  options={{
+                    plugins: {
+                      legend: { display: false },
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: 'rgb(156, 163, 175)' },
+                        grid: { color: 'rgba(156, 163, 175, 0.1)' }
+                      },
+                      x: {
+                        ticks: { color: 'rgb(156, 163, 175)' },
+                        grid: { display: false }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <!-- Provider Cost Distribution -->
+            <div class="bg-gray-800 rounded-lg p-6">
+              <h3 class="text-xl font-semibold text-white mb-4">Cost Distribution</h3>
+              <div class="h-64">
+                <Chart
+                  type="doughnut"
+                  data={providerCostChart}
+                  width={400}
+                  height={256}
+                  options={{
+                    plugins: {
+                      legend: {
+                        position: "bottom",
+                        labels: {
+                          color: "rgb(156, 163, 175)",
+                          padding: 15,
+                        },
+                      },
+                    },
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Provider Performance Comparison -->
+        {#if providerPerformance && providerPerformance.comparison}
+          <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <h3 class="text-xl font-semibold text-white mb-4">Provider Performance Comparison</h3>
+            
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="border-b border-gray-700">
+                    <th class="text-left py-3 text-gray-400 font-medium">Provider</th>
+                    <th class="text-left py-3 text-gray-400 font-medium">Type</th>
+                    <th class="text-left py-3 text-gray-400 font-medium">Health</th>
+                    <th class="text-left py-3 text-gray-400 font-medium">Success Rate</th>
+                    <th class="text-left py-3 text-gray-400 font-medium">Avg Response</th>
+                    <th class="text-left py-3 text-gray-400 font-medium">Cost/Request</th>
+                    <th class="text-left py-3 text-gray-400 font-medium">Requests</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each Object.entries(providerPerformance.comparison) as [providerId, provider]}
+                    <tr class="border-b border-gray-700/50">
+                      <td class="py-3 text-white font-mono">{provider.name}</td>
+                      <td class="py-3 text-gray-300">{provider.type}</td>
+                      <td class="py-3">
+                        <span class="text-{provider.health_score >= 0.9 ? 'green' : provider.health_score >= 0.7 ? 'yellow' : 'red'}-400">
+                          {(provider.health_score * 100).toFixed(0)}%
+                        </span>
+                      </td>
+                      <td class="py-3">
+                        <span class="text-{provider.success_rate >= 95 ? 'green' : provider.success_rate >= 80 ? 'yellow' : 'red'}-400">
+                          {provider.success_rate.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td class="py-3 text-gray-300">{(provider.average_response_time / 1000).toFixed(2)}s</td>
+                      <td class="py-3 text-gray-300">{formatCurrency(provider.cost_per_request)}</td>
+                      <td class="py-3 text-gray-300">{formatNumber(provider.total_requests)}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Performance Rankings -->
+            {#if providerPerformance.rankings}
+              <div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-gray-900 rounded-lg p-4">
+                  <h4 class="text-green-400 font-medium mb-2">🏆 Most Reliable</h4>
+                  <p class="text-white text-sm">{providerPerformance.rankings.most_reliable[0]?.[1]?.name || 'N/A'}</p>
+                </div>
+                <div class="bg-gray-900 rounded-lg p-4">
+                  <h4 class="text-blue-400 font-medium mb-2">⚡ Fastest</h4>
+                  <p class="text-white text-sm">{providerPerformance.rankings.fastest[0]?.[1]?.name || 'N/A'}</p>
+                </div>
+                <div class="bg-gray-900 rounded-lg p-4">
+                  <h4 class="text-yellow-400 font-medium mb-2">💰 Most Cost-Effective</h4>
+                  <p class="text-white text-sm">{providerPerformance.rankings.most_cost_effective[0]?.[1]?.name || 'N/A'}</p>
+                </div>
+                <div class="bg-gray-900 rounded-lg p-4">
+                  <h4 class="text-purple-400 font-medium mb-2">💚 Healthiest</h4>
+                  <p class="text-white text-sm">{providerPerformance.rankings.healthiest[0]?.[1]?.name || 'N/A'}</p>
+                </div>
+              </div>
+            {/if}
+          </div>
+        {/if}
+
+        <!-- Cost Optimization Recommendations -->
+        {#if costOptimization && costOptimization.recommendations}
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">Cost Optimization</h3>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <div class="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                <h4 class="text-green-400 font-medium mb-2">Potential Monthly Savings</h4>
+                <p class="text-2xl font-bold text-white">{formatCurrency(costOptimization.potential_savings)}</p>
+              </div>
+              
+              <div class="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                <h4 class="text-blue-400 font-medium mb-2">Optimization Opportunities</h4>
+                <p class="text-2xl font-bold text-white">{costOptimization.optimization_opportunities?.length || 0}</p>
+              </div>
+              
+              <div class="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
+                <h4 class="text-purple-400 font-medium mb-2">Provider Efficiency</h4>
+                <p class="text-2xl font-bold text-white">
+                  {Object.keys(costOptimization.provider_efficiency || {}).length} analyzed
+                </p>
+              </div>
+            </div>
+
+            {#if costOptimization.optimization_opportunities?.length > 0}
+              <div class="space-y-3">
+                <h4 class="text-gray-300 font-medium">Recommendations:</h4>
+                {#each costOptimization.optimization_opportunities as opportunity}
+                  <div class="bg-gray-900 rounded-lg p-4 border-l-4 border-yellow-500">
+                    <div class="flex justify-between items-start">
+                      <div>
+                        <h5 class="text-white font-medium">{opportunity.title || 'Optimization Opportunity'}</h5>
+                        <p class="text-gray-400 text-sm mt-1">{opportunity.description || 'Detailed recommendation available'}</p>
+                      </div>
+                      <span class="text-green-400 font-medium text-sm">
+                        {formatCurrency(opportunity.potential_savings || 0)}
+                      </span>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            {/if}
           </div>
         {/if}
       </div>

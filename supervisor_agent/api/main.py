@@ -12,6 +12,7 @@ from supervisor_agent.api.routes.chat import router as chat_router
 from supervisor_agent.api.routes.providers import router as providers_router
 from supervisor_agent.api.websocket import websocket_endpoint
 from supervisor_agent.api.websocket_analytics import router as analytics_ws_router
+from supervisor_agent.api.websocket_providers import router as providers_ws_router
 from supervisor_agent.db.database import engine
 from supervisor_agent.db.models import Base
 from supervisor_agent.core.quota import quota_manager
@@ -114,6 +115,7 @@ app.include_router(workflows_router, prefix="/api/v1", tags=["workflows"])
 app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(providers_router, tags=["providers"])
 app.include_router(analytics_ws_router, tags=["analytics-websocket"])
+app.include_router(providers_ws_router, tags=["providers-websocket"])
 
 
 @app.exception_handler(Exception)
