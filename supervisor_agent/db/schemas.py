@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from uuid import UUID
-from supervisor_agent.db.models import (
+from supervisor_agent.db.enums import (
     TaskType, 
     TaskStatus, 
     ChatThreadStatus, 

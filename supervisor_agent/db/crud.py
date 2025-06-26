@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from supervisor_agent.db import models, schemas
-from supervisor_agent.db.enums import ProviderType, ProviderStatus
+from supervisor_agent.db.enums import MessageRole, MessageType, ChatThreadStatus, ProviderType, ProviderStatus
 
 
 class TaskCRUD:
@@ -381,9 +381,9 @@ class ChatThreadCRUD:
         if thread.initial_message:
             initial_msg = models.ChatMessage(
                 thread_id=db_thread.id,
-                role=models.MessageRole.USER,
+                role=MessageRole.USER,
                 content=thread.initial_message,
-                message_type=models.MessageType.TEXT,
+                message_type=MessageType.TEXT,
                 message_metadata={}
             )
             db.add(initial_msg)

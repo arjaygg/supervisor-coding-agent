@@ -14,7 +14,8 @@ from typing import List, Dict, Any, Callable, Optional
 from datetime import datetime
 
 from supervisor_agent.core.subscription_intelligence import SubscriptionIntelligence
-from supervisor_agent.db.models import Task, TaskStatus
+from supervisor_agent.db.models import Task
+from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.api.websocket import notify_quota_update, notify_system_event
 from supervisor_agent.utils.logger import get_logger
 
