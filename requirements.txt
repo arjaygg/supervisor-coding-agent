@@ -19,3 +19,55 @@ croniter==2.0.1
 pytz==2023.3
 psutil==5.9.6
 websockets==12.0
+
+# AI Swarm Platform Dependencies
+# Enterprise Authentication & Authorization
+fastapi-users[sqlalchemy]==12.1.3
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# RBAC & Policy Management
+casbin==1.23.0
+casbin-sqlalchemy-adapter==1.2.0
+
+# Vector Database & AI Memory
+pgvector==0.2.4
+sentence-transformers==2.2.2
+numpy==1.24.4
+scikit-learn==1.3.2
+
+# MCP Protocol & Tool Integration
+mcp==1.0.0
+pydantic-ai==0.0.8
+
+# AI & Language Models
+openai==1.6.1
+anthropic==0.8.1
+langchain==0.1.5
+langchain-community==0.0.13
+
+# Advanced Redis & Streams
+aioredis==2.0.1
+redis-streams==0.1.2
+
+# Monitoring & Observability
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Advanced AsyncIO & Concurrency
+asyncio-mqtt==0.16.1
+aiocache==0.12.2
+
+# Machine Learning & Analytics
+pandas==2.1.4
+plotly==5.17.0
+
+# Security & Validation
+cryptography==41.0.8
+bcrypt==4.1.2
+
+# Development & Testing Extensions
+factory-boy==3.3.0
+faker==20.1.0
+pytest-xdist==3.5.0

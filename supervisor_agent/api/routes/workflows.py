@@ -20,7 +20,7 @@ import uuid
 from supervisor_agent.db.database import get_db
 from supervisor_agent.core.workflow_engine import WorkflowEngine
 from supervisor_agent.core.workflow_scheduler import WorkflowScheduler
-from supervisor_agent.core.workflow_models import WorkflowDefinition, ScheduleStatus
+from supervisor_agent.db.workflow_models import WorkflowDefinition, ScheduleStatus
 from supervisor_agent.core.dag_resolver import DAGResolver
 from supervisor_agent.utils.logger import get_logger
 
@@ -126,7 +126,7 @@ async def get_workflow(workflow_id: str, db: Session = Depends(get_db)):
     """Get workflow definition by ID"""
     
     try:
-        from supervisor_agent.core.workflow_models import Workflow
+        from supervisor_agent.db.workflow_models import Workflow
         
         workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
         if not workflow:
@@ -161,7 +161,7 @@ async def list_workflows(
     """List workflows with pagination"""
     
     try:
-        from supervisor_agent.core.workflow_models import Workflow
+        from supervisor_agent.db.workflow_models import Workflow
         
         query = db.query(Workflow)
         if active_only:
@@ -198,7 +198,7 @@ async def delete_workflow(workflow_id: str, db: Session = Depends(get_db)):
     """Delete a workflow (mark as inactive)"""
     
     try:
-        from supervisor_agent.core.workflow_models import Workflow
+        from supervisor_agent.db.workflow_models import Workflow
         
         workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
         if not workflow:
@@ -301,7 +301,7 @@ async def list_executions(
     """List workflow executions"""
     
     try:
-        from supervisor_agent.core.workflow_models import WorkflowExecution
+        from supervisor_agent.db.workflow_models import WorkflowExecution
         
         query = db.query(WorkflowExecution).filter(
             WorkflowExecution.workflow_id == workflow_id
@@ -533,7 +533,7 @@ async def workflow_health():
     """Get workflow system health status"""
     
     try:
-        from supervisor_agent.core.workflow_models import WorkflowExecution
+        from supervisor_agent.db.workflow_models import WorkflowExecution
         from supervisor_agent.db.database import SessionLocal
         
         with SessionLocal() as db:

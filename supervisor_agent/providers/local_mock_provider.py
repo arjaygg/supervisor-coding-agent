@@ -14,7 +14,6 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 
 from .base_provider import (
-    AIProvider,
     ProviderCapabilities,
     ProviderHealth,
     ProviderResponse,
@@ -23,13 +22,15 @@ from .base_provider import (
     Task,
     TaskCapability,
 )
+from .provider_interfaces import MockProvider
+from .base_provider_impl import BaseProviderImpl, TaskExecutionHelper
 
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class LocalMockProvider(AIProvider):
+class LocalMockProvider(BaseProviderImpl, MockProvider, TaskExecutionHelper):
     """
     Local mock provider for testing and offline scenarios.
     
@@ -39,7 +40,7 @@ class LocalMockProvider(AIProvider):
     """
     
     def __init__(self, provider_id: str, config: Dict[str, Any]):
-        super().__init__(provider_id, config)
+        BaseProviderImpl.__init__(self, provider_id, config)
         
         # Configuration
         self.response_delay_min: float = config.get("response_delay_min", 0.5)

@@ -68,6 +68,16 @@ class TaskType(str, Enum):
     REFACTOR = "REFACTOR"
     BUG_FIX = "BUG_FIX"
     FEATURE = "FEATURE"
+    # AI Workflow Intelligence Types
+    WORKFLOW_SYNTHESIS = "WORKFLOW_SYNTHESIS"
+    REQUIREMENT_ANALYSIS = "REQUIREMENT_ANALYSIS"
+    WORKFLOW_ADAPTATION = "WORKFLOW_ADAPTATION"
+    HUMAN_LOOP_ANALYSIS = "HUMAN_LOOP_ANALYSIS"
+    # Additional Task Types for Enhanced Workflow
+    CODE_IMPLEMENTATION = "CODE_IMPLEMENTATION"
+    TESTING = "TESTING"
+    DESIGN_TASK = "DESIGN_TASK"
+    SETUP = "SETUP"
 
 
 class TaskStatus(str, Enum):
@@ -364,7 +374,7 @@ class ChatNotification(Base):
 
 
 # Import workflow models to ensure they're included in Base metadata
-from supervisor_agent.core.workflow_models import (
+from supervisor_agent.db.workflow_models import (
     Workflow,
     WorkflowExecution, 
     WorkflowTaskExecution,
@@ -373,7 +383,7 @@ from supervisor_agent.core.workflow_models import (
 )
 
 # Import analytics models to ensure they're included in Base metadata
-from supervisor_agent.core.analytics_models import (
+from supervisor_agent.db.analytics_models import (
     MetricEntry,
     Dashboard,
     AnalyticsCache,

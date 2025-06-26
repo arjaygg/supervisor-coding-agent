@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from supervisor_agent.core.analytics_engine import AnalyticsEngine
-from supervisor_agent.core.analytics_models import (AnalyticsQuery,
+from supervisor_agent.db.analytics_models import (AnalyticsQuery,
                                                     AnalyticsResult,
                                                     AnalyticsSummary, Insight,
                                                     MetricEntry,

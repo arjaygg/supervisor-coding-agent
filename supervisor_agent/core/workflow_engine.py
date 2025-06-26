@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.orm import Session
 
-from supervisor_agent.core.workflow_models import (
+from supervisor_agent.db.workflow_models import (
     Workflow, WorkflowExecution, WorkflowTaskExecution,
     WorkflowDefinition, WorkflowResult, WorkflowContext,
     ExecutionPlan, WorkflowStatus

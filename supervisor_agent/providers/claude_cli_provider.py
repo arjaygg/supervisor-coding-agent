@@ -15,7 +15,6 @@ from datetime import datetime, timezone
 from dataclasses import asdict
 
 from .base_provider import (
-    AIProvider,
     ProviderCapabilities,
     ProviderHealth,
     ProviderResponse,
@@ -28,6 +27,13 @@ from .base_provider import (
     Task,
     TaskCapability,
 )
+from .provider_interfaces import AdvancedProvider
+from .base_provider_impl import (
+    BaseProviderImpl, 
+    DefaultLifecycleMixin, 
+    DefaultConfigurationValidatorMixin,
+    TaskExecutionHelper
+)
 
 from supervisor_agent.config import settings
 from supervisor_agent.utils.logger import get_logger
@@ -35,7 +41,13 @@ from supervisor_agent.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-class ClaudeCliProvider(AIProvider):
+class ClaudeCliProvider(
+    BaseProviderImpl,
+    AdvancedProvider,
+    DefaultLifecycleMixin,
+    DefaultConfigurationValidatorMixin,
+    TaskExecutionHelper
+):
     """
     Claude CLI provider implementation with multi-subscription support.
     
@@ -44,7 +56,8 @@ class ClaudeCliProvider(AIProvider):
     """
     
     def __init__(self, provider_id: str, config: Dict[str, Any]):
-        super().__init__(provider_id, config)
+        BaseProviderImpl.__init__(self, provider_id, config)
+        DefaultLifecycleMixin.__init__(self)
         
         # Extract configuration
         self.api_keys: List[str] = config.get("api_keys", [])

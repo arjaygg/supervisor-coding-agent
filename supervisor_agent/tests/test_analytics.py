@@ -10,7 +10,7 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, AsyncMock, patch
 
-from supervisor_agent.core.analytics_models import (
+from supervisor_agent.db.analytics_models import (
     MetricType, TimeRange, AggregationType, AnalyticsQuery, TaskMetrics,
     SystemMetrics, UserMetrics, WorkflowMetrics, Insight, TrendPrediction
 )
@@ -385,7 +385,7 @@ class TestAnalyticsModels:
     
     def test_metric_point_creation(self):
         """Test MetricPoint model creation"""
-        from supervisor_agent.core.analytics_models import MetricPoint
+        from supervisor_agent.db.analytics_models import MetricPoint
         
         point = MetricPoint(
             timestamp=datetime.now(timezone.utc),

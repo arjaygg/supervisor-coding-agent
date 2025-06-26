@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock, patch
 
 from supervisor_agent.core.workflow_engine import WorkflowEngine, WorkflowExecutor
-from supervisor_agent.core.workflow_models import (
+from supervisor_agent.db.workflow_models import (
     WorkflowDefinition, WorkflowStatus, WorkflowResult, WorkflowContext
 )
 from supervisor_agent.core.dag_resolver import DAGResolver, ValidationResult
@@ -194,7 +194,7 @@ class TestWorkflowExecutor:
         resolver = Mock(spec=DAGResolver)
         
         # Mock execution plan
-        from supervisor_agent.core.workflow_models import ExecutionPlan, TaskDefinition
+        from supervisor_agent.db.workflow_models import ExecutionPlan, TaskDefinition
         execution_plan = ExecutionPlan(
             execution_order=[["task1"], ["task2"]],
             task_map={
@@ -293,7 +293,7 @@ class TestWorkflowExecutor:
     async def test_execute_task_success(self, workflow_executor):
         """Test successful task execution"""
         
-        from supervisor_agent.core.workflow_models import TaskDefinition
+        from supervisor_agent.db.workflow_models import TaskDefinition
         task_def = TaskDefinition("test-task", "Test Task", "CODE_ANALYSIS", {"test": "config"})
         
         with patch.object(workflow_executor, '_create_task_record', new_callable=AsyncMock) as mock_create:

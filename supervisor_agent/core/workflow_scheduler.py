@@ -18,7 +18,7 @@ import uuid
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
-from supervisor_agent.core.workflow_models import (
+from supervisor_agent.db.workflow_models import (
     WorkflowSchedule, ScheduleStatus, Workflow
 )
 from supervisor_agent.core.workflow_engine import WorkflowEngine

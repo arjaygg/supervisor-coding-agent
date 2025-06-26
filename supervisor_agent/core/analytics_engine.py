@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy import func
 
-from supervisor_agent.core.analytics_models import (AggregationType,
+from supervisor_agent.db.analytics_models import (AggregationType,
                                                     AnalyticsCache,
                                                     AnalyticsQuery,
                                                     AnalyticsResult,

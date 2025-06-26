@@ -10,7 +10,7 @@ from supervisor_agent.core.dag_resolver import (
     DAGResolver, ValidationResult, CircularDependencyError, 
     InvalidDAGError, StandardDependencyChecker
 )
-from supervisor_agent.core.workflow_models import (
+from supervisor_agent.db.workflow_models import (
     WorkflowDefinition, DependencyCondition, DependencyDefinition
 )
 

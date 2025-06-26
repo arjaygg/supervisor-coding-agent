@@ -16,7 +16,7 @@ from typing import Dict, List, Set, Tuple, Optional
 from collections import defaultdict, deque
 from abc import ABC, abstractmethod
 
-from supervisor_agent.core.workflow_models import (
+from supervisor_agent.db.workflow_models import (
     WorkflowDefinition,
     TaskDefinition,
     DependencyDefinition,
