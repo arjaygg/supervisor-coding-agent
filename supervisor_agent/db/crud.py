@@ -10,6 +10,8 @@ from supervisor_agent.db.repositories import (
     TaskSessionCRUD, 
     AgentCRUD,
     AuditLogCRUD,
+    ProviderCRUD,
+    ProviderUsageCRUD,
     # Also export the repository instances for direct use
     task_repository,
     task_session_repository,
@@ -25,6 +27,8 @@ __all__ = [
     'TaskSessionCRUD', 
     'AgentCRUD',
     'AuditLogCRUD',
+    'ProviderCRUD',
+    'ProviderUsageCRUD',
     'task_repository',
     'task_session_repository',
     'agent_repository',

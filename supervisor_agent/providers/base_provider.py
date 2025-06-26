@@ -20,6 +20,7 @@ class ProviderType(str, Enum):
     LOCAL_MOCK = "local_mock"
     OPENAI = "openai"
     ANTHROPIC_API = "anthropic_api"
+    GEMINI_API = "gemini_api"
     CUSTOM = "custom"
 
 
@@ -38,6 +39,7 @@ class TaskCapability(str, Enum):
     BUG_FIX = "bug_fix"
     FEATURE_DEVELOPMENT = "feature_development"
     CODE_ANALYSIS = "code_analysis"
+    CODE_GENERATION = "code_generation"
     REFACTORING = "refactoring"
     DOCUMENTATION = "documentation"
     TESTING = "testing"

@@ -319,3 +319,31 @@ class TaskCreateFromChat(BaseModel):
     message_id: Optional[UUID] = None
     task_type: Optional[TaskType] = None
     priority: Optional[int] = 5
+
+
+class ProviderCreate(BaseModel):
+    provider_type: str
+    name: str
+    health_status: str = "healthy"
+    configuration: Optional[Dict[str, Any]] = None
+    is_enabled: bool = True
+
+
+class ProviderUpdate(BaseModel):
+    name: Optional[str] = None
+    health_status: Optional[str] = None
+    configuration: Optional[Dict[str, Any]] = None
+    is_enabled: Optional[bool] = None
+
+
+class ProviderResponse(BaseModel):
+    id: int
+    provider_type: str
+    name: str
+    health_status: str
+    configuration: Optional[Dict[str, Any]]
+    is_enabled: bool
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    model_config = {"from_attributes": True}

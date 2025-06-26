@@ -279,3 +279,51 @@ class AuditLogCRUD:
         db: Session, skip: int = 0, limit: int = 100, event_type: Optional[str] = None
     ) -> List[models.AuditLog]:
         return audit_log_repository.get_logs_by_event(db, event_type, skip, limit)
+
+
+class ProviderCRUD:
+    """Backward compatibility wrapper for ProviderRepository."""
+    
+    @staticmethod
+    def create_provider(db: Session, provider: schemas.ProviderCreate) -> models.Provider:
+        return provider_repository.create(db, provider)
+    
+    @staticmethod
+    def get_provider(db: Session, provider_id: int) -> Optional[models.Provider]:
+        return provider_repository.get(db, provider_id)
+    
+    @staticmethod
+    def get_providers(
+        db: Session, skip: int = 0, limit: int = 100
+    ) -> List[models.Provider]:
+        return provider_repository.get_multi(db, skip=skip, limit=limit)
+    
+    @staticmethod
+    def update_provider(
+        db: Session, provider_id: int, provider_update: schemas.ProviderUpdate
+    ) -> Optional[models.Provider]:
+        return provider_repository.update_by_id(db, id=provider_id, obj_in=provider_update)
+    
+    @staticmethod
+    def get_healthy_providers(db: Session) -> List[models.Provider]:
+        return provider_repository.get_healthy_providers(db)
+    
+    @staticmethod
+    def get_providers_by_type(
+        db: Session, provider_type: str
+    ) -> List[models.Provider]:
+        return provider_repository.get_providers_by_type(db, provider_type)
+
+
+class ProviderUsageCRUD:
+    """Backward compatibility wrapper for provider usage operations."""
+    
+    @staticmethod
+    def create_usage_log(db: Session, usage: schemas.CostTrackingCreate) -> models.CostTrackingEntry:
+        return cost_tracking_repository.create(db, usage)
+    
+    @staticmethod
+    def get_usage_by_agent(
+        db: Session, agent_id: str, hours_back: int = 24
+    ) -> List[models.CostTrackingEntry]:
+        return cost_tracking_repository.get_cost_by_agent(db, agent_id, hours_back)
