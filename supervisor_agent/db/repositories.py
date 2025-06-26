@@ -133,19 +133,19 @@ class AuditLogRepository(BaseRepository[models.AuditLog, schemas.AuditLogCreate,
         )
 
 
-class CostTrackingRepository(BaseRepository[models.CostTracking, schemas.CostTrackingCreate, schemas.CostTrackingUpdate],
+class CostTrackingRepository(BaseRepository[models.CostTrackingEntry, schemas.CostTrackingCreate, schemas.CostTrackingUpdate],
                              TimestampMixin):
     """Repository for CostTracking operations with aggregation methods."""
     
     def __init__(self):
-        super().__init__(models.CostTracking)
+        super().__init__(models.CostTrackingEntry)
     
     def get_cost_by_agent(
         self, 
         db: Session, 
         agent_id: str,
         hours_back: int = 24
-    ) -> List[models.CostTracking]:
+    ) -> List[models.CostTrackingEntry]:
         """Get cost tracking entries for a specific agent."""
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours_back)
         return (

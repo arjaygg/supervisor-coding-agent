@@ -47,6 +47,13 @@ class TaskSessionCreate(BaseModel):
     execution_time_seconds: Optional[int] = None
 
 
+class TaskSessionUpdate(BaseModel):
+    prompt: Optional[str] = None
+    response: Optional[str] = None
+    result: Optional[Dict[str, Any]] = None
+    execution_time_seconds: Optional[int] = None
+
+
 class TaskSessionResponse(BaseModel):
     id: int
     task_id: int
@@ -94,6 +101,16 @@ class AuditLogCreate(BaseModel):
     user_agent: Optional[str] = None
 
 
+class AuditLogUpdate(BaseModel):
+    event_type: Optional[str] = None
+    agent_id: Optional[str] = None
+    task_id: Optional[int] = None
+    prompt_hash: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+
 class AuditLogResponse(BaseModel):
     id: int
     event_type: str
@@ -126,6 +143,32 @@ class CostTrackingEntryCreate(BaseModel):
     estimated_cost_usd: str
     model_used: Optional[str] = None
     execution_time_ms: int
+
+    model_config = {"protected_namespaces": ()}
+
+
+class CostTrackingCreate(BaseModel):
+    task_id: int
+    agent_id: str
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_cost_usd: str
+    model_used: Optional[str] = None
+    execution_time_ms: int
+
+    model_config = {"protected_namespaces": ()}
+
+
+class CostTrackingUpdate(BaseModel):
+    task_id: Optional[int] = None
+    agent_id: Optional[str] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
+    estimated_cost_usd: Optional[str] = None
+    model_used: Optional[str] = None
+    execution_time_ms: Optional[int] = None
 
     model_config = {"protected_namespaces": ()}
 
