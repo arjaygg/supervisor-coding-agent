@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 from typing import Dict, List, Set, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.routing import APIRouter
 
@@ -87,7 +87,7 @@ class ProviderWebSocketManager:
             
             initial_data = {
                 "type": "initial_status",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "data": {
                     "provider_status": provider_status,
                     "system_health": system_health,
@@ -108,7 +108,7 @@ class ProviderWebSocketManager:
             
         message = {
             "type": update_type,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": data
         }
         
@@ -199,7 +199,7 @@ class ProviderWebSocketManager:
             await self.broadcast_update("system_health", system_health)
             
             # Send analytics updates every minute
-            if datetime.utcnow().second < 5:  # Roughly once per minute
+            if datetime.now(timezone.utc).second < 5:  # Roughly once per minute
                 analytics = await multi_provider_service.get_analytics()
                 await self.broadcast_update("analytics", analytics)
                 
@@ -371,7 +371,7 @@ async def websocket_provider_monitoring(websocket: WebSocket):
                     # Respond to ping
                     await websocket.send_text(json.dumps({
                         "type": "pong",
-                        "timestamp": datetime.utcnow().isoformat()
+                        "timestamp": datetime.now(timezone.utc).isoformat()
                     }))
                     
             except WebSocketDisconnect:
@@ -416,7 +416,7 @@ async def websocket_single_provider(websocket: WebSocket, provider_id: str):
                             "type": "provider_status",
                             "provider_id": provider_id,
                             "data": provider_info,
-                            "timestamp": datetime.utcnow().isoformat()
+                            "timestamp": datetime.now(timezone.utc).isoformat()
                         }))
                     else:
                         await websocket.send_text(json.dumps({

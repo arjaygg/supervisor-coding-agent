@@ -34,7 +34,7 @@ def mock_provider():
     provider.get_health_status = AsyncMock(return_value=ProviderHealth(
         status="healthy",
         score=0.95,
-        last_check=datetime.utcnow(),
+        last_check=datetime.now(timezone.utc),
         metrics={
             "current_tasks": 2,
             "success_rate": 0.98,

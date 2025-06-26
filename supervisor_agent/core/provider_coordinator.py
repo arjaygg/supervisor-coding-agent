@@ -53,7 +53,7 @@ class ExecutionContext:
         self.exclude_providers = exclude_providers or []
         self.require_capabilities = require_capabilities or []
         self.metadata = metadata or {}
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
 
 
 class TaskAffinityTracker:
@@ -464,7 +464,7 @@ class ProviderCoordinator:
         # Check cache first
         if provider_id in self._provider_cache:
             cached_time, cached_data = self._provider_cache[provider_id]
-            if datetime.utcnow() - cached_time < self._cache_ttl:
+            if datetime.now(timezone.utc) - cached_time < self._cache_ttl:
                 return cached_data.get("healthy", False)
                 
         # Get fresh health status
@@ -478,7 +478,7 @@ class ProviderCoordinator:
             
             # Cache the result
             self._provider_cache[provider_id] = (
-                datetime.utcnow(),
+                datetime.now(timezone.utc),
                 {"healthy": is_healthy, "health_score": health.score}
             )
             

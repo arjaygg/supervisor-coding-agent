@@ -49,7 +49,7 @@ class TaskBatch:
     def __init__(self, tasks: List[Task], batch_type: str = "general"):
         self.tasks = tasks
         self.batch_type = batch_type
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
         self.total_estimated_cost = 0.0
         self.preferred_provider: Optional[str] = None
         

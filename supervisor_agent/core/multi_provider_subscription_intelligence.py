@@ -101,7 +101,7 @@ class MultiProviderSubscriptionIntelligence:
         
         # Provider quota tracking
         self.provider_quotas: Dict[str, ProviderQuotaInfo] = {}
-        self.last_quota_check = datetime.utcnow() - timedelta(hours=1)
+        self.last_quota_check = datetime.now(timezone.utc) - timedelta(hours=1)
         
         # Enhanced caching with cross-provider deduplication
         self._cache: Dict[str, CacheEntry] = {}
@@ -189,7 +189,7 @@ class MultiProviderSubscriptionIntelligence:
     ) -> None:
         """Track a request for analytics and quota management"""
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             today = now.date().isoformat()
             
             # Update usage tracking
@@ -236,7 +236,7 @@ class MultiProviderSubscriptionIntelligence:
     async def get_cross_provider_analytics(self) -> CrossProviderAnalytics:
         """Get comprehensive analytics across all providers"""
         try:
-            today = datetime.utcnow().date().isoformat()
+            today = datetime.now(timezone.utc).date().isoformat()
             
             # Calculate totals
             total_requests = sum(self._daily_usage[today].values())
@@ -313,7 +313,7 @@ class MultiProviderSubscriptionIntelligence:
             
         quota_info = self.provider_quotas[provider_id]
         if quota_info.requests_remaining <= 0:
-            return datetime.utcnow()  # Already exhausted
+            return datetime.now(timezone.utc)  # Already exhausted
             
         # Calculate usage rate over the last few hours
         recent_usage = self._calculate_recent_usage_rate(provider_id, hours=4)
@@ -322,7 +322,7 @@ class MultiProviderSubscriptionIntelligence:
             
         # Estimate time to exhaustion
         hours_to_exhaustion = quota_info.requests_remaining / recent_usage
-        exhaustion_time = datetime.utcnow() + timedelta(hours=hours_to_exhaustion)
+        exhaustion_time = datetime.now(timezone.utc) + timedelta(hours=hours_to_exhaustion)
         
         # Don't predict beyond the quota reset time
         if exhaustion_time > quota_info.reset_time:
@@ -352,7 +352,7 @@ class MultiProviderSubscriptionIntelligence:
         
     async def _update_quota_information(self) -> None:
         """Update quota information for all providers"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # Only update if enough time has passed
         if now - self.last_quota_check < timedelta(seconds=self.quota_check_interval):
@@ -378,7 +378,7 @@ class MultiProviderSubscriptionIntelligence:
             current_usage = health.metrics.get("quota_used", 0)
             
             # Calculate reset time (assume daily reset at midnight UTC)
-            tomorrow = datetime.utcnow().date() + timedelta(days=1)
+            tomorrow = datetime.now(timezone.utc).date() + timedelta(days=1)
             reset_time = datetime.combine(tomorrow, datetime.min.time())
             
             # Determine status
@@ -519,7 +519,7 @@ class MultiProviderSubscriptionIntelligence:
             
     def _calculate_recent_usage_rate(self, provider_id: str, hours: float) -> float:
         """Calculate usage rate (requests per hour) for recent period"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
         
         # Count recent requests from cost tracking (as a proxy for request count)
         recent_requests = 0
@@ -571,7 +571,7 @@ class MultiProviderSubscriptionIntelligence:
                     
             # Check for cost optimization opportunities
             total_cost_today = sum(
-                sum(cost for _, cost in costs if _.date() == datetime.utcnow().date())
+                sum(cost for _, cost in costs if _.date() == datetime.now(timezone.utc).date())
                 for costs in self._cost_tracking.values()
             )
             
