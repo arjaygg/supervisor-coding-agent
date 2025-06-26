@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from supervisor_agent.db import models, schemas
+from supervisor_agent.db.enums import MessageRole, MessageType, ChatThreadStatus
 from supervisor_agent.providers.base_provider import ProviderType, ProviderStatus
 
 
@@ -401,7 +402,7 @@ class ChatThreadCRUD:
         db: Session,
         skip: int = 0,
         limit: int = 20,
-        status: Optional[models.ChatThreadStatus] = None,
+        status: Optional[ChatThreadStatus] = None,
         user_id: Optional[str] = None
     ) -> List[models.ChatThread]:
         query = db.query(models.ChatThread)
@@ -446,7 +447,7 @@ class ChatThreadCRUD:
         db: Session,
         skip: int = 0,
         limit: int = 20,
-        status: Optional[models.ChatThreadStatus] = None,
+        status: Optional[ChatThreadStatus] = None,
         user_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Get threads with message count and unread notifications"""

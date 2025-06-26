@@ -3,7 +3,8 @@ import hashlib
 from typing import List, Dict, Any, Set
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
-from supervisor_agent.db.models import Task, TaskStatus
+from supervisor_agent.db.models import Task
+from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.db.crud import TaskCRUD
 from supervisor_agent.config import settings
 from supervisor_agent.utils.logger import get_logger

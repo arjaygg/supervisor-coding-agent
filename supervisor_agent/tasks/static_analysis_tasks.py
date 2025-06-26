@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from supervisor_agent.queue.celery_app import celery_app
 from supervisor_agent.db.database import get_db
 from supervisor_agent.db import models, schemas, crud
+from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.analysis import (
     StaticAnalysisPipeline,
     quick_repository_analysis,
@@ -48,7 +49,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
         # Update task status if task_id provided
         if task_id:
             update_data = schemas.TaskUpdate(
-                status=models.TaskStatus.IN_PROGRESS, started_at=start_time
+                status=TaskStatus.IN_PROGRESS, started_at=start_time
             )
             crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -158,7 +159,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
 
             # Update task to completed
             update_data = schemas.TaskUpdate(
-                status=models.TaskStatus.COMPLETED, completed_at=datetime.now(timezone.utc)
+                status=TaskStatus.COMPLETED, completed_at=datetime.now(timezone.utc)
             )
             crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -205,7 +206,7 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
         if task_id:
             error_message = f"Static analysis failed: {str(e)}"
             update_data = schemas.TaskUpdate(
-                status=models.TaskStatus.FAILED,
+                status=TaskStatus.FAILED,
                 error_message=error_message,
                 completed_at=datetime.now(timezone.utc),
             )
@@ -268,7 +269,7 @@ def analyze_files_task(
 
         if task_id:
             update_data = schemas.TaskUpdate(
-                status=models.TaskStatus.IN_PROGRESS, started_at=start_time
+                status=TaskStatus.IN_PROGRESS, started_at=start_time
             )
             crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -305,7 +306,7 @@ def analyze_files_task(
             crud.TaskSessionCRUD.create_session(db, session_data)
 
             update_data = schemas.TaskUpdate(
-                status=models.TaskStatus.COMPLETED, completed_at=datetime.now(timezone.utc)
+                status=TaskStatus.COMPLETED, completed_at=datetime.now(timezone.utc)
             )
             crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -316,7 +317,7 @@ def analyze_files_task(
 
         if task_id:
             update_data = schemas.TaskUpdate(
-                status=models.TaskStatus.FAILED,
+                status=TaskStatus.FAILED,
                 error_message=str(e),
                 completed_at=datetime.now(timezone.utc),
             )

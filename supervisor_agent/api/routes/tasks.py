@@ -4,7 +4,7 @@ from typing import List, Optional
 import asyncio
 from supervisor_agent.db.database import get_db
 from supervisor_agent.db import schemas, crud
-from supervisor_agent.db.models import TaskStatus
+from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.core.quota import quota_manager
 from supervisor_agent.api.websocket import notify_task_update
 from supervisor_agent.utils.logger import get_logger
