@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Dict, Any, Optional
 import json
 import os
+import secrets
 
 
 class Settings(BaseSettings):
@@ -66,6 +67,37 @@ class Settings(BaseSettings):
     enable_mock_responses: bool = Field(default=False)
     enable_debug_endpoints: bool = Field(default=False)
     skip_auth_for_development: bool = Field(default=False)
+    
+    # Security and Authentication
+    jwt_secret_key: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(64),
+        description="JWT signing secret key"
+    )
+    jwt_algorithm: str = Field(default="HS256")
+    jwt_access_token_expire_minutes: int = Field(default=30)
+    jwt_refresh_token_expire_days: int = Field(default=7)
+    
+    # Security hardening
+    security_enabled: bool = Field(default=True)
+    rate_limit_enabled: bool = Field(default=True)
+    rate_limit_requests_per_minute: int = Field(default=60)
+    rate_limit_burst: int = Field(default=120)
+    
+    # CORS settings
+    cors_allow_origins: List[str] = Field(
+        default=["http://localhost:3000", "http://localhost:5173"]
+    )
+    cors_allow_credentials: bool = Field(default=True)
+    
+    # OAuth settings
+    oauth_google_client_id: Optional[str] = Field(default=None)
+    oauth_google_client_secret: Optional[str] = Field(default=None)
+    oauth_github_client_id: Optional[str] = Field(default=None)
+    oauth_github_client_secret: Optional[str] = Field(default=None)
+    
+    # Session management
+    session_cleanup_interval_hours: int = Field(default=24)
+    max_sessions_per_user: int = Field(default=10)
     
     # Provider Configuration
     providers_config: str = Field(

@@ -225,7 +225,7 @@ class EnhancedAgentManager:
                 "routing_strategy": preferences.get("routing_strategy", "optimal"),
                 "max_cost_usd": preferences.get("max_cost_usd"),
                 "prefer_multi_provider": preferences.get("prefer_multi_provider", True),
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }
             
             logger.info(f"Updated provider preferences for user {user_id}")
@@ -315,7 +315,7 @@ class EnhancedAgentManager:
                         mapping["migration_status"] = "failed"
                         
                 migration_plan["migration_completed"] = True
-                migration_plan["migration_timestamp"] = datetime.utcnow()
+                migration_plan["migration_timestamp"] = datetime.now(timezone.utc)
                 
             return migration_plan
             
@@ -331,7 +331,7 @@ class EnhancedAgentManager:
             "legacy_system": {"status": "unknown", "agents": 0},
             "multi_provider_system": {"status": "unknown", "providers": 0},
             "recommendations": [],
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.now(timezone.utc)
         }
         
         try:

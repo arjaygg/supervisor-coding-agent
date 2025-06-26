@@ -181,4 +181,52 @@ export const api = {
     }),
 
   getAnalyticsHealth: () => apiRequest<any>("/api/v1/analytics/health"),
+
+  // Chat API methods
+  getChatThreads: () => apiRequest<any>("/api/v1/chat/threads"),
+
+  createChatThread: (data: { title: string; initial_message?: string }) =>
+    apiRequest<any>("/api/v1/chat/threads", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getChatThread: (threadId: string) =>
+    apiRequest<any>(`/api/v1/chat/threads/${threadId}`),
+
+  updateChatThread: (threadId: string, data: any) =>
+    apiRequest<any>(`/api/v1/chat/threads/${threadId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  deleteChatThread: (threadId: string) =>
+    apiRequest<{ message: string }>(`/api/v1/chat/threads/${threadId}`, {
+      method: "DELETE",
+    }),
+
+  getChatMessages: (threadId: string, before?: string) => {
+    const url = `/api/v1/chat/threads/${threadId}/messages`;
+    const params = before ? `?before=${encodeURIComponent(before)}` : "";
+    return apiRequest<any>(`${url}${params}`);
+  },
+
+  sendChatMessage: (threadId: string, data: { content: string }) =>
+    apiRequest<any>(`/api/v1/chat/threads/${threadId}/messages`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getChatNotifications: (unreadOnly?: boolean) => {
+    const params = unreadOnly ? "?unread_only=true" : "";
+    return apiRequest<any[]>(`/api/v1/chat/notifications${params}`);
+  },
+
+  markChatNotificationsRead: (threadId: string) =>
+    apiRequest<{ message: string }>(
+      `/api/v1/chat/threads/${threadId}/notifications/read`,
+      {
+        method: "POST",
+      }
+    ),
 };

@@ -1,0 +1,342 @@
+# Default values for supervisor-agent
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Application configuration
+image:
+  registry: docker.io
+  repository: supervisor-agent
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# Deployment configuration
+replicaCount: 3
+nameOverride: ""
+fullnameOverride: ""
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod configuration
+podAnnotations: {}
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: supervisor-agent.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: supervisor-agent-tls
+  #    hosts:
+  #      - supervisor-agent.local
+
+# Resource configuration
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Autoscaling configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Node selection
+nodeSelector: {}
+tolerations: []
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supervisor-agent
+        topologyKey: kubernetes.io/hostname
+
+# Environment variables
+env:
+  - name: APP_ENV
+    value: "production"
+  - name: LOG_LEVEL
+    value: "INFO"
+
+# Environment variables from secrets/configmaps
+envFrom:
+  - secretRef:
+      name: supervisor-agent-secrets
+  - configMapRef:
+      name: supervisor-agent-config
+
+# Persistent volumes
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  annotations: {}
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /api/v1/healthz
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/v1/readyz
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Startup probe for slow-starting containers
+startupProbe:
+  httpGet:
+    path: /api/v1/healthz
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 30
+
+# Database configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "supervisor-agent-password"
+    username: "supervisor_agent"
+    password: "supervisor-agent-password"
+    database: "supervisor_agent"
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+  metrics:
+    enabled: true
+
+# Redis configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "redis-password"
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+  replica:
+    replicaCount: 1
+  metrics:
+    enabled: true
+
+# External database configuration (when postgresql.enabled = false)
+externalDatabase:
+  host: ""
+  port: 5432
+  username: "supervisor_agent"
+  database: "supervisor_agent"
+  password: ""
+  existingSecret: ""
+  existingSecretPasswordKey: ""
+
+# External Redis configuration (when redis.enabled = false)
+externalRedis:
+  host: ""
+  port: 6379
+  password: ""
+  existingSecret: ""
+  existingSecretPasswordKey: ""
+
+# Worker configuration (Celery)
+worker:
+  enabled: true
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+  
+  prometheus:
+    enabled: false  # Use external Prometheus
+    
+  grafana:
+    enabled: false  # Use external Grafana
+    dashboards:
+      enabled: true
+
+# Logging configuration
+logging:
+  level: INFO
+  format: json
+  output: stdout
+
+# Security configuration
+security:
+  enabled: true
+  networkPolicy:
+    enabled: true
+    ingress: []
+    egress: []
+  podSecurityPolicy:
+    enabled: false
+
+# Blue-green deployment configuration
+blueGreen:
+  enabled: false
+  productionSlot: blue  # blue or green
+
+# Feature flags
+features:
+  multiProvider: true
+  analytics: true
+  security: true
+  rateLimiting: true
+
+# Custom configuration
+config:
+  # Application settings
+  app:
+    host: "0.0.0.0"
+    port: 8000
+    debug: false
+    workers: 4
+  
+  # Security settings
+  security:
+    jwtSecret: ""  # Will be generated if empty
+    sessionTimeout: 3600
+    rateLimitEnabled: true
+    corsOrigins: ["http://localhost:3000"]
+  
+  # Claude API configuration
+  claude:
+    apiKeys: []  # Add via secrets
+    quotaLimit: 1000
+    quotaResetHours: 24
+  
+  # Notification settings
+  notifications:
+    slack:
+      enabled: false
+      token: ""
+      channel: "#alerts"
+    email:
+      enabled: false
+      smtpHost: ""
+      smtpPort: 587
+      username: ""
+      password: ""
+
+# Additional containers (sidecars)
+extraContainers: []
+
+# Additional volumes
+extraVolumes: []
+
+# Additional volume mounts
+extraVolumeMounts: []
+
+# Init containers
+initContainers: []
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# Network policy
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress: []
+
+# Backup configuration
+backup:
+  enabled: false
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: "7d"
+  storage:
+    type: "s3"  # s3, gcs, azure
+    bucket: ""
+    region: ""
+    
+# Migration jobs
+migration:
+  enabled: true
+  image:
+    repository: supervisor-agent
+    tag: "latest"
+  backoffLimit: 3
