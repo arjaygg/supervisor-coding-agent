@@ -1,0 +1,28 @@
+{
+  "slack_notification": {
+    "enabled": true,
+    "auto_start": true,
+    "configuration": {
+      "webhook_url": "",
+      "api_token": "",
+      "default_channel": "#general",
+      "username": "Supervisor Agent",
+      "icon_emoji": ":robot_face:"
+    },
+    "permissions": [
+      "network:http",
+      "notification:send"
+    ],
+    "resource_limits": {
+      "max_memory_mb": 100,
+      "max_cpu_percent": 10,
+      "max_concurrent_operations": 5
+    },
+    "retry_policy": {
+      "max_retries": 3,
+      "retry_delay": 1.0,
+      "exponential_backoff": true,
+      "max_delay": 300.0
+    }
+  }
+}
