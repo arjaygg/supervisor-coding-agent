@@ -478,7 +478,8 @@ class MultiProviderSubscriptionIntelligence:
                 
             # Get cost estimate
             # For this implementation, we'll create a mock task to estimate cost
-            from supervisor_agent.db.models import Task, TaskType
+            from supervisor_agent.db.models import Task
+            from supervisor_agent.db.enums import TaskType
             mock_task = Task(
                 type=TaskType.FEATURE,  # Default task type
                 payload=request_data,

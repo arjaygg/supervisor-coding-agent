@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from supervisor_agent.db import models, schemas
-from supervisor_agent.providers.base_provider import ProviderType, ProviderStatus
+from supervisor_agent.db.enums import ProviderType, ProviderStatus
 
 
 class TaskCRUD:
