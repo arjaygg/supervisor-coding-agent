@@ -50,6 +50,379 @@ class InvalidDAGError(Exception):
     pass
 
 
+class DependencyResolverInterface(ABC):
+    """Abstract interface for dependency resolution"""
+    
+    @abstractmethod
+    def resolve_dependencies(self, tasks: List[TaskDefinition]) -> 'ExecutionPlan':
+        """Resolve task dependencies and create execution plan"""
+        pass
+    
+    @abstractmethod
+    def validate_dag(self, workflow: WorkflowDefinition) -> ValidationResult:
+        """Validate DAG structure for cycles and consistency"""
+        pass
+
+
+class DAGResolver(DependencyResolverInterface):
+    """
+    Advanced DAG resolver with topological sorting, cycle detection,
+    and parallel execution planning capabilities.
+    
+    Implements sophisticated dependency resolution algorithms:
+    - Kahn's algorithm for topological sorting
+    - DFS-based cycle detection
+    - Critical path analysis for optimization
+    - Parallel execution level calculation
+    """
+    
+    def __init__(self):
+        self.logger = get_logger(__name__)
+    
+    def resolve_dependencies(self, tasks: List[TaskDefinition]) -> ExecutionPlan:
+        """
+        Resolve task dependencies using topological sorting and create execution plan.
+        
+        Returns an ExecutionPlan with:
+        - Execution order for sequential processing
+        - Parallel execution levels for concurrent processing
+        - Critical path analysis
+        - Dependency graph information
+        """
+        if not tasks:
+            return ExecutionPlan(
+                task_order=[],
+                parallel_levels=[],
+                critical_path=[],
+                execution_graph={}
+            )
+        
+        # Build dependency graph
+        graph = self._build_dependency_graph(tasks)
+        
+        # Validate for cycles
+        if self._has_cycles(graph):
+            raise CircularDependencyError("Circular dependency detected in task graph")
+        
+        # Perform topological sort
+        task_order = self._topological_sort(graph)
+        
+        # Calculate parallel execution levels
+        parallel_levels = self._calculate_parallel_levels(graph, task_order)
+        
+        # Find critical path
+        critical_path = self._find_critical_path(graph, tasks)
+        
+        execution_plan = ExecutionPlan(
+            task_order=task_order,
+            parallel_levels=parallel_levels,
+            critical_path=critical_path,
+            execution_graph=graph,
+            metadata={
+                "total_tasks": len(tasks),
+                "max_parallel_level": len(max(parallel_levels, key=len, default=[])),
+                "critical_path_length": len(critical_path),
+                "estimated_duration": self._estimate_execution_time(critical_path, tasks)
+            }
+        )
+        
+        self.logger.info(f"Resolved dependencies for {len(tasks)} tasks with {len(parallel_levels)} execution levels")
+        return execution_plan
+    
+    def validate_dag(self, workflow: WorkflowDefinition) -> ValidationResult:
+        """
+        Comprehensive DAG validation including:
+        - Cycle detection
+        - Orphaned task detection
+        - Dependency consistency checks
+        - Resource constraint validation
+        """
+        try:
+            warnings = []
+            
+            # Basic structure validation
+            if not workflow.tasks:
+                return ValidationResult(False, "Workflow must contain at least one task")
+            
+            # Build task lookup
+            task_map = {task.id: task for task in workflow.tasks}
+            
+            # Validate all dependencies exist
+            for task in workflow.tasks:
+                for dep in task.dependencies:
+                    if dep.depends_on not in task_map:
+                        return ValidationResult(
+                            False, 
+                            f"Task '{task.id}' has dependency on non-existent task '{dep.depends_on}'"
+                        )
+            
+            # Build dependency graph
+            graph = self._build_dependency_graph(workflow.tasks)
+            
+            # Check for cycles
+            if self._has_cycles(graph):
+                return ValidationResult(False, "Circular dependency detected")
+            
+            # Check for orphaned tasks (tasks with no path to/from root)
+            orphaned = self._find_orphaned_tasks(graph)
+            if orphaned:
+                warnings.append(f"Found {len(orphaned)} orphaned tasks: {', '.join(orphaned)}")
+            
+            # Check for overly complex dependencies
+            max_dependencies = 10  # Configurable threshold
+            complex_tasks = [
+                task.id for task in workflow.tasks 
+                if len(task.dependencies) > max_dependencies
+            ]
+            if complex_tasks:
+                warnings.append(f"Tasks with many dependencies (>{max_dependencies}): {', '.join(complex_tasks)}")
+            
+            # Validate parallel execution feasibility
+            parallel_levels = self._calculate_parallel_levels(graph, self._topological_sort(graph))
+            max_parallel = len(max(parallel_levels, key=len, default=[]))
+            if max_parallel > 50:  # Configurable threshold
+                warnings.append(f"High parallelism detected: {max_parallel} concurrent tasks")
+            
+            return ValidationResult(True, warnings=warnings)
+            
+        except Exception as e:
+            return ValidationResult(False, f"Validation failed: {str(e)}")
+    
+    def _build_dependency_graph(self, tasks: List[TaskDefinition]) -> Dict[str, Set[str]]:
+        """Build adjacency list representation of dependency graph"""
+        graph = defaultdict(set)
+        
+        # Initialize all tasks in graph
+        for task in tasks:
+            graph[task.id] = set()
+        
+        # Add dependencies
+        for task in tasks:
+            for dep in task.dependencies:
+                graph[dep.depends_on].add(task.id)
+        
+        return dict(graph)
+    
+    def _has_cycles(self, graph: Dict[str, Set[str]]) -> bool:
+        """Detect cycles using DFS with coloring"""
+        WHITE, GRAY, BLACK = 0, 1, 2
+        colors = {node: WHITE for node in graph}
+        
+        def dfs(node: str) -> bool:
+            if colors[node] == GRAY:  # Back edge found
+                return True
+            if colors[node] == BLACK:  # Already processed
+                return False
+            
+            colors[node] = GRAY
+            for neighbor in graph[node]:
+                if dfs(neighbor):
+                    return True
+            colors[node] = BLACK
+            return False
+        
+        for node in graph:
+            if colors[node] == WHITE:
+                if dfs(node):
+                    return True
+        return False
+    
+    def _topological_sort(self, graph: Dict[str, Set[str]]) -> List[str]:
+        """Perform topological sort using Kahn's algorithm"""
+        # Calculate in-degrees
+        in_degree = {node: 0 for node in graph}
+        for node in graph:
+            for neighbor in graph[node]:
+                in_degree[neighbor] += 1
+        
+        # Start with nodes having no dependencies
+        queue = deque([node for node in in_degree if in_degree[node] == 0])
+        result = []
+        
+        while queue:
+            node = queue.popleft()
+            result.append(node)
+            
+            # Remove edges and update in-degrees
+            for neighbor in graph[node]:
+                in_degree[neighbor] -= 1
+                if in_degree[neighbor] == 0:
+                    queue.append(neighbor)
+        
+        if len(result) != len(graph):
+            raise CircularDependencyError("Cannot perform topological sort: cycle detected")
+        
+        return result
+    
+    def _calculate_parallel_levels(
+        self, 
+        graph: Dict[str, Set[str]], 
+        task_order: List[str]
+    ) -> List[List[str]]:
+        """Calculate parallel execution levels"""
+        levels = []
+        remaining_tasks = set(task_order)
+        completed_tasks = set()
+        
+        while remaining_tasks:
+            # Find tasks that can run now (all dependencies completed)
+            current_level = []
+            for task in list(remaining_tasks):
+                # Get all tasks this task depends on
+                dependencies = set()
+                for potential_dep in graph:
+                    if task in graph[potential_dep]:
+                        dependencies.add(potential_dep)
+                
+                # Check if all dependencies are completed
+                if dependencies.issubset(completed_tasks):
+                    current_level.append(task)
+            
+            if not current_level:
+                raise InvalidDAGError("Cannot create execution levels: circular dependency or invalid graph")
+            
+            levels.append(current_level)
+            completed_tasks.update(current_level)
+            remaining_tasks -= set(current_level)
+        
+        return levels
+    
+    def _find_critical_path(
+        self, 
+        graph: Dict[str, Set[str]], 
+        tasks: List[TaskDefinition]
+    ) -> List[str]:
+        """Find critical path (longest path through the DAG)"""
+        # Create task duration mapping
+        task_durations = {
+            task.id: getattr(task, 'estimated_duration', 1.0) 
+            for task in tasks
+        }
+        
+        # Calculate longest paths using dynamic programming
+        longest_path = {}
+        path_predecessor = {}
+        
+        def calculate_longest_path(node: str) -> float:
+            if node in longest_path:
+                return longest_path[node]
+            
+            max_path = 0
+            best_predecessor = None
+            
+            # Find all predecessors (tasks that this task depends on)
+            for potential_pred in graph:
+                if node in graph[potential_pred]:
+                    pred_path = calculate_longest_path(potential_pred)
+                    if pred_path > max_path:
+                        max_path = pred_path
+                        best_predecessor = potential_pred
+            
+            longest_path[node] = max_path + task_durations.get(node, 1.0)
+            if best_predecessor:
+                path_predecessor[node] = best_predecessor
+            
+            return longest_path[node]
+        
+        # Calculate longest paths for all nodes
+        for node in graph:
+            calculate_longest_path(node)
+        
+        # Find the end node with the longest path
+        if not longest_path:
+            return []
+        
+        end_node = max(longest_path.keys(), key=lambda x: longest_path[x])
+        
+        # Reconstruct critical path
+        critical_path = []
+        current = end_node
+        while current:
+            critical_path.append(current)
+            current = path_predecessor.get(current)
+        
+        return list(reversed(critical_path))
+    
+    def _find_orphaned_tasks(self, graph: Dict[str, Set[str]]) -> List[str]:
+        """Find tasks that are not connected to the main workflow"""
+        # Find nodes with no incoming or outgoing edges
+        has_incoming = set()
+        has_outgoing = set()
+        
+        for node, neighbors in graph.items():
+            if neighbors:
+                has_outgoing.add(node)
+            for neighbor in neighbors:
+                has_incoming.add(neighbor)
+        
+        all_nodes = set(graph.keys())
+        orphaned = all_nodes - (has_incoming | has_outgoing)
+        
+        return list(orphaned)
+    
+    def _estimate_execution_time(
+        self, 
+        critical_path: List[str], 
+        tasks: List[TaskDefinition]
+    ) -> float:
+        """Estimate total execution time based on critical path"""
+        task_durations = {
+            task.id: getattr(task, 'estimated_duration', 1.0) 
+            for task in tasks
+        }
+        
+        return sum(task_durations.get(task_id, 1.0) for task_id in critical_path)
+    
+    def analyze_parallelization_potential(
+        self, 
+        workflow: WorkflowDefinition
+    ) -> Dict[str, Any]:
+        """Analyze potential for parallel execution optimization"""
+        if not workflow.tasks:
+            return {"error": "No tasks to analyze"}
+        
+        graph = self._build_dependency_graph(workflow.tasks)
+        task_order = self._topological_sort(graph)
+        parallel_levels = self._calculate_parallel_levels(graph, task_order)
+        critical_path = self._find_critical_path(graph, workflow.tasks)
+        
+        total_tasks = len(workflow.tasks)
+        max_parallel = len(max(parallel_levels, key=len, default=[]))
+        
+        # Calculate parallelization metrics
+        sequential_time = sum(
+            getattr(task, 'estimated_duration', 1.0) 
+            for task in workflow.tasks
+        )
+        
+        parallel_time = sum(
+            max(
+                getattr(next(t for t in workflow.tasks if t.id == task_id), 'estimated_duration', 1.0)
+                for task_id in level
+            )
+            for level in parallel_levels
+        )
+        
+        speedup_potential = sequential_time / parallel_time if parallel_time > 0 else 1.0
+        efficiency = speedup_potential / max_parallel if max_parallel > 0 else 0.0
+        
+        return {
+            "total_tasks": total_tasks,
+            "execution_levels": len(parallel_levels),
+            "max_parallel_tasks": max_parallel,
+            "critical_path_length": len(critical_path),
+            "sequential_execution_time": sequential_time,
+            "parallel_execution_time": parallel_time,
+            "speedup_potential": speedup_potential,
+            "parallel_efficiency": efficiency,
+            "bottleneck_tasks": critical_path,
+            "parallel_levels": [
+                {"level": i, "tasks": level, "task_count": len(level)}
+                for i, level in enumerate(parallel_levels)
+            ]
+        }
+
+
 class DependencyChecker(ABC):
     """Abstract dependency checker for different condition types"""
     
