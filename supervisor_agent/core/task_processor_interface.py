@@ -138,7 +138,7 @@ class SyncTaskProcessor:
             try:
                 from supervisor_agent.db.database import SessionLocal
                 from supervisor_agent.db import crud, schemas
-                from supervisor_agent.db.models import TaskStatus
+                from supervisor_agent.db.enums import TaskStatus
                 
                 with SessionLocal() as task_db:
                     update_data = schemas.TaskUpdate(

@@ -10,7 +10,8 @@ from pydantic import BaseModel, Field
 import logging
 
 from supervisor_agent.core.multi_provider_service import multi_provider_service
-from supervisor_agent.db.models import Task, TaskType
+from supervisor_agent.db.models import Task
+from supervisor_agent.db.enums import TaskType
 from supervisor_agent.db.database import get_db
 from sqlalchemy.orm import Session
 

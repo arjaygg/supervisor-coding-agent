@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from supervisor_agent.db.database import get_db
@@ -206,7 +206,7 @@ async def delete_workflow(workflow_id: str, db: Session = Depends(get_db)):
         
         # Mark as inactive instead of deleting
         workflow.is_active = False
-        workflow.updated_at = datetime.utcnow()
+        workflow.updated_at = datetime.now(timezone.utc)
         db.commit()
         
         return {"message": "Workflow deactivated successfully"}
@@ -389,7 +389,7 @@ async def update_schedule(
     """Update schedule configuration"""
     
     try:
-        updates = {k: v for k, v in request.dict().items() if v is not None}
+        updates = {k: v for k, v in request.model_dump().items() if v is not None}
         
         success = await workflow_scheduler.update_schedule(schedule_id, **updates)
         
@@ -543,7 +543,7 @@ async def workflow_health():
             ).count()
             
             # Count total executions today
-            today = datetime.utcnow().date()
+            today = datetime.now(timezone.utc).date()
             today_executions = db.query(WorkflowExecution).filter(
                 WorkflowExecution.started_at >= today
             ).count()

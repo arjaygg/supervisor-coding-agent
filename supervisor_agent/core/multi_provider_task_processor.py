@@ -19,7 +19,8 @@ from supervisor_agent.core.provider_coordinator import ProviderCoordinator, Exec
 from supervisor_agent.core.multi_provider_subscription_intelligence import MultiProviderSubscriptionIntelligence
 from supervisor_agent.providers.provider_registry import ProviderRegistry, LoadBalancingStrategy
 from supervisor_agent.providers.base_provider import AIProvider, ProviderError, ProviderResponse
-from supervisor_agent.db.models import Task, TaskStatus, TaskType
+from supervisor_agent.db.models import Task
+from supervisor_agent.db.enums import TaskStatus, TaskType
 from supervisor_agent.db.crud import TaskCRUD, ProviderUsageCRUD
 from supervisor_agent.api.websocket import notify_quota_update, notify_system_event
 
@@ -49,7 +50,7 @@ class TaskBatch:
     def __init__(self, tasks: List[Task], batch_type: str = "general"):
         self.tasks = tasks
         self.batch_type = batch_type
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
         self.total_estimated_cost = 0.0
         self.preferred_provider: Optional[str] = None
         

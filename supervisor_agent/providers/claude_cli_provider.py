@@ -645,3 +645,9 @@ I've analyzed your request and here's my response:
         # Claude pricing (approximate)
         cost_per_token = 0.00001  # $0.01 per 1K tokens
         return tokens_used * cost_per_token
+    
+    def _estimate_tokens_from_text(self, text: str) -> int:
+        """Estimate token count from text (rough approximation)."""
+        # Very rough estimation: ~4 characters per token for English text
+        # This is a simplification - real token counting would use the actual tokenizer
+        return max(1, len(text) // 4)

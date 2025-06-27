@@ -59,7 +59,7 @@ class AnalyticsEngine(AnalyticsEngineInterface):
 
     def _generate_query_hash(self, query: AnalyticsQuery) -> str:
         """Generate unique hash for query caching"""
-        query_str = json.dumps(query.dict(), sort_keys=True, default=str)
+        query_str = json.dumps(query.model_dump(), sort_keys=True, default=str)
         return hashlib.md5(query_str.encode(), usedforsecurity=False).hexdigest()
 
     def _parse_time_range(self, time_range: TimeRange) -> timedelta:
@@ -162,7 +162,7 @@ class AnalyticsEngine(AnalyticsEngineInterface):
         # Create new cache entry
         cache_entry = AnalyticsCache(
             query_hash=query_hash,
-            query_config=query.dict(),
+            query_config=query.model_dump(),
             result_data=result_data,
             expires_at=expires_at,
         )
