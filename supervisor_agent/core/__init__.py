@@ -13,25 +13,25 @@ from .agent import ClaudeAgentWrapper, AgentManager
 from .intelligent_task_processor import IntelligentTaskProcessor
 from .subscription_intelligence import SubscriptionIntelligence
 
-# New multi-provider exports
-from .provider_coordinator import (
-    ProviderCoordinator, 
-    ExecutionContext, 
-    TaskAffinityStrategy,
-    TaskAffinityTracker
-)
-from .multi_provider_subscription_intelligence import (
-    MultiProviderSubscriptionIntelligence,
-    QuotaStatus,
-    ProviderQuotaInfo,
-    CrossProviderAnalytics
-)
-from .multi_provider_task_processor import (
-    MultiProviderTaskProcessor,
-    TaskPriority,
-    RoutingStrategy,
-    TaskBatch
-)
+# New multi-provider exports - temporarily commented out to fix circular imports
+# from .provider_coordinator import (
+#     ProviderCoordinator, 
+#     ExecutionContext, 
+#     TaskAffinityStrategy,
+#     TaskAffinityTracker
+# )
+# from .multi_provider_subscription_intelligence import (
+#     MultiProviderSubscriptionIntelligence,
+#     QuotaStatus,
+#     ProviderQuotaInfo,
+#     CrossProviderAnalytics
+# )
+# from .multi_provider_task_processor import (
+#     MultiProviderTaskProcessor,
+#     TaskPriority,
+#     RoutingStrategy,
+#     TaskBatch
+# )
 
 __all__ = [
     # Legacy exports (maintained for backward compatibility)
@@ -40,17 +40,17 @@ __all__ = [
     "IntelligentTaskProcessor",
     "SubscriptionIntelligence",
     
-    # Multi-provider architecture exports
-    "ProviderCoordinator",
-    "ExecutionContext",
-    "TaskAffinityStrategy", 
-    "TaskAffinityTracker",
-    "MultiProviderSubscriptionIntelligence",
-    "QuotaStatus",
-    "ProviderQuotaInfo",
-    "CrossProviderAnalytics",
-    "MultiProviderTaskProcessor",
-    "TaskPriority",
-    "RoutingStrategy",
-    "TaskBatch"
+    # Multi-provider architecture exports - temporarily commented out
+    # "ProviderCoordinator",
+    # "ExecutionContext",
+    # "TaskAffinityStrategy", 
+    # "TaskAffinityTracker",
+    # "MultiProviderSubscriptionIntelligence",
+    # "QuotaStatus",
+    # "ProviderQuotaInfo",
+    # "CrossProviderAnalytics",
+    # "MultiProviderTaskProcessor",
+    # "TaskPriority",
+    # "RoutingStrategy",
+    # "TaskBatch"
 ]

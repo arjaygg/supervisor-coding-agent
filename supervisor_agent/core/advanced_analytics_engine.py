@@ -36,11 +36,11 @@ import statistics
 import math
 
 from supervisor_agent.core.analytics_models import (
-    MetricsData, SystemMetrics, TaskMetrics, UserMetrics, 
+    SystemMetrics, TaskMetrics, UserMetrics, 
     AnalyticsResult, Insight, TrendPrediction, TimeRange
 )
 from supervisor_agent.db.database import SessionLocal
-from supervisor_agent.db.models import Task, TaskExecution, User
+from supervisor_agent.db.models import Task, TaskSession
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
