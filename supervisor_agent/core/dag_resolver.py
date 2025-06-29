@@ -12,7 +12,7 @@ Follows SOLID principles:
 - Dependency Inversion: Abstract dependency checking
 """
 
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Set, Tuple, Optional, Any
 from collections import defaultdict, deque
 from abc import ABC, abstractmethod
 

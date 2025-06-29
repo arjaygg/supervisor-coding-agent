@@ -23,7 +23,7 @@ import structlog
 from supervisor_agent.intelligence.workflow_synthesizer import (
     ClaudeAgentWrapper, EnhancedWorkflowDefinition
 )
-from supervisor_agent.db.workflow_models import TaskDefinition, ExecutionPlan
+from supervisor_agent.core.workflow_models import TaskDefinition, ExecutionPlan
 from supervisor_agent.db.models import TaskType
 
 

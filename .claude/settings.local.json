@@ -17,7 +17,19 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(source:*)",
+      "Bash(python -m flake8:*)",
+      "Bash(python -m pylint:*)",
+      "Bash(pytest:*)",
+      "Bash(grep:*)",
+      "Bash(python -m pytest supervisor_agent/tests/test_quota.py -v --tb=short)",
+      "Bash(python3 -m pytest supervisor_agent/tests/test_quota.py -v --tb=short)",
+      "Bash(python3:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   },

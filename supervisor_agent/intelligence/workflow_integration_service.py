@@ -27,7 +27,7 @@ from supervisor_agent.intelligence.workflow_synthesizer import (
 )
 from supervisor_agent.core.provider_coordinator import ProviderCoordinator
 from supervisor_agent.core.workflow_engine import WorkflowEngine
-from supervisor_agent.db.workflow_models import WorkflowDefinition
+from supervisor_agent.core.workflow_models import WorkflowDefinition
 from supervisor_agent.db.models import Task, TaskType, TaskStatus
 from supervisor_agent.db.crud import TaskCRUD, WorkflowCRUD
 

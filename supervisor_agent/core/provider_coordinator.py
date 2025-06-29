@@ -12,7 +12,8 @@ from typing import Dict, List, Optional, Any, Tuple
 from enum import Enum
 
 from supervisor_agent.db.models import Task, Provider, ProviderUsage
-from supervisor_agent.db.crud import ProviderCRUD, ProviderUsageCRUD, TaskCRUD
+# Import CRUD classes lazily to avoid circular imports
+# from supervisor_agent.db.crud import ProviderCRUD, ProviderUsageCRUD, TaskCRUD
 from supervisor_agent.providers.provider_registry import ProviderRegistry, LoadBalancingStrategy
 from supervisor_agent.providers.base_provider import (
     AIProvider, ProviderCapabilities, ProviderHealth, 
