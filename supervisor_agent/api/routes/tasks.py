@@ -135,8 +135,9 @@ async def retry_task(task_id: int, db: Session = Depends(get_db)):
         update_data = schemas.TaskUpdate(status=TaskStatus.PENDING, error_message=None)
         crud.TaskCRUD.update_task(db, task_id, update_data)
 
-        # Queue for processing
-        process_single_task.delay(task_id)
+        # Queue for processing using dependency injection
+        processor = TaskProcessorFactory.create_processor()
+        await processor.queue_task(task_id, db)
 
         logger.info(f"Retrying task {task_id}")
 

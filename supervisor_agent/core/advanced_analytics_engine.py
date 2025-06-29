@@ -24,7 +24,6 @@ SOLID Principles:
 
 import asyncio
 import json
-import math
 import statistics
 from abc import ABC, abstractmethod
 from collections import defaultdict, deque
@@ -46,6 +45,7 @@ from supervisor_agent.core.analytics_models import (
     UserMetrics,
 )
 from supervisor_agent.db.database import SessionLocal
+from supervisor_agent.auth.models import User
 from supervisor_agent.db.models import Task, TaskSession
 from supervisor_agent.utils.logger import get_logger
 
@@ -239,21 +239,22 @@ class MetricsCollector(MetricsCollectorInterface):
             )
             tasks_per_hour = recent_tasks / 24
 
-            # Average execution time
-            completed_executions = (
-                self.db_session.query(TaskExecution)
+            # Average execution time from completed tasks
+            completed_tasks_with_times = (
+                self.db_session.query(Task)
                 .filter(
-                    TaskExecution.status == "completed",
-                    TaskExecution.completed_at.isnot(None),
+                    Task.status == "completed",
+                    Task.completed_at.isnot(None),
+                    Task.started_at.isnot(None),
                 )
                 .all()
             )
 
             execution_times = []
-            for execution in completed_executions[-100:]:  # Last 100 executions
-                if execution.completed_at and execution.started_at:
+            for task in completed_tasks_with_times[-100:]:  # Last 100 tasks
+                if task.completed_at and task.started_at:
                     duration = (
-                        execution.completed_at - execution.started_at
+                        task.completed_at - task.started_at
                     ).total_seconds()
                     execution_times.append(duration)
 
@@ -467,7 +468,10 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
                         value=value,
                         expected_value=mean_val,
                         confidence=min(z_score / 5, 1.0),
-                        description=f"Value {value:.2f} is {z_score:.2f} standard deviations from mean {mean_val:.2f}",
+                        description=(
+                            f"Value {value:.2f} is {z_score:.2f} standard deviations "
+                            f"from mean {mean_val:.2f}"
+                        ),
                         metadata={"z_score": z_score, "method": "zscore"},
                     )
                 )
@@ -518,7 +522,10 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
                         value=current_value,
                         expected_value=window_mean,
                         confidence=min(deviation / 3, 1.0),
-                        description=f"Value {current_value:.2f} outside moving average bounds [{lower_bound:.2f}, {upper_bound:.2f}]",
+                        description=(
+                            f"Value {current_value:.2f} outside moving average bounds "
+                            f"[{lower_bound:.2f}, {upper_bound:.2f}]"
+                        ),
                         metadata={
                             "method": "moving_average",
                             "window_size": self.window_size,
@@ -551,7 +558,10 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
                         value=value,
                         expected_value=thresholds["critical_high"],
                         confidence=1.0,
-                        description=f"Value {value:.2f} exceeds critical threshold {thresholds['critical_high']:.2f}",
+                        description=(
+                            f"Value {value:.2f} exceeds critical threshold "
+                            f"{thresholds['critical_high']:.2f}"
+                        ),
                         metadata={
                             "method": "threshold",
                             "threshold_type": "critical_high",
@@ -569,7 +579,10 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
                         value=value,
                         expected_value=thresholds["warning_high"],
                         confidence=0.8,
-                        description=f"Value {value:.2f} exceeds warning threshold {thresholds['warning_high']:.2f}",
+                        description=(
+                            f"Value {value:.2f} exceeds warning threshold "
+                            f"{thresholds['warning_high']:.2f}"
+                        ),
                         metadata={
                             "method": "threshold",
                             "threshold_type": "warning_high",
@@ -611,7 +624,10 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
                         timestamp=timestamps[i - 1],
                         value=values[i - 1],
                         confidence=0.7,
-                        description=f"Trend change detected: from {previous_trend:.3f} to {recent_trend:.3f}",
+                        description=(
+                            f"Trend change detected: from {previous_trend:.3f} "
+                            f"to {recent_trend:.3f}"
+                        ),
                         metadata={
                             "method": "trend_change",
                             "previous_trend": previous_trend,

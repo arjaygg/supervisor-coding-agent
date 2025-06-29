@@ -311,7 +311,7 @@ class SessionCRUD:
     def get_session_by_jti(db: Session, jti: str) -> Optional[UserSession]:
         return (
             db.query(UserSession)
-            .filter(UserSession.token_jti == jti, UserSession.is_active == True)
+            .filter(UserSession.token_jti == jti, UserSession.is_active.is_(True))
             .first()
         )
 
@@ -323,7 +323,7 @@ class SessionCRUD:
             db.query(UserSession)
             .filter(
                 UserSession.refresh_token_jti == refresh_jti,
-                UserSession.is_active == True,
+                UserSession.is_active.is_(True),
             )
             .first()
         )
@@ -343,7 +343,7 @@ class SessionCRUD:
         """Deactivate all sessions for a user"""
         count = (
             db.query(UserSession)
-            .filter(UserSession.user_id == user_id, UserSession.is_active == True)
+            .filter(UserSession.user_id == user_id, UserSession.is_active.is_(True))
             .update({"is_active": False})
         )
 
@@ -387,7 +387,7 @@ class APIKeyCRUD:
     def get_api_keys(db: Session, user_id: str) -> List[APIKey]:
         return (
             db.query(APIKey)
-            .filter(APIKey.user_id == user_id, APIKey.is_active == True)
+            .filter(APIKey.user_id == user_id, APIKey.is_active.is_(True))
             .all()
         )
 

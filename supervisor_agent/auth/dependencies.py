@@ -120,7 +120,7 @@ async def authenticate_jwt_token(request: Request, token: str, db: Session) -> U
     # Check if session exists and is active
     session = (
         db.query(UserSession)
-        .filter(UserSession.token_jti == jti, UserSession.is_active == True)
+        .filter(UserSession.token_jti == jti, UserSession.is_active.is_(True))
         .first()
     )
 
@@ -137,7 +137,7 @@ async def authenticate_jwt_token(request: Request, token: str, db: Session) -> U
         raise AuthenticationError("Session not found or expired")
 
     # Get user
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
     if not user:
         log_security_event(
             db,
@@ -175,7 +175,7 @@ async def authenticate_api_key(request: Request, api_key: str, db: Session) -> U
     # Find API key in database
     api_key_record = (
         db.query(APIKey)
-        .filter(APIKey.key_prefix == key_prefix, APIKey.is_active == True)
+        .filter(APIKey.key_prefix == key_prefix, APIKey.is_active.is_(True))
         .first()
     )
 
@@ -221,7 +221,7 @@ async def authenticate_api_key(request: Request, api_key: str, db: Session) -> U
     # Get user
     user = (
         db.query(User)
-        .filter(User.id == api_key_record.user_id, User.is_active == True)
+        .filter(User.id == api_key_record.user_id, User.is_active.is_(True))
         .first()
     )
 
