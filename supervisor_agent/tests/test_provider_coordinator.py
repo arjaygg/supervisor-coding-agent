@@ -8,7 +8,7 @@ and execution context handling.
 import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from supervisor_agent.core.provider_coordinator import (
     ProviderCoordinator, ExecutionContext, TaskAffinityStrategy, TaskAffinityTracker

@@ -203,7 +203,7 @@ def validate_environment_setup():
         files_to_check = [
             'requirements.txt',
             'setup_database.py',
-            'supervisor_agent/main.py',
+            'supervisor_agent/api/main.py',
             'frontend/package.json'
         ]
         for file_name in files_to_check:
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     else:
         print("⚠️  Skipping API tests - server not running")
         print("💡 To run full tests, start the API server with:")
-        print("   source venv/bin/activate && python supervisor_agent/main.py")
+        print("   source venv/bin/activate && python supervisor_agent/api/main.py")
     
     # Test frontend server (optional)
     if test_frontend_server():

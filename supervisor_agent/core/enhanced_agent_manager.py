@@ -9,7 +9,7 @@ agent system and the new provider architecture.
 import asyncio
 import logging
 from typing import Dict, List, Optional, Any, Union
-from datetime import datetime
+from datetime import datetime, timezone
 
 from supervisor_agent.core.agent import ClaudeAgentWrapper, AgentManager
 from supervisor_agent.core.multi_provider_service import multi_provider_service
