@@ -7,13 +7,18 @@ Implements comprehensive test cases following TDD principles.
 
 import pytest
 
-from supervisor_agent.core.dag_resolver import (CircularDependencyError,
-                                                DAGResolver, InvalidDAGError,
-                                                StandardDependencyChecker,
-                                                ValidationResult)
-from supervisor_agent.core.workflow_models import (DependencyCondition,
-                                                   DependencyDefinition,
-                                                   WorkflowDefinition)
+from supervisor_agent.core.dag_resolver import (
+    CircularDependencyError,
+    DAGResolver,
+    InvalidDAGError,
+    StandardDependencyChecker,
+    ValidationResult,
+)
+from supervisor_agent.core.workflow_models import (
+    DependencyCondition,
+    DependencyDefinition,
+    WorkflowDefinition,
+)
 
 
 class TestDAGResolver:

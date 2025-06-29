@@ -11,15 +11,21 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from supervisor_agent.core.multi_provider_subscription_intelligence import \
-    MultiProviderSubscriptionIntelligence
+from supervisor_agent.core.multi_provider_subscription_intelligence import (
+    MultiProviderSubscriptionIntelligence,
+)
 from supervisor_agent.core.multi_provider_task_processor import (
-    MultiProviderTaskProcessor, RoutingStrategy, TaskBatch, TaskPriority)
-from supervisor_agent.core.provider_coordinator import (ExecutionContext,
-                                                        ProviderCoordinator)
+    MultiProviderTaskProcessor,
+    RoutingStrategy,
+    TaskBatch,
+    TaskPriority,
+)
+from supervisor_agent.core.provider_coordinator import (
+    ExecutionContext,
+    ProviderCoordinator,
+)
 from supervisor_agent.db.models import Task, TaskType
-from supervisor_agent.providers.base_provider import (CostEstimate,
-                                                      ProviderResponse)
+from supervisor_agent.providers.base_provider import CostEstimate, ProviderResponse
 from supervisor_agent.providers.provider_registry import ProviderRegistry
 
 

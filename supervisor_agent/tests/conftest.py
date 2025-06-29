@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from supervisor_agent.api.main import app
 from supervisor_agent.config import settings
+
 # Import models to register them with Base
 from supervisor_agent.db import models
 from supervisor_agent.db.database import Base, get_db

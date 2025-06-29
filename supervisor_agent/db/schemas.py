@@ -4,9 +4,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from supervisor_agent.db.enums import (ChatThreadStatus, MessageRole,
-                                       MessageType, NotificationType,
-                                       TaskStatus, TaskType)
+from supervisor_agent.db.enums import (
+    ChatThreadStatus,
+    MessageRole,
+    MessageType,
+    NotificationType,
+    TaskStatus,
+    TaskType,
+)
 
 
 class TaskCreate(BaseModel):

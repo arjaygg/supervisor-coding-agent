@@ -38,20 +38,22 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Type
 
-from supervisor_agent.plugins.plugin_interface import (AnalyticsInterface,
-                                                       DataSourceInterface,
-                                                       EventType,
-                                                       IntegrationInterface,
-                                                       NotificationInterface,
-                                                       PluginEvent,
-                                                       PluginInterface,
-                                                       PluginMetadata,
-                                                       PluginPermissionManager,
-                                                       PluginResult,
-                                                       PluginStatus,
-                                                       PluginType,
-                                                       PluginValidator,
-                                                       TaskProcessorInterface)
+from supervisor_agent.plugins.plugin_interface import (
+    AnalyticsInterface,
+    DataSourceInterface,
+    EventType,
+    IntegrationInterface,
+    NotificationInterface,
+    PluginEvent,
+    PluginInterface,
+    PluginMetadata,
+    PluginPermissionManager,
+    PluginResult,
+    PluginStatus,
+    PluginType,
+    PluginValidator,
+    TaskProcessorInterface,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

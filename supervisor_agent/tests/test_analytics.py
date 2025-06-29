@@ -12,13 +12,18 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from supervisor_agent.core.analytics_engine import AnalyticsEngine
-from supervisor_agent.core.analytics_models import (AggregationType,
-                                                    AnalyticsQuery, Insight,
-                                                    MetricType, SystemMetrics,
-                                                    TaskMetrics, TimeRange,
-                                                    TrendPrediction,
-                                                    UserMetrics,
-                                                    WorkflowMetrics)
+from supervisor_agent.core.analytics_models import (
+    AggregationType,
+    AnalyticsQuery,
+    Insight,
+    MetricType,
+    SystemMetrics,
+    TaskMetrics,
+    TimeRange,
+    TrendPrediction,
+    UserMetrics,
+    WorkflowMetrics,
+)
 from supervisor_agent.core.metrics_collector import MetricsCollector
 from supervisor_agent.db.models import Task, TaskStatus, TaskType
 

@@ -22,11 +22,17 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from supervisor_agent.core.subscription_intelligence import (
-    CacheEntry, RequestHash, SubscriptionIntelligence)
+    CacheEntry,
+    RequestHash,
+    SubscriptionIntelligence,
+)
 from supervisor_agent.db.crud import ProviderCRUD, ProviderUsageCRUD
 from supervisor_agent.db.models import Provider, ProviderUsage
-from supervisor_agent.providers.base_provider import (AIProvider, CostEstimate,
-                                                      ProviderError)
+from supervisor_agent.providers.base_provider import (
+    AIProvider,
+    CostEstimate,
+    ProviderError,
+)
 from supervisor_agent.providers.provider_registry import ProviderRegistry
 
 logger = logging.getLogger(__name__)

@@ -17,13 +17,17 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import structlog
 
 from supervisor_agent.core.dag_resolver import DAGResolver, ValidationResult
-from supervisor_agent.core.workflow_models import (DependencyDefinition,
-                                                   ExecutionPlan,
-                                                   TaskDefinition,
-                                                   WorkflowDefinition)
+from supervisor_agent.core.workflow_models import (
+    DependencyDefinition,
+    ExecutionPlan,
+    TaskDefinition,
+    WorkflowDefinition,
+)
 from supervisor_agent.db.models import TaskType
 from supervisor_agent.intelligence.workflow_synthesizer import (
-    ClaudeAgentWrapper, EnhancedWorkflowDefinition)
+    ClaudeAgentWrapper,
+    EnhancedWorkflowDefinition,
+)
 
 logger = structlog.get_logger(__name__)
 

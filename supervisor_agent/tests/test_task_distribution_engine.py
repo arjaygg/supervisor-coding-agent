@@ -10,17 +10,25 @@ import pytest
 
 from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.db.models import Task, TaskType
-from supervisor_agent.orchestration.agent_specialization_engine import \
-    AgentSpecialty
-from supervisor_agent.orchestration.multi_provider_coordinator import \
-    MultiProviderCoordinator
+from supervisor_agent.orchestration.agent_specialization_engine import AgentSpecialty
+from supervisor_agent.orchestration.multi_provider_coordinator import (
+    MultiProviderCoordinator,
+)
 from supervisor_agent.orchestration.task_distribution_engine import (
-    ComplexityAnalysis, DependencyGraph, DependencyManager, DistributionResult,
-    DistributionStrategy, ExecutionPlan, IntelligentTaskSplitter,
-    SplittingStrategy, TaskComplexity, TaskDistributionEngine, TaskSplit,
-    create_task_distribution_engine)
-from supervisor_agent.providers.base_provider import (ProviderType,
-                                                      TaskCapability)
+    ComplexityAnalysis,
+    DependencyGraph,
+    DependencyManager,
+    DistributionResult,
+    DistributionStrategy,
+    ExecutionPlan,
+    IntelligentTaskSplitter,
+    SplittingStrategy,
+    TaskComplexity,
+    TaskDistributionEngine,
+    TaskSplit,
+    create_task_distribution_engine,
+)
+from supervisor_agent.providers.base_provider import ProviderType, TaskCapability
 
 
 class TestIntelligentTaskSplitter:

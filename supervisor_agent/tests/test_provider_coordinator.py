@@ -11,18 +11,25 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from supervisor_agent.core.provider_coordinator import (ExecutionContext,
-                                                        ProviderCoordinator,
-                                                        TaskAffinityStrategy,
-                                                        TaskAffinityTracker)
+from supervisor_agent.core.provider_coordinator import (
+    ExecutionContext,
+    ProviderCoordinator,
+    TaskAffinityStrategy,
+    TaskAffinityTracker,
+)
 from supervisor_agent.db.models import Task, TaskType
-from supervisor_agent.providers.base_provider import (AIProvider, CostEstimate,
-                                                      ProviderCapabilities,
-                                                      ProviderError,
-                                                      ProviderHealth,
-                                                      ProviderResponse)
+from supervisor_agent.providers.base_provider import (
+    AIProvider,
+    CostEstimate,
+    ProviderCapabilities,
+    ProviderError,
+    ProviderHealth,
+    ProviderResponse,
+)
 from supervisor_agent.providers.provider_registry import (
-    LoadBalancingStrategy, ProviderRegistry)
+    LoadBalancingStrategy,
+    ProviderRegistry,
+)
 
 
 @pytest.fixture

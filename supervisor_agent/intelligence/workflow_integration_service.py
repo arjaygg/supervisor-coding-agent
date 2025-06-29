@@ -24,8 +24,12 @@ from supervisor_agent.core.workflow_models import WorkflowDefinition
 from supervisor_agent.db.crud import TaskCRUD, WorkflowCRUD
 from supervisor_agent.db.models import Task, TaskStatus, TaskType
 from supervisor_agent.intelligence.workflow_synthesizer import (
-    AIWorkflowSynthesizer, EnhancedWorkflowDefinition, RequirementAnalysis,
-    TenantContext, create_workflow_synthesizer)
+    AIWorkflowSynthesizer,
+    EnhancedWorkflowDefinition,
+    RequirementAnalysis,
+    TenantContext,
+    create_workflow_synthesizer,
+)
 
 logger = logging.getLogger(__name__)
 structured_logger = structlog.get_logger(__name__)

@@ -25,10 +25,12 @@ import structlog
 
 from supervisor_agent.core.provider_coordinator import ExecutionContext
 from supervisor_agent.db.models import Task, TaskType
-from supervisor_agent.providers.base_provider import (AIProvider,
-                                                      ProviderCapabilities,
-                                                      ProviderType,
-                                                      TaskCapability)
+from supervisor_agent.providers.base_provider import (
+    AIProvider,
+    ProviderCapabilities,
+    ProviderType,
+    TaskCapability,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

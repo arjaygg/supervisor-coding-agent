@@ -16,11 +16,13 @@ from abc import ABC, abstractmethod
 from collections import defaultdict, deque
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from supervisor_agent.core.workflow_models import (DependencyCondition,
-                                                   DependencyDefinition,
-                                                   ExecutionPlan,
-                                                   TaskDefinition,
-                                                   WorkflowDefinition)
+from supervisor_agent.core.workflow_models import (
+    DependencyCondition,
+    DependencyDefinition,
+    ExecutionPlan,
+    TaskDefinition,
+    WorkflowDefinition,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

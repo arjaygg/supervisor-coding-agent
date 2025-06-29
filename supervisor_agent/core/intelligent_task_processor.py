@@ -13,10 +13,8 @@ import time
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
-from supervisor_agent.api.websocket import (notify_quota_update,
-                                            notify_system_event)
-from supervisor_agent.core.subscription_intelligence import \
-    SubscriptionIntelligence
+from supervisor_agent.api.websocket import notify_quota_update, notify_system_event
+from supervisor_agent.core.subscription_intelligence import SubscriptionIntelligence
 from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.db.models import Task
 from supervisor_agent.utils.logger import get_logger
@@ -101,8 +99,7 @@ class IntelligentTaskProcessor:
             )
 
             # Track cache hits
-            from supervisor_agent.core.subscription_intelligence import \
-                RequestHash
+            from supervisor_agent.core.subscription_intelligence import RequestHash
 
             request_hash = RequestHash.generate(request)
             if request_hash in self.subscription_intelligence.deduplicator.cache:

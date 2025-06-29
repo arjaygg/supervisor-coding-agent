@@ -20,13 +20,14 @@ from typing import Any, Dict, List
 from celery import current_task
 from sqlalchemy.orm import Session
 
-from supervisor_agent.api.websocket import (notify_quota_update,
-                                            notify_task_update)
+from supervisor_agent.api.websocket import notify_quota_update, notify_task_update
 from supervisor_agent.config import settings
 from supervisor_agent.core.agent import agent_manager
 from supervisor_agent.core.intelligent_task_processor import (
-    TaskProcessorFactory, process_batch_intelligently,
-    process_task_intelligently)
+    TaskProcessorFactory,
+    process_batch_intelligently,
+    process_task_intelligently,
+)
 from supervisor_agent.core.memory import shared_memory
 from supervisor_agent.core.notifier import notification_manager
 from supervisor_agent.core.quota import quota_manager

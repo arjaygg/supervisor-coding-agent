@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from supervisor_agent.config import settings
+
 # Removed unused imports TaskSessionCRUD, AgentCRUD to fix circular import issue
 from supervisor_agent.core.cost_tracker import cost_tracker
 from supervisor_agent.db.models import Agent, Task, TaskSession

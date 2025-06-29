@@ -14,23 +14,28 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from supervisor_agent.api.websocket import (notify_quota_update,
-                                            notify_system_event)
-from supervisor_agent.core.intelligent_task_processor import \
-    IntelligentTaskProcessor
-from supervisor_agent.core.multi_provider_subscription_intelligence import \
-    MultiProviderSubscriptionIntelligence
-from supervisor_agent.core.provider_coordinator import (ExecutionContext,
-                                                        ProviderCoordinator,
-                                                        TaskAffinityStrategy)
+from supervisor_agent.api.websocket import notify_quota_update, notify_system_event
+from supervisor_agent.core.intelligent_task_processor import IntelligentTaskProcessor
+from supervisor_agent.core.multi_provider_subscription_intelligence import (
+    MultiProviderSubscriptionIntelligence,
+)
+from supervisor_agent.core.provider_coordinator import (
+    ExecutionContext,
+    ProviderCoordinator,
+    TaskAffinityStrategy,
+)
 from supervisor_agent.db.crud import ProviderUsageCRUD, TaskCRUD
 from supervisor_agent.db.enums import TaskStatus, TaskType
 from supervisor_agent.db.models import Task
-from supervisor_agent.providers.base_provider import (AIProvider,
-                                                      ProviderError,
-                                                      ProviderResponse)
+from supervisor_agent.providers.base_provider import (
+    AIProvider,
+    ProviderError,
+    ProviderResponse,
+)
 from supervisor_agent.providers.provider_registry import (
-    LoadBalancingStrategy, ProviderRegistry)
+    LoadBalancingStrategy,
+    ProviderRegistry,
+)
 
 logger = logging.getLogger(__name__)
 

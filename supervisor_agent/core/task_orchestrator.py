@@ -33,12 +33,14 @@ import croniter
 import pytz
 
 from supervisor_agent.core.dag_resolver import DAGResolver, ValidationResult
-from supervisor_agent.core.workflow_models import (DependencyCondition,
-                                                   DependencyDefinition,
-                                                   ExecutionPlan,
-                                                   TaskDefinition,
-                                                   WorkflowDefinition,
-                                                   WorkflowStatus)
+from supervisor_agent.core.workflow_models import (
+    DependencyCondition,
+    DependencyDefinition,
+    ExecutionPlan,
+    TaskDefinition,
+    WorkflowDefinition,
+    WorkflowStatus,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

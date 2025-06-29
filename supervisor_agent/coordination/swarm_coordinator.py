@@ -20,7 +20,10 @@ from pydantic import BaseModel
 
 from supervisor_agent.db.workflow_models import WorkflowContext, WorkflowStatus
 from supervisor_agent.intelligence.workflow_synthesizer import (
-    ClaudeAgentWrapper, EnhancedWorkflowDefinition, TenantContext)
+    ClaudeAgentWrapper,
+    EnhancedWorkflowDefinition,
+    TenantContext,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

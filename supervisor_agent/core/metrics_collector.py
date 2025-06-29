@@ -15,10 +15,15 @@ import psutil
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
-from supervisor_agent.core.analytics_models import (MetricEntry, MetricPoint,
-                                                    MetricType, SystemMetrics,
-                                                    TaskMetrics, UserMetrics,
-                                                    WorkflowMetrics)
+from supervisor_agent.core.analytics_models import (
+    MetricEntry,
+    MetricPoint,
+    MetricType,
+    SystemMetrics,
+    TaskMetrics,
+    UserMetrics,
+    WorkflowMetrics,
+)
 from supervisor_agent.db.database import SessionLocal
 from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.db.models import Agent, Task

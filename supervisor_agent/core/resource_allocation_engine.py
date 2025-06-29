@@ -28,8 +28,7 @@ import structlog
 from supervisor_agent.core.provider_coordinator import ProviderCoordinator
 from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.db.models import Provider, Task
-from supervisor_agent.providers.base_provider import (ProviderType,
-                                                      TaskCapability)
+from supervisor_agent.providers.base_provider import ProviderType, TaskCapability
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

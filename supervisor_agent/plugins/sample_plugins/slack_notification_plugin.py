@@ -16,12 +16,14 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from supervisor_agent.plugins.plugin_interface import (EventType,
-                                                       NotificationInterface,
-                                                       PluginEvent,
-                                                       PluginMetadata,
-                                                       PluginResult,
-                                                       PluginType)
+from supervisor_agent.plugins.plugin_interface import (
+    EventType,
+    NotificationInterface,
+    PluginEvent,
+    PluginMetadata,
+    PluginResult,
+    PluginType,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

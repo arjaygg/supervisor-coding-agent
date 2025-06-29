@@ -23,7 +23,9 @@ import structlog
 from supervisor_agent.core.workflow_models import ExecutionPlan, TaskDefinition
 from supervisor_agent.db.models import TaskType
 from supervisor_agent.intelligence.workflow_synthesizer import (
-    ClaudeAgentWrapper, EnhancedWorkflowDefinition)
+    ClaudeAgentWrapper,
+    EnhancedWorkflowDefinition,
+)
 
 logger = structlog.get_logger(__name__)
 

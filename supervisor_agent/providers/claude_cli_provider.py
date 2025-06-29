@@ -17,11 +17,20 @@ from typing import Any, Dict, List, Optional
 from supervisor_agent.config import settings
 from supervisor_agent.utils.logger import get_logger
 
-from .base_provider import (AIProvider, CostEstimate, ProviderCapabilities,
-                            ProviderError, ProviderHealth, ProviderResponse,
-                            ProviderStatus, ProviderUnavailableError,
-                            QuotaExceededError, RateLimitError, Task,
-                            TaskCapability)
+from .base_provider import (
+    AIProvider,
+    CostEstimate,
+    ProviderCapabilities,
+    ProviderError,
+    ProviderHealth,
+    ProviderResponse,
+    ProviderStatus,
+    ProviderUnavailableError,
+    QuotaExceededError,
+    RateLimitError,
+    Task,
+    TaskCapability,
+)
 
 logger = get_logger(__name__)
 

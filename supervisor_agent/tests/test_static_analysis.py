@@ -14,16 +14,19 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from supervisor_agent.analysis.scc_analyzer import AnalysisResult as SCCResult
-from supervisor_agent.analysis.scc_analyzer import (CodeMetrics, FileMetrics,
-                                                    SCCAnalyzer)
-from supervisor_agent.analysis.semgrep_analyzer import \
-    AnalysisResult as SemgrepResult
-from supervisor_agent.analysis.semgrep_analyzer import (Finding,
-                                                        FindingCategory,
-                                                        SemgrepAnalyzer,
-                                                        SeverityLevel)
+from supervisor_agent.analysis.scc_analyzer import CodeMetrics, FileMetrics, SCCAnalyzer
+from supervisor_agent.analysis.semgrep_analyzer import AnalysisResult as SemgrepResult
+from supervisor_agent.analysis.semgrep_analyzer import (
+    Finding,
+    FindingCategory,
+    SemgrepAnalyzer,
+    SeverityLevel,
+)
 from supervisor_agent.analysis.static_analysis_pipeline import (
-    PipelineResult, StaticAnalysisPipeline, UnifiedInsights)
+    PipelineResult,
+    StaticAnalysisPipeline,
+    UnifiedInsights,
+)
 
 
 class TestSCCAnalyzer:
@@ -201,9 +204,10 @@ class TestSemgrepAnalyzer:
     @pytest.fixture
     def semgrep_analyzer(self):
         """Create Semgrep analyzer with mocked checks."""
-        with patch.object(
-            SemgrepAnalyzer, "_verify_semgrep_installation"
-        ), patch.object(SemgrepAnalyzer, "_setup_custom_rules"):
+        with (
+            patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"),
+            patch.object(SemgrepAnalyzer, "_setup_custom_rules"),
+        ):
             return SemgrepAnalyzer()
 
     @patch("subprocess.run")
@@ -278,9 +282,11 @@ class TestSemgrepAnalyzer:
 
     def test_custom_rules_setup(self):
         """Test custom rules directory creation."""
-        with patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"), patch(
-            "pathlib.Path.mkdir"
-        ) as mock_mkdir, patch("builtins.open", mock=Mock()) as mock_open:
+        with (
+            patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"),
+            patch("pathlib.Path.mkdir") as mock_mkdir,
+            patch("builtins.open", mock=Mock()) as mock_open,
+        ):
 
             analyzer = SemgrepAnalyzer()
             mock_mkdir.assert_called()  # Rules directory should be created
@@ -352,16 +358,20 @@ class TestStaticAnalysisPipeline:
     @pytest.fixture
     def pipeline(self):
         """Create pipeline with mocked analyzers."""
-        with patch.object(SCCAnalyzer, "_verify_scc_installation"), patch.object(
-            SemgrepAnalyzer, "_verify_semgrep_installation"
-        ), patch.object(SemgrepAnalyzer, "_setup_custom_rules"):
+        with (
+            patch.object(SCCAnalyzer, "_verify_scc_installation"),
+            patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"),
+            patch.object(SemgrepAnalyzer, "_setup_custom_rules"),
+        ):
             return StaticAnalysisPipeline()
 
     def test_pipeline_initialization(self):
         """Test pipeline initialization."""
-        with patch.object(SCCAnalyzer, "_verify_scc_installation"), patch.object(
-            SemgrepAnalyzer, "_verify_semgrep_installation"
-        ), patch.object(SemgrepAnalyzer, "_setup_custom_rules"):
+        with (
+            patch.object(SCCAnalyzer, "_verify_scc_installation"),
+            patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"),
+            patch.object(SemgrepAnalyzer, "_setup_custom_rules"),
+        ):
 
             pipeline = StaticAnalysisPipeline("custom_scc", "custom_semgrep", 4)
             assert pipeline.scc_analyzer.scc_binary_path == "custom_scc"
@@ -372,10 +382,11 @@ class TestStaticAnalysisPipeline:
         self, pipeline, mock_scc_result, mock_semgrep_result
     ):
         """Test sequential repository analysis."""
-        with patch.object(
-            pipeline, "_run_scc_analysis", return_value=mock_scc_result
-        ), patch.object(
-            pipeline, "_run_semgrep_analysis", return_value=mock_semgrep_result
+        with (
+            patch.object(pipeline, "_run_scc_analysis", return_value=mock_scc_result),
+            patch.object(
+                pipeline, "_run_semgrep_analysis", return_value=mock_semgrep_result
+            ),
         ):
 
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -409,14 +420,20 @@ class TestStaticAnalysisPipeline:
         self, pipeline, mock_scc_result, mock_semgrep_result
     ):
         """Test unified insights generation."""
-        with patch.object(
-            pipeline.scc_analyzer,
-            "get_language_insights",
-            return_value={"maintainability_score": 80, "dominant_language": "Python"},
-        ), patch.object(
-            pipeline.semgrep_analyzer,
-            "get_security_insights",
-            return_value={"security_score": 90, "risk_assessment": "LOW"},
+        with (
+            patch.object(
+                pipeline.scc_analyzer,
+                "get_language_insights",
+                return_value={
+                    "maintainability_score": 80,
+                    "dominant_language": "Python",
+                },
+            ),
+            patch.object(
+                pipeline.semgrep_analyzer,
+                "get_security_insights",
+                return_value={"security_score": 90, "risk_assessment": "LOW"},
+            ),
         ):
 
             insights = pipeline._generate_unified_insights(
@@ -471,14 +488,20 @@ class TestStaticAnalysisPipeline:
         self, pipeline, mock_scc_result, mock_semgrep_result
     ):
         """Test AI model context creation."""
-        with patch.object(
-            pipeline.scc_analyzer,
-            "get_language_insights",
-            return_value={"maintainability_score": 75, "dominant_language": "Python"},
-        ), patch.object(
-            pipeline.semgrep_analyzer,
-            "get_security_insights",
-            return_value={"security_score": 85, "risk_assessment": "LOW"},
+        with (
+            patch.object(
+                pipeline.scc_analyzer,
+                "get_language_insights",
+                return_value={
+                    "maintainability_score": 75,
+                    "dominant_language": "Python",
+                },
+            ),
+            patch.object(
+                pipeline.semgrep_analyzer,
+                "get_security_insights",
+                return_value={"security_score": 85, "risk_assessment": "LOW"},
+            ),
         ):
 
             context = pipeline._create_ai_model_context(
@@ -510,8 +533,9 @@ class TestStaticAnalysisPipeline:
             )
 
             # Create mock pipeline result
-            from supervisor_agent.analysis.static_analysis_pipeline import \
-                PipelineMetrics
+            from supervisor_agent.analysis.static_analysis_pipeline import (
+                PipelineMetrics,
+            )
 
             pipeline_metrics = PipelineMetrics(
                 total_execution_time=5.0,
@@ -579,8 +603,9 @@ class TestIntegrationFunctions:
 
         mock_pipeline.analyze_repository.return_value = mock_result
 
-        from supervisor_agent.analysis.static_analysis_pipeline import \
-            quick_repository_analysis
+        from supervisor_agent.analysis.static_analysis_pipeline import (
+            quick_repository_analysis,
+        )
 
         result = quick_repository_analysis("/test/path")
 
@@ -609,8 +634,9 @@ class TestIntegrationFunctions:
         mock_result.unified_insights.ai_model_context = mock_context
         mock_pipeline.analyze_repository.return_value = mock_result
 
-        from supervisor_agent.analysis.static_analysis_pipeline import \
-            get_ai_analysis_context
+        from supervisor_agent.analysis.static_analysis_pipeline import (
+            get_ai_analysis_context,
+        )
 
         result = get_ai_analysis_context("/test/path")
 

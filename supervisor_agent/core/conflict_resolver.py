@@ -26,8 +26,14 @@ from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 import structlog
 
 from supervisor_agent.core.resource_allocation_engine import (
-    AllocationStrategy, DynamicResourceAllocator, ResourceAllocation,
-    ResourceMetrics, ResourceStatus, ResourceType, ResourceUsage)
+    AllocationStrategy,
+    DynamicResourceAllocator,
+    ResourceAllocation,
+    ResourceMetrics,
+    ResourceStatus,
+    ResourceType,
+    ResourceUsage,
+)
 from supervisor_agent.providers.base_provider import ProviderType
 from supervisor_agent.utils.logger import get_logger
 

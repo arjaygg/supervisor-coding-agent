@@ -19,8 +19,11 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from supervisor_agent.core.workflow_engine import WorkflowEngine
-from supervisor_agent.core.workflow_models import (ScheduleStatus, Workflow,
-                                                   WorkflowSchedule)
+from supervisor_agent.core.workflow_models import (
+    ScheduleStatus,
+    Workflow,
+    WorkflowSchedule,
+)
 from supervisor_agent.db.database import SessionLocal
 from supervisor_agent.utils.logger import get_logger
 

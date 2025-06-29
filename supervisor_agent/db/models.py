@@ -9,10 +9,16 @@ from sqlalchemy.sql import func
 from sqlalchemy.types import CHAR, TypeDecorator
 
 from supervisor_agent.db.database import Base
-from supervisor_agent.db.enums import (ChatThreadStatus, MessageRole,
-                                       MessageType, NotificationType,
-                                       ProviderStatus, ProviderType,
-                                       TaskStatus, TaskType)
+from supervisor_agent.db.enums import (
+    ChatThreadStatus,
+    MessageRole,
+    MessageType,
+    NotificationType,
+    ProviderStatus,
+    ProviderType,
+    TaskStatus,
+    TaskType,
+)
 
 
 class GUID(TypeDecorator):
@@ -321,10 +327,18 @@ class ChatNotification(Base):
 
 
 # Import analytics models to ensure they're included in Base metadata
-from supervisor_agent.core.analytics_models import (AlertRule, AnalyticsCache,
-                                                    Dashboard, MetricEntry)
+from supervisor_agent.core.analytics_models import (
+    AlertRule,
+    AnalyticsCache,
+    Dashboard,
+    MetricEntry,
+)
+
 # Import workflow models to ensure they're included in Base metadata
-from supervisor_agent.core.workflow_models import (TaskDependency, Workflow,
-                                                   WorkflowExecution,
-                                                   WorkflowSchedule,
-                                                   WorkflowTaskExecution)
+from supervisor_agent.core.workflow_models import (
+    TaskDependency,
+    Workflow,
+    WorkflowExecution,
+    WorkflowSchedule,
+    WorkflowTaskExecution,
+)

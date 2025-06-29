@@ -7,8 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from supervisor_agent.auth.jwt_handler import jwt_handler
-from supervisor_agent.auth.models import (APIKey, SecurityAuditLog, User,
-                                          UserSession)
+from supervisor_agent.auth.models import APIKey, SecurityAuditLog, User, UserSession
 from supervisor_agent.auth.schemas import TokenType, UserResponse
 from supervisor_agent.db.database import get_db
 from supervisor_agent.utils.logger import get_logger

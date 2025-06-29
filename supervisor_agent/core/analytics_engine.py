@@ -13,14 +13,19 @@ from typing import Dict, List, Optional
 
 from sqlalchemy import func
 
-from supervisor_agent.core.analytics_models import (AggregationType,
-                                                    AnalyticsCache,
-                                                    AnalyticsQuery,
-                                                    AnalyticsResult,
-                                                    AnalyticsSummary, Insight,
-                                                    MetricEntry, MetricPoint,
-                                                    MetricType, TimeRange,
-                                                    TrendPrediction)
+from supervisor_agent.core.analytics_models import (
+    AggregationType,
+    AnalyticsCache,
+    AnalyticsQuery,
+    AnalyticsResult,
+    AnalyticsSummary,
+    Insight,
+    MetricEntry,
+    MetricPoint,
+    MetricType,
+    TimeRange,
+    TrendPrediction,
+)
 from supervisor_agent.db.database import SessionLocal
 
 

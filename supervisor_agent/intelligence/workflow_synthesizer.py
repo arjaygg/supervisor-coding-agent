@@ -17,9 +17,11 @@ from typing import Any, Dict, List, Optional, Union
 import structlog
 from pydantic import BaseModel, Field
 
-from supervisor_agent.core.workflow_models import (TaskDefinition,
-                                                   WorkflowDefinition,
-                                                   WorkflowStatus)
+from supervisor_agent.core.workflow_models import (
+    TaskDefinition,
+    WorkflowDefinition,
+    WorkflowStatus,
+)
 from supervisor_agent.db.models import Task, TaskType
 from supervisor_agent.utils.logger import get_logger
 
@@ -150,8 +152,7 @@ class ClaudeAgentWrapper:
         if self.provider_coordinator:
             try:
                 # Use existing provider system for Claude CLI integration
-                from supervisor_agent.core.provider_coordinator import \
-                    ExecutionContext
+                from supervisor_agent.core.provider_coordinator import ExecutionContext
                 from supervisor_agent.db.models import Task, TaskType
 
                 # Create task for provider execution

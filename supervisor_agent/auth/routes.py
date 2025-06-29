@@ -5,26 +5,42 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from supervisor_agent.auth.crud import (APIKeyCRUD, PermissionCRUD, RoleCRUD,
-                                        SessionCRUD, UserCRUD,
-                                        initialize_default_permissions,
-                                        initialize_default_roles)
-from supervisor_agent.auth.dependencies import (get_current_user,
-                                                log_security_event,
-                                                require_admin,
-                                                require_permissions,
-                                                require_user_or_admin)
+from supervisor_agent.auth.crud import (
+    APIKeyCRUD,
+    PermissionCRUD,
+    RoleCRUD,
+    SessionCRUD,
+    UserCRUD,
+    initialize_default_permissions,
+    initialize_default_roles,
+)
+from supervisor_agent.auth.dependencies import (
+    get_current_user,
+    log_security_event,
+    require_admin,
+    require_permissions,
+    require_user_or_admin,
+)
 from supervisor_agent.auth.jwt_handler import create_token_pair, jwt_handler
 from supervisor_agent.auth.models import SecurityAuditLog, User
-from supervisor_agent.auth.schemas import (APIKeyCreate, APIKeyResponse,
-                                           APIKeyWithSecret, LoginRequest,
-                                           PasswordChangeRequest, Permission,
-                                           PermissionCreate,
-                                           RefreshTokenRequest, Role,
-                                           RoleCreate, RoleUpdate,
-                                           SecurityAuditLogResponse,
-                                           TokenResponse, UserCreate,
-                                           UserResponse, UserUpdate)
+from supervisor_agent.auth.schemas import (
+    APIKeyCreate,
+    APIKeyResponse,
+    APIKeyWithSecret,
+    LoginRequest,
+    PasswordChangeRequest,
+    Permission,
+    PermissionCreate,
+    RefreshTokenRequest,
+    Role,
+    RoleCreate,
+    RoleUpdate,
+    SecurityAuditLogResponse,
+    TokenResponse,
+    UserCreate,
+    UserResponse,
+    UserUpdate,
+)
 from supervisor_agent.db.database import get_db
 from supervisor_agent.utils.logger import get_logger
 

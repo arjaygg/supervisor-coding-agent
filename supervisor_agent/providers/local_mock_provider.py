@@ -15,9 +15,16 @@ from typing import Any, Dict, List, Optional
 
 from supervisor_agent.utils.logger import get_logger
 
-from .base_provider import (AIProvider, CostEstimate, ProviderCapabilities,
-                            ProviderHealth, ProviderResponse, ProviderStatus,
-                            Task, TaskCapability)
+from .base_provider import (
+    AIProvider,
+    CostEstimate,
+    ProviderCapabilities,
+    ProviderHealth,
+    ProviderResponse,
+    ProviderStatus,
+    Task,
+    TaskCapability,
+)
 
 logger = get_logger(__name__)
 

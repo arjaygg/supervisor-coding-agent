@@ -26,11 +26,19 @@ from supervisor_agent.core.multi_provider_service import MultiProviderService
 from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.db.models import Task, TaskType
 from supervisor_agent.orchestration.agent_specialization_engine import (
-    AgentSpecializationEngine, AgentSpecialty)
+    AgentSpecializationEngine,
+    AgentSpecialty,
+)
 from supervisor_agent.orchestration.multi_provider_coordinator import (
-    CoordinationStrategy, MultiProviderCoordinator, ProviderMetrics)
-from supervisor_agent.providers.base_provider import (AIProvider, ProviderType,
-                                                      TaskCapability)
+    CoordinationStrategy,
+    MultiProviderCoordinator,
+    ProviderMetrics,
+)
+from supervisor_agent.providers.base_provider import (
+    AIProvider,
+    ProviderType,
+    TaskCapability,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

@@ -12,15 +12,21 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 from supervisor_agent.db.models import Provider, ProviderUsage, Task
-from supervisor_agent.providers.base_provider import (AIProvider, CostEstimate,
-                                                      ProviderCapabilities,
-                                                      ProviderError,
-                                                      ProviderHealth,
-                                                      ProviderResponse)
+from supervisor_agent.providers.base_provider import (
+    AIProvider,
+    CostEstimate,
+    ProviderCapabilities,
+    ProviderError,
+    ProviderHealth,
+    ProviderResponse,
+)
+
 # Import CRUD classes lazily to avoid circular imports
 # from supervisor_agent.db.crud import ProviderCRUD, ProviderUsageCRUD, TaskCRUD
 from supervisor_agent.providers.provider_registry import (
-    LoadBalancingStrategy, ProviderRegistry)
+    LoadBalancingStrategy,
+    ProviderRegistry,
+)
 
 logger = logging.getLogger(__name__)
 

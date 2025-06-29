@@ -20,8 +20,7 @@ from sqlalchemy.orm import Session
 
 from supervisor_agent.core.dag_resolver import DAGResolver
 from supervisor_agent.core.workflow_engine import WorkflowEngine
-from supervisor_agent.core.workflow_models import (ScheduleStatus,
-                                                   WorkflowDefinition)
+from supervisor_agent.core.workflow_models import ScheduleStatus, WorkflowDefinition
 from supervisor_agent.core.workflow_scheduler import WorkflowScheduler
 from supervisor_agent.db.database import get_db
 from supervisor_agent.utils.logger import get_logger

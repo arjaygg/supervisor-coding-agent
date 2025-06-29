@@ -19,13 +19,16 @@ from sqlalchemy.orm import Session
 
 from supervisor_agent.core.dag_resolver import DAGResolver, ValidationResult
 from supervisor_agent.core.task_processor_interface import TaskProcessorFactory
-from supervisor_agent.core.workflow_models import (ExecutionPlan, Workflow,
-                                                   WorkflowContext,
-                                                   WorkflowDefinition,
-                                                   WorkflowExecution,
-                                                   WorkflowResult,
-                                                   WorkflowStatus,
-                                                   WorkflowTaskExecution)
+from supervisor_agent.core.workflow_models import (
+    ExecutionPlan,
+    Workflow,
+    WorkflowContext,
+    WorkflowDefinition,
+    WorkflowExecution,
+    WorkflowResult,
+    WorkflowStatus,
+    WorkflowTaskExecution,
+)
 from supervisor_agent.db import crud, schemas
 from supervisor_agent.db.database import SessionLocal
 from supervisor_agent.db.enums import TaskStatus, TaskType

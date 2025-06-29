@@ -13,12 +13,13 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from supervisor_agent.core.dag_resolver import DAGResolver, ValidationResult
-from supervisor_agent.core.workflow_engine import (WorkflowEngine,
-                                                   WorkflowExecutor)
-from supervisor_agent.core.workflow_models import (WorkflowContext,
-                                                   WorkflowDefinition,
-                                                   WorkflowResult,
-                                                   WorkflowStatus)
+from supervisor_agent.core.workflow_engine import WorkflowEngine, WorkflowExecutor
+from supervisor_agent.core.workflow_models import (
+    WorkflowContext,
+    WorkflowDefinition,
+    WorkflowResult,
+    WorkflowStatus,
+)
 from supervisor_agent.db.models import TaskStatus, TaskType
 
 
@@ -207,8 +208,7 @@ class TestWorkflowExecutor:
         resolver = Mock(spec=DAGResolver)
 
         # Mock execution plan
-        from supervisor_agent.core.workflow_models import (ExecutionPlan,
-                                                           TaskDefinition)
+        from supervisor_agent.core.workflow_models import ExecutionPlan, TaskDefinition
 
         execution_plan = ExecutionPlan(
             execution_order=[["task1"], ["task2"]],

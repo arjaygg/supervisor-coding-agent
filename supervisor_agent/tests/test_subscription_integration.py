@@ -4,13 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from supervisor_agent.core.intelligent_task_processor import \
-    IntelligentTaskProcessor
-from supervisor_agent.core.subscription_intelligence import \
-    SubscriptionIntelligence
+from supervisor_agent.core.intelligent_task_processor import IntelligentTaskProcessor
+from supervisor_agent.core.subscription_intelligence import SubscriptionIntelligence
 from supervisor_agent.db.models import Task, TaskStatus
-from supervisor_agent.queue.tasks import (process_single_task,
-                                          process_task_batch)
+from supervisor_agent.queue.tasks import process_single_task, process_task_batch
 
 
 class TestIntelligentTaskProcessor:
@@ -185,15 +182,13 @@ class TestCeleryTaskIntegration:
     @pytest.mark.asyncio
     async def test_enhanced_process_single_task(self):
         """Test that process_single_task uses subscription intelligence."""
-        with patch("supervisor_agent.queue.tasks.get_db") as mock_get_db, patch(
-            "supervisor_agent.queue.tasks.crud"
-        ) as mock_crud, patch(
-            "supervisor_agent.queue.tasks.quota_manager"
-        ) as mock_quota, patch(
-            "supervisor_agent.queue.tasks.agent_manager"
-        ) as mock_agent_mgr, patch(
-            "supervisor_agent.queue.tasks.shared_memory"
-        ) as mock_memory:
+        with (
+            patch("supervisor_agent.queue.tasks.get_db") as mock_get_db,
+            patch("supervisor_agent.queue.tasks.crud") as mock_crud,
+            patch("supervisor_agent.queue.tasks.quota_manager") as mock_quota,
+            patch("supervisor_agent.queue.tasks.agent_manager") as mock_agent_mgr,
+            patch("supervisor_agent.queue.tasks.shared_memory") as mock_memory,
+        ):
 
             # Mock database and task
             mock_db = Mock()
@@ -235,13 +230,12 @@ class TestCeleryTaskIntegration:
     @pytest.mark.asyncio
     async def test_enhanced_batch_processing(self):
         """Test that batch processing integrates with subscription intelligence."""
-        with patch("supervisor_agent.queue.tasks.get_db") as mock_get_db, patch(
-            "supervisor_agent.queue.tasks.crud"
-        ) as mock_crud, patch(
-            "supervisor_agent.queue.tasks.quota_manager"
-        ) as mock_quota, patch(
-            "supervisor_agent.queue.tasks.agent_manager"
-        ) as mock_agent_mgr:
+        with (
+            patch("supervisor_agent.queue.tasks.get_db") as mock_get_db,
+            patch("supervisor_agent.queue.tasks.crud") as mock_crud,
+            patch("supervisor_agent.queue.tasks.quota_manager") as mock_quota,
+            patch("supervisor_agent.queue.tasks.agent_manager") as mock_agent_mgr,
+        ):
 
             # Mock setup similar to above
             mock_db = Mock()

@@ -24,12 +24,19 @@ import structlog
 from supervisor_agent.core.workflow_models import ExecutionPlan, TaskDefinition
 from supervisor_agent.db.models import TaskType
 from supervisor_agent.intelligence.ai_enhanced_dag_resolver import (
-    AIEnhancedDAGResolver, OptimizedExecutionPlan)
+    AIEnhancedDAGResolver,
+    OptimizedExecutionPlan,
+)
 from supervisor_agent.intelligence.parallel_execution_analyzer import (
-    ParallelExecutionAnalyzer, ParallelizationAnalysis)
+    ParallelExecutionAnalyzer,
+    ParallelizationAnalysis,
+)
 from supervisor_agent.intelligence.workflow_synthesizer import (
-    AIWorkflowSynthesizer, ClaudeAgentWrapper, EnhancedWorkflowDefinition,
-    TenantContext)
+    AIWorkflowSynthesizer,
+    ClaudeAgentWrapper,
+    EnhancedWorkflowDefinition,
+    TenantContext,
+)
 
 logger = structlog.get_logger(__name__)
 

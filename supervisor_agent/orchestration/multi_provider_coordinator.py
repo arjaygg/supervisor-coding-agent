@@ -15,9 +15,14 @@ import structlog
 
 from supervisor_agent.core.multi_provider_service import MultiProviderService
 from supervisor_agent.orchestration.agent_specialization_engine import (
-    AgentSpecializationEngine, AgentSpecialty)
-from supervisor_agent.providers.base_provider import (AIProvider, ProviderType,
-                                                      TaskCapability)
+    AgentSpecializationEngine,
+    AgentSpecialty,
+)
+from supervisor_agent.providers.base_provider import (
+    AIProvider,
+    ProviderType,
+    TaskCapability,
+)
 
 logger = structlog.get_logger(__name__)
 

@@ -6,9 +6,13 @@ from sqlalchemy import and_, desc, func, or_
 from sqlalchemy.orm import Session
 
 from supervisor_agent.db import models, schemas
-from supervisor_agent.db.enums import (ChatThreadStatus, MessageRole,
-                                       MessageType, ProviderStatus,
-                                       ProviderType)
+from supervisor_agent.db.enums import (
+    ChatThreadStatus,
+    MessageRole,
+    MessageType,
+    ProviderStatus,
+    ProviderType,
+)
 
 
 class TaskCRUD:

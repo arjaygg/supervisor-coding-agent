@@ -7,8 +7,12 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from supervisor_agent.core.subscription_intelligence import (
-    BatchProcessor, RequestDeduplicator, RequestHash, SubscriptionIntelligence,
-    UsagePredictor)
+    BatchProcessor,
+    RequestDeduplicator,
+    RequestHash,
+    SubscriptionIntelligence,
+    UsagePredictor,
+)
 
 
 class TestRequestHash:

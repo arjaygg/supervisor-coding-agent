@@ -12,20 +12,27 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from supervisor_agent.config import settings
-from supervisor_agent.core.multi_provider_subscription_intelligence import \
-    MultiProviderSubscriptionIntelligence
+from supervisor_agent.core.multi_provider_subscription_intelligence import (
+    MultiProviderSubscriptionIntelligence,
+)
 from supervisor_agent.core.multi_provider_task_processor import (
-    MultiProviderTaskProcessor, RoutingStrategy)
-from supervisor_agent.core.provider_coordinator import (ExecutionContext,
-                                                        ProviderCoordinator,
-                                                        TaskAffinityStrategy)
+    MultiProviderTaskProcessor,
+    RoutingStrategy,
+)
+from supervisor_agent.core.provider_coordinator import (
+    ExecutionContext,
+    ProviderCoordinator,
+    TaskAffinityStrategy,
+)
 from supervisor_agent.db.crud import ProviderCRUD
 from supervisor_agent.db.database import get_db
 from supervisor_agent.db.models import Task
 from supervisor_agent.providers.claude_cli_provider import ClaudeCliProvider
 from supervisor_agent.providers.local_mock_provider import LocalMockProvider
 from supervisor_agent.providers.provider_registry import (
-    LoadBalancingStrategy, ProviderRegistry)
+    LoadBalancingStrategy,
+    ProviderRegistry,
+)
 
 logger = logging.getLogger(__name__)
 

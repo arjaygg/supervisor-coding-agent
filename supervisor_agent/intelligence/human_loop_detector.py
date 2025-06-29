@@ -18,7 +18,10 @@ import structlog
 from pydantic import BaseModel, Field
 
 from supervisor_agent.intelligence.workflow_synthesizer import (
-    ClaudeAgentWrapper, RequirementAnalysis, TenantContext)
+    ClaudeAgentWrapper,
+    RequirementAnalysis,
+    TenantContext,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
