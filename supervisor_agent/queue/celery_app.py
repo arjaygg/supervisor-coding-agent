@@ -1,4 +1,5 @@
 from celery import Celery
+
 from supervisor_agent.config import settings
 
 # Create Celery app instance

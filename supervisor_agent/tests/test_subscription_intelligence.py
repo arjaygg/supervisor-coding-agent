@@ -1,16 +1,17 @@
-import pytest
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock
-from datetime import datetime, timedelta
 import hashlib
 import json
+from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 from supervisor_agent.core.subscription_intelligence import (
-    SubscriptionIntelligence,
-    RequestDeduplicator,
     BatchProcessor,
-    UsagePredictor,
+    RequestDeduplicator,
     RequestHash,
+    SubscriptionIntelligence,
+    UsagePredictor,
 )
 
 

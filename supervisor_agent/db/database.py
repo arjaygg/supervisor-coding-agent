@@ -1,8 +1,10 @@
+import logging
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
 from supervisor_agent.config import settings
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +28,11 @@ try:
             pool_recycle=3600,
             echo=False,
         )
-    
-    logger.info(f"Database engine created successfully for {settings.database_url.split('://')[0]}")
-    
+
+    logger.info(
+        f"Database engine created successfully for {settings.database_url.split('://')[0]}"
+    )
+
 except Exception as e:
     logger.error(f"Failed to create database engine: {str(e)}")
     raise

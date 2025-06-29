@@ -6,26 +6,27 @@ Implements the MetricsCollector interface with SOLID principles.
 """
 
 import asyncio
-import psutil
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Union
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import text
+from typing import Any, Dict, List, Optional, Union
 
-from supervisor_agent.db.database import SessionLocal
-from supervisor_agent.db.models import Task, Agent
-from supervisor_agent.db.enums import TaskStatus
+import psutil
+from sqlalchemy import text
+from sqlalchemy.orm import sessionmaker
+
 from supervisor_agent.core.analytics_models import (
     MetricEntry,
-    TaskMetrics,
+    MetricPoint,
+    MetricType,
     SystemMetrics,
+    TaskMetrics,
     UserMetrics,
     WorkflowMetrics,
-    MetricType,
-    MetricPoint,
 )
+from supervisor_agent.db.database import SessionLocal
+from supervisor_agent.db.enums import TaskStatus
+from supervisor_agent.db.models import Agent, Task
 
 
 class MetricsCollectorInterface(ABC):
@@ -235,7 +236,11 @@ class MetricsCollector(MetricsCollectorInterface):
                 session_duration_ms=int(session_duration),
                 actions_count=actions_count,
                 features_used=features_used,
-                last_activity=datetime.fromisoformat(str(last_activity)) if last_activity else datetime.now(timezone.utc),
+                last_activity=(
+                    datetime.fromisoformat(str(last_activity))
+                    if last_activity
+                    else datetime.now(timezone.utc)
+                ),
             )
         finally:
             session.close()

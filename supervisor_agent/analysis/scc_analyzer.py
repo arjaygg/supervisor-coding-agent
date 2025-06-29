@@ -14,13 +14,14 @@ Following Lean principles with fast, accurate analysis.
 """
 
 import json
+import shutil
 import subprocess
 import tempfile
-import shutil
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

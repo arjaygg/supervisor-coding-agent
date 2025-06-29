@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Query
-from sqlalchemy.orm import Session
+import asyncio
 from typing import List, Optional
 from uuid import UUID
-import asyncio
 
-from supervisor_agent.db.database import get_db
-from supervisor_agent.db import schemas, crud, models
-from supervisor_agent.db.enums import ChatThreadStatus, MessageRole
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy.orm import Session
+
 from supervisor_agent.api.websocket import notify_chat_update
+from supervisor_agent.db import crud, models, schemas
+from supervisor_agent.db.database import get_db
+from supervisor_agent.db.enums import ChatThreadStatus, MessageRole
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,9 +18,7 @@ router = APIRouter()
 # Chat Thread Endpoints
 @router.post("/threads", response_model=schemas.ChatThreadResponse)
 async def create_chat_thread(
-    thread: schemas.ChatThreadCreate,
-    request: Request,
-    db: Session = Depends(get_db)
+    thread: schemas.ChatThreadCreate, request: Request, db: Session = Depends(get_db)
 ):
     """Create a new chat thread"""
     logger.info(f"Creating new chat thread: {thread.title}")
@@ -33,7 +32,7 @@ async def create_chat_thread(
             details={
                 "thread_id": str(db_thread.id),
                 "title": thread.title,
-                "has_initial_message": bool(thread.initial_message)
+                "has_initial_message": bool(thread.initial_message),
             },
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
@@ -42,12 +41,14 @@ async def create_chat_thread(
 
         # Send WebSocket notification
         asyncio.create_task(
-            notify_chat_update({
-                "type": "thread_created",
-                "thread_id": str(db_thread.id),
-                "title": db_thread.title,
-                "created_at": db_thread.created_at.isoformat()
-            })
+            notify_chat_update(
+                {
+                    "type": "thread_created",
+                    "thread_id": str(db_thread.id),
+                    "title": db_thread.title,
+                    "created_at": db_thread.created_at.isoformat(),
+                }
+            )
         )
 
         logger.info(f"Created chat thread {db_thread.id}: {thread.title}")
@@ -63,14 +64,14 @@ async def get_chat_threads(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     status: Optional[ChatThreadStatus] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get list of chat threads with statistics"""
     try:
         threads_data = crud.ChatThreadCRUD.get_threads_with_stats(
             db, skip=skip, limit=limit, status=status
         )
-        
+
         # Convert to response format
         threads = []
         for thread_data in threads_data:
@@ -81,7 +82,11 @@ async def get_chat_threads(
                     db, thread_data["id"], limit=1
                 )
                 if messages:
-                    last_message = messages[0].content[:100] + "..." if len(messages[0].content) > 100 else messages[0].content
+                    last_message = (
+                        messages[0].content[:100] + "..."
+                        if len(messages[0].content) > 100
+                        else messages[0].content
+                    )
 
             thread_response = schemas.ChatThreadResponse(
                 id=thread_data["id"],
@@ -94,17 +99,16 @@ async def get_chat_threads(
                 metadata=thread_data["metadata"],
                 unread_count=thread_data["unread_count"],
                 last_message=last_message,
-                last_message_at=thread_data["last_message_at"]
+                last_message_at=thread_data["last_message_at"],
             )
             threads.append(thread_response)
 
         # Get total count for pagination
-        total_count = len(crud.ChatThreadCRUD.get_threads(db, limit=1000))  # Get rough count
+        total_count = len(
+            crud.ChatThreadCRUD.get_threads(db, limit=1000)
+        )  # Get rough count
 
-        return schemas.ChatThreadListResponse(
-            threads=threads,
-            total_count=total_count
-        )
+        return schemas.ChatThreadListResponse(threads=threads, total_count=total_count)
 
     except Exception as e:
         logger.error(f"Failed to get chat threads: {str(e)}")
@@ -121,13 +125,17 @@ async def get_chat_thread(thread_id: UUID, db: Session = Depends(get_db)):
 
         # Get unread count for this thread
         unread_count = crud.ChatNotificationCRUD.get_unread_count(db, thread_id)
-        
+
         # Get last message
         messages = crud.ChatMessageCRUD.get_messages(db, thread_id, limit=1)
         last_message = None
         last_message_at = None
         if messages:
-            last_message = messages[0].content[:100] + "..." if len(messages[0].content) > 100 else messages[0].content
+            last_message = (
+                messages[0].content[:100] + "..."
+                if len(messages[0].content) > 100
+                else messages[0].content
+            )
             last_message_at = messages[0].created_at
 
         # Create response with additional data
@@ -142,7 +150,7 @@ async def get_chat_thread(thread_id: UUID, db: Session = Depends(get_db)):
             metadata=thread.metadata,
             unread_count=unread_count,
             last_message=last_message,
-            last_message_at=last_message_at
+            last_message_at=last_message_at,
         )
 
         return thread_response
@@ -158,7 +166,7 @@ async def get_chat_thread(thread_id: UUID, db: Session = Depends(get_db)):
 async def update_chat_thread(
     thread_id: UUID,
     thread_update: schemas.ChatThreadUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Update a chat thread"""
     try:
@@ -168,12 +176,14 @@ async def update_chat_thread(
 
         # Send WebSocket notification
         asyncio.create_task(
-            notify_chat_update({
-                "type": "thread_updated",
-                "thread_id": str(thread_id),
-                "title": updated_thread.title,
-                "status": updated_thread.status.value
-            })
+            notify_chat_update(
+                {
+                    "type": "thread_updated",
+                    "thread_id": str(thread_id),
+                    "title": updated_thread.title,
+                    "status": updated_thread.status.value,
+                }
+            )
         )
 
         logger.info(f"Updated chat thread {thread_id}")
@@ -196,10 +206,7 @@ async def delete_chat_thread(thread_id: UUID, db: Session = Depends(get_db)):
 
         # Send WebSocket notification
         asyncio.create_task(
-            notify_chat_update({
-                "type": "thread_deleted",
-                "thread_id": str(thread_id)
-            })
+            notify_chat_update({"type": "thread_deleted", "thread_id": str(thread_id)})
         )
 
         logger.info(f"Deleted chat thread {thread_id}")
@@ -213,11 +220,11 @@ async def delete_chat_thread(thread_id: UUID, db: Session = Depends(get_db)):
 
 
 # Chat Message Endpoints
-@router.post("/threads/{thread_id}/messages", response_model=schemas.ChatMessageResponse)
+@router.post(
+    "/threads/{thread_id}/messages", response_model=schemas.ChatMessageResponse
+)
 async def send_message(
-    thread_id: UUID,
-    message: schemas.ChatMessageCreate,
-    db: Session = Depends(get_db)
+    thread_id: UUID, message: schemas.ChatMessageCreate, db: Session = Depends(get_db)
 ):
     """Send a message to a chat thread"""
     try:
@@ -233,14 +240,16 @@ async def send_message(
 
         # Send WebSocket notification
         asyncio.create_task(
-            notify_chat_update({
-                "type": "message_sent",
-                "thread_id": str(thread_id),
-                "message_id": str(db_message.id),
-                "content": message.content,
-                "role": "user",
-                "created_at": db_message.created_at.isoformat()
-            })
+            notify_chat_update(
+                {
+                    "type": "message_sent",
+                    "thread_id": str(thread_id),
+                    "message_id": str(db_message.id),
+                    "content": message.content,
+                    "role": "user",
+                    "created_at": db_message.created_at.isoformat(),
+                }
+            )
         )
 
         # TODO: Process message for task generation if needed
@@ -256,13 +265,15 @@ async def send_message(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/threads/{thread_id}/messages", response_model=schemas.ChatMessagesListResponse)
+@router.get(
+    "/threads/{thread_id}/messages", response_model=schemas.ChatMessagesListResponse
+)
 async def get_messages(
     thread_id: UUID,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     before: Optional[UUID] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get messages from a chat thread"""
     try:
@@ -283,9 +294,7 @@ async def get_messages(
         has_more = (skip + len(messages)) < total_count
 
         return schemas.ChatMessagesListResponse(
-            messages=messages,
-            has_more=has_more,
-            total_count=total_count
+            messages=messages, has_more=has_more, total_count=total_count
         )
 
     except HTTPException:
@@ -296,11 +305,7 @@ async def get_messages(
 
 
 @router.put("/messages/{message_id}", response_model=schemas.ChatMessageResponse)
-async def update_message(
-    message_id: UUID,
-    content: str,
-    db: Session = Depends(get_db)
-):
+async def update_message(message_id: UUID, content: str, db: Session = Depends(get_db)):
     """Update a chat message"""
     try:
         updated_message = crud.ChatMessageCRUD.update_message(db, message_id, content)
@@ -309,13 +314,19 @@ async def update_message(
 
         # Send WebSocket notification
         asyncio.create_task(
-            notify_chat_update({
-                "type": "message_updated",
-                "thread_id": str(updated_message.thread_id),
-                "message_id": str(message_id),
-                "content": content,
-                "edited_at": updated_message.edited_at.isoformat() if updated_message.edited_at else None
-            })
+            notify_chat_update(
+                {
+                    "type": "message_updated",
+                    "thread_id": str(updated_message.thread_id),
+                    "message_id": str(message_id),
+                    "content": content,
+                    "edited_at": (
+                        updated_message.edited_at.isoformat()
+                        if updated_message.edited_at
+                        else None
+                    ),
+                }
+            )
         )
 
         logger.info(f"Updated message {message_id}")
@@ -335,7 +346,7 @@ async def get_notifications(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     unread_only: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get chat notifications"""
     try:
@@ -368,7 +379,9 @@ async def mark_notification_read(notification_id: UUID, db: Session = Depends(ge
 
 
 @router.post("/threads/{thread_id}/notifications/read")
-async def mark_thread_notifications_read(thread_id: UUID, db: Session = Depends(get_db)):
+async def mark_thread_notifications_read(
+    thread_id: UUID, db: Session = Depends(get_db)
+):
     """Mark all notifications in a thread as read"""
     try:
         # Verify thread exists
@@ -376,31 +389,38 @@ async def mark_thread_notifications_read(thread_id: UUID, db: Session = Depends(
         if not thread:
             raise HTTPException(status_code=404, detail="Chat thread not found")
 
-        updated_count = crud.ChatNotificationCRUD.mark_thread_notifications_read(db, thread_id)
+        updated_count = crud.ChatNotificationCRUD.mark_thread_notifications_read(
+            db, thread_id
+        )
 
         # Send WebSocket notification
         asyncio.create_task(
-            notify_chat_update({
-                "type": "notifications_read",
-                "thread_id": str(thread_id),
-                "count": updated_count
-            })
+            notify_chat_update(
+                {
+                    "type": "notifications_read",
+                    "thread_id": str(thread_id),
+                    "count": updated_count,
+                }
+            )
         )
 
-        logger.info(f"Marked {updated_count} notifications as read for thread {thread_id}")
+        logger.info(
+            f"Marked {updated_count} notifications as read for thread {thread_id}"
+        )
         return {"message": f"Marked {updated_count} notifications as read"}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to mark thread {thread_id} notifications as read: {str(e)}")
+        logger.error(
+            f"Failed to mark thread {thread_id} notifications as read: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/notifications/unread-count")
 async def get_unread_notifications_count(
-    thread_id: Optional[UUID] = None,
-    db: Session = Depends(get_db)
+    thread_id: Optional[UUID] = None, db: Session = Depends(get_db)
 ):
     """Get count of unread notifications"""
     try:

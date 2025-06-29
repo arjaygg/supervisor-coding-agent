@@ -1,14 +1,16 @@
+import asyncio
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from typing import List, Optional
-import asyncio
-from supervisor_agent.db.database import get_db
-from supervisor_agent.db import schemas, crud
-from supervisor_agent.db.enums import TaskStatus
-from supervisor_agent.core.quota import quota_manager
+
 from supervisor_agent.api.websocket import notify_task_update
-from supervisor_agent.utils.logger import get_logger
+from supervisor_agent.core.quota import quota_manager
 from supervisor_agent.core.task_processor_interface import TaskProcessorFactory
+from supervisor_agent.db import crud, schemas
+from supervisor_agent.db.database import get_db
+from supervisor_agent.db.enums import TaskStatus
+from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -133,8 +135,9 @@ async def retry_task(task_id: int, db: Session = Depends(get_db)):
         update_data = schemas.TaskUpdate(status=TaskStatus.PENDING, error_message=None)
         crud.TaskCRUD.update_task(db, task_id, update_data)
 
-        # Queue for processing
-        process_single_task.delay(task_id)
+        # Queue for processing using dependency injection
+        processor = TaskProcessorFactory.create_processor()
+        await processor.queue_task(task_id, db)
 
         logger.info(f"Retrying task {task_id}")
 

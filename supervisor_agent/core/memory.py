@@ -1,10 +1,12 @@
 import json
-import redis
-from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+
+import redis
+
 from supervisor_agent.config import settings
-from supervisor_agent.db.models import Task, TaskSession
 from supervisor_agent.db.crud import TaskCRUD, TaskSessionCRUD
+from supervisor_agent.db.models import Task, TaskSession
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

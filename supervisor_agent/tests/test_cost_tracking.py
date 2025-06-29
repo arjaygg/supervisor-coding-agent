@@ -1,8 +1,10 @@
-import pytest
-from unittest.mock import Mock, patch
 from datetime import datetime, timezone
-from supervisor_agent.core.cost_tracker import TokenEstimator, CostTracker, cost_tracker
-from supervisor_agent.db import models, schemas, crud
+from unittest.mock import Mock, patch
+
+import pytest
+
+from supervisor_agent.core.cost_tracker import CostTracker, TokenEstimator, cost_tracker
+from supervisor_agent.db import crud, models, schemas
 from supervisor_agent.tests.conftest import test_db
 
 
@@ -213,9 +215,11 @@ class TestCostTrackingCRUD:
         )
 
         # This would fail without proper database setup, but tests the interface
-        with patch.object(test_db, "add"), patch.object(
-            test_db, "commit"
-        ), patch.object(test_db, "refresh"):
+        with (
+            patch.object(test_db, "add"),
+            patch.object(test_db, "commit"),
+            patch.object(test_db, "refresh"),
+        ):
             db_entry = crud.CostTrackingCRUD.create_cost_entry(test_db, cost_entry)
             # Just verify the method can be called without errors
             # In a real integration test, we'd verify the actual database operations
@@ -269,9 +273,11 @@ class TestUsageMetricsCRUD:
             success_rate="95.00",
         )
 
-        with patch.object(test_db, "add"), patch.object(
-            test_db, "commit"
-        ), patch.object(test_db, "refresh"):
+        with (
+            patch.object(test_db, "add"),
+            patch.object(test_db, "commit"),
+            patch.object(test_db, "refresh"),
+        ):
             db_metric = crud.UsageMetricsCRUD.create_metric(test_db, metric)
             # Verify method can be called
 
@@ -281,9 +287,11 @@ class TestUsageMetricsCRUD:
             # Mock no existing metric
             mock_query.return_value.filter.return_value.first.return_value = None
 
-            with patch.object(test_db, "add"), patch.object(
-                test_db, "commit"
-            ), patch.object(test_db, "refresh"):
+            with (
+                patch.object(test_db, "add"),
+                patch.object(test_db, "commit"),
+                patch.object(test_db, "refresh"),
+            ):
                 result = crud.UsageMetricsCRUD.upsert_metric(
                     test_db,
                     "daily",

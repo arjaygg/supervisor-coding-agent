@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import text
 from datetime import datetime, timezone
+
 import redis
-from supervisor_agent.db.database import get_db, engine
-from supervisor_agent.db import schemas, crud
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
 from supervisor_agent.config import settings
 from supervisor_agent.core.notifier import notification_manager
+from supervisor_agent.db import crud, schemas
+from supervisor_agent.db.database import engine, get_db
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -40,7 +42,9 @@ async def health_check(db: Session = Depends(get_db)):
             logger.error(f"Redis health check failed: {str(e)}")
             redis_healthy = False
         else:
-            logger.warning(f"Redis unavailable but not required in development: {str(e)}")
+            logger.warning(
+                f"Redis unavailable but not required in development: {str(e)}"
+            )
             redis_healthy = True  # Consider healthy in development mode
 
     # Count active agents

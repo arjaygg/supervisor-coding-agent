@@ -1,10 +1,12 @@
-import pytest
-import subprocess
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from supervisor_agent.core.agent import ClaudeAgentWrapper, AgentManager
-from supervisor_agent.db.models import Task, TaskType
+import subprocess
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
+
+from supervisor_agent.core.agent import AgentManager, ClaudeAgentWrapper
+from supervisor_agent.db.models import Task, TaskType
 
 
 @pytest.fixture

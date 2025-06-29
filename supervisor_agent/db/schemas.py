@@ -1,14 +1,16 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 from uuid import UUID
+
+from pydantic import BaseModel, Field
+
 from supervisor_agent.db.enums import (
-    TaskType, 
-    TaskStatus, 
-    ChatThreadStatus, 
-    MessageRole, 
-    MessageType, 
-    NotificationType
+    ChatThreadStatus,
+    MessageRole,
+    MessageType,
+    NotificationType,
+    TaskStatus,
+    TaskType,
 )
 
 

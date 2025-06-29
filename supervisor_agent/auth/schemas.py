@@ -1,7 +1,8 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class TokenType(str, Enum):
@@ -11,7 +12,7 @@ class TokenType(str, Enum):
 
 class UserRole(str, Enum):
     ADMIN = "admin"
-    USER = "user" 
+    USER = "user"
     VIEWER = "viewer"
     API_USER = "api_user"
 
@@ -59,7 +60,7 @@ class UserResponse(UserBase):
     roles: List[Role] = []
     created_at: datetime
     last_login: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -132,7 +133,7 @@ class SecurityAuditLogResponse(BaseModel):
     user_agent: Optional[str] = None
     success: bool
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 

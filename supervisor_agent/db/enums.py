@@ -10,6 +10,7 @@ from enum import Enum, IntEnum
 
 class TaskType(str, Enum):
     """Types of tasks that can be processed"""
+
     PR_REVIEW = "PR_REVIEW"
     ISSUE_SUMMARY = "ISSUE_SUMMARY"
     CODE_ANALYSIS = "CODE_ANALYSIS"
@@ -24,6 +25,7 @@ class TaskType(str, Enum):
 
 class TaskStatus(str, Enum):
     """Status of task execution"""
+
     PENDING = "PENDING"
     QUEUED = "QUEUED"
     IN_PROGRESS = "IN_PROGRESS"
@@ -34,6 +36,7 @@ class TaskStatus(str, Enum):
 
 class TaskPriority(IntEnum):
     """Task priority levels"""
+
     LOW = 1
     NORMAL = 5
     HIGH = 7
@@ -43,6 +46,7 @@ class TaskPriority(IntEnum):
 
 class ChatThreadStatus(str, Enum):
     """Status of chat threads"""
+
     ACTIVE = "ACTIVE"
     ARCHIVED = "ARCHIVED"
     COMPLETED = "COMPLETED"
@@ -51,6 +55,7 @@ class ChatThreadStatus(str, Enum):
 
 class MessageRole(str, Enum):
     """Role of message sender"""
+
     USER = "USER"
     ASSISTANT = "ASSISTANT"
     SYSTEM = "SYSTEM"
@@ -58,6 +63,7 @@ class MessageRole(str, Enum):
 
 class MessageType(str, Enum):
     """Type of message content"""
+
     TEXT = "TEXT"
     CODE = "CODE"
     IMAGE = "IMAGE"
@@ -70,6 +76,7 @@ class MessageType(str, Enum):
 
 class NotificationType(str, Enum):
     """Type of notification"""
+
     INFO = "INFO"
     WARNING = "WARNING"
     ERROR = "ERROR"
@@ -82,6 +89,7 @@ class NotificationType(str, Enum):
 
 class ProviderType(str, Enum):
     """Types of providers"""
+
     OPENAI = "OPENAI"
     ANTHROPIC = "ANTHROPIC"
     ANTHROPIC_API = "anthropic_api"
@@ -96,6 +104,7 @@ class ProviderType(str, Enum):
 
 class ProviderStatus(str, Enum):
     """Status of providers"""
+
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     DEGRADED = "DEGRADED"
