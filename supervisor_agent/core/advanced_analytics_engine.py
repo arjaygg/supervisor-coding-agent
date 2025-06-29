@@ -253,9 +253,7 @@ class MetricsCollector(MetricsCollectorInterface):
             execution_times = []
             for task in completed_tasks_with_times[-100:]:  # Last 100 tasks
                 if task.completed_at and task.started_at:
-                    duration = (
-                        task.completed_at - task.started_at
-                    ).total_seconds()
+                    duration = (task.completed_at - task.started_at).total_seconds()
                     execution_times.append(duration)
 
             avg_execution_time = (
