@@ -1,42 +1,30 @@
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    DateTime,
-    Text,
-    JSON,
-    ForeignKey,
-    Boolean,
-    Enum as SQLEnum,
-    Index,
-)
+import uuid
+
+from sqlalchemy import JSON, Boolean, Column, DateTime
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, Index, Integer, String, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.types import TypeDecorator, CHAR
-import uuid
+from sqlalchemy.types import CHAR, TypeDecorator
+
 from supervisor_agent.db.database import Base
-from supervisor_agent.db.enums import (
-    TaskType,
-    TaskStatus,
-    ChatThreadStatus,
-    MessageRole,
-    MessageType,
-    NotificationType,
-    ProviderType,
-    ProviderStatus,
-)
+from supervisor_agent.db.enums import (ChatThreadStatus, MessageRole,
+                                       MessageType, NotificationType,
+                                       ProviderStatus, ProviderType,
+                                       TaskStatus, TaskType)
 
 
 class GUID(TypeDecorator):
     """Platform-independent GUID type.
     Uses PostgreSQL's UUID type, otherwise uses CHAR(32), storing as stringified hex values.
     """
+
     impl = CHAR
     cache_ok = True
 
     def load_dialect_impl(self, dialect):
-        if dialect.name == 'postgresql':
+        if dialect.name == "postgresql":
             return dialect.type_descriptor(UUID())
         else:
             return dialect.type_descriptor(CHAR(36))
@@ -44,7 +32,7 @@ class GUID(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return value
-        elif dialect.name == 'postgresql':
+        elif dialect.name == "postgresql":
             return str(value)
         else:
             if not isinstance(value, uuid.UUID):
@@ -70,7 +58,6 @@ class GUID(TypeDecorator):
             return value
 
 
-
 class Provider(Base):
     __tablename__ = "providers"
 
@@ -94,12 +81,14 @@ class Provider(Base):
 
     # Relationships
     tasks = relationship("Task", back_populates="provider")
-    usage_entries = relationship("ProviderUsage", back_populates="provider", cascade="all, delete-orphan")
+    usage_entries = relationship(
+        "ProviderUsage", back_populates="provider", cascade="all, delete-orphan"
+    )
 
     # Indexes for performance
     __table_args__ = (
-        Index('ix_providers_type_status', 'type', 'status'),
-        Index('ix_providers_priority_enabled', 'priority', 'is_enabled'),
+        Index("ix_providers_type_status", "type", "status"),
+        Index("ix_providers_priority_enabled", "priority", "is_enabled"),
     )
 
 
@@ -107,11 +96,15 @@ class ProviderUsage(Base):
     __tablename__ = "provider_usage"
 
     id = Column(Integer, primary_key=True, index=True)
-    provider_id = Column(String, ForeignKey("providers.id", ondelete="CASCADE"), nullable=False)
+    provider_id = Column(
+        String, ForeignKey("providers.id", ondelete="CASCADE"), nullable=False
+    )
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
     request_id = Column(String, nullable=True)  # For tracking individual requests
     tokens_used = Column(Integer, nullable=False, default=0)
-    cost_usd = Column(String, nullable=False, default="0.00")  # Store as string for precision
+    cost_usd = Column(
+        String, nullable=False, default="0.00"
+    )  # Store as string for precision
     execution_time_ms = Column(Integer, nullable=False, default=0)
     model_used = Column(String, nullable=True)
     success = Column(Boolean, nullable=False, default=True)
@@ -125,9 +118,9 @@ class ProviderUsage(Base):
 
     # Indexes for efficient queries
     __table_args__ = (
-        Index('ix_provider_usage_provider_timestamp', 'provider_id', 'timestamp'),
-        Index('ix_provider_usage_task_provider', 'task_id', 'provider_id'),
-        Index('ix_provider_usage_success_timestamp', 'success', 'timestamp'),
+        Index("ix_provider_usage_provider_timestamp", "provider_id", "timestamp"),
+        Index("ix_provider_usage_task_provider", "task_id", "provider_id"),
+        Index("ix_provider_usage_success_timestamp", "success", "timestamp"),
     )
 
 
@@ -254,14 +247,21 @@ class ChatThread(Base):
     thread_metadata = Column("metadata", JSON, default=dict)
 
     # Relationships
-    messages = relationship("ChatMessage", back_populates="thread", cascade="all, delete-orphan", order_by="ChatMessage.created_at")
+    messages = relationship(
+        "ChatMessage",
+        back_populates="thread",
+        cascade="all, delete-orphan",
+        order_by="ChatMessage.created_at",
+    )
     tasks = relationship("Task", back_populates="chat_thread")
-    notifications = relationship("ChatNotification", back_populates="thread", cascade="all, delete-orphan")
+    notifications = relationship(
+        "ChatNotification", back_populates="thread", cascade="all, delete-orphan"
+    )
 
     # Indexes for performance
     __table_args__ = (
-        Index('ix_chat_threads_status_updated', 'status', 'updated_at'),
-        Index('ix_chat_threads_user_status', 'user_id', 'status'),
+        Index("ix_chat_threads_status_updated", "status", "updated_at"),
+        Index("ix_chat_threads_user_status", "user_id", "status"),
     )
 
 
@@ -269,11 +269,15 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
-    thread_id = Column(GUID(), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False)
+    thread_id = Column(
+        GUID(), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False
+    )
     role = Column(SQLEnum(MessageRole), nullable=False)
     content = Column(Text, nullable=False)
     message_type = Column(SQLEnum(MessageType), default=MessageType.TEXT)
-    message_metadata = Column("metadata", JSON, default=dict)  # for storing task refs, progress data, etc.
+    message_metadata = Column(
+        "metadata", JSON, default=dict
+    )  # for storing task refs, progress data, etc.
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     edited_at = Column(DateTime(timezone=True), nullable=True)
     parent_message_id = Column(GUID(), ForeignKey("chat_messages.id"), nullable=True)
@@ -281,12 +285,14 @@ class ChatMessage(Base):
     # Relationships
     thread = relationship("ChatThread", back_populates="messages")
     parent_message = relationship("ChatMessage", remote_side=[id])
-    child_messages = relationship("ChatMessage", remote_side=[parent_message_id], overlaps="parent_message")
+    child_messages = relationship(
+        "ChatMessage", remote_side=[parent_message_id], overlaps="parent_message"
+    )
 
     # Indexes for performance
     __table_args__ = (
-        Index('ix_chat_messages_thread_created', 'thread_id', 'created_at'),
-        Index('ix_chat_messages_role_type', 'role', 'message_type'),
+        Index("ix_chat_messages_thread_created", "thread_id", "created_at"),
+        Index("ix_chat_messages_role_type", "role", "message_type"),
     )
 
 
@@ -294,7 +300,9 @@ class ChatNotification(Base):
     __tablename__ = "chat_notifications"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
-    thread_id = Column(GUID(), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False)
+    thread_id = Column(
+        GUID(), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False
+    )
     type = Column(SQLEnum(NotificationType), nullable=False)
     title = Column(String(255), nullable=False)
     message = Column(Text, nullable=True)
@@ -307,24 +315,16 @@ class ChatNotification(Base):
 
     # Indexes for performance
     __table_args__ = (
-        Index('ix_chat_notifications_thread_unread', 'thread_id', 'is_read'),
-        Index('ix_chat_notifications_type_created', 'type', 'created_at'),
+        Index("ix_chat_notifications_thread_unread", "thread_id", "is_read"),
+        Index("ix_chat_notifications_type_created", "type", "created_at"),
     )
 
 
-# Import workflow models to ensure they're included in Base metadata
-from supervisor_agent.core.workflow_models import (
-    Workflow,
-    WorkflowExecution, 
-    WorkflowTaskExecution,
-    TaskDependency,
-    WorkflowSchedule
-)
-
 # Import analytics models to ensure they're included in Base metadata
-from supervisor_agent.core.analytics_models import (
-    MetricEntry,
-    Dashboard,
-    AnalyticsCache,
-    AlertRule
-)
+from supervisor_agent.core.analytics_models import (AlertRule, AnalyticsCache,
+                                                    Dashboard, MetricEntry)
+# Import workflow models to ensure they're included in Base metadata
+from supervisor_agent.core.workflow_models import (TaskDependency, Workflow,
+                                                   WorkflowExecution,
+                                                   WorkflowSchedule,
+                                                   WorkflowTaskExecution)

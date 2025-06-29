@@ -1,5 +1,7 @@
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
 from supervisor_agent.core.quota import QuotaManager
 from supervisor_agent.db import crud, schemas
 

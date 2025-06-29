@@ -5,31 +5,25 @@ Tests SCC, Semgrep, and unified pipeline functionality.
 Follows TDD principles with comprehensive test coverage.
 """
 
-import pytest
-import tempfile
 import json
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
 from datetime import datetime
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
-from supervisor_agent.analysis.scc_analyzer import (
-    SCCAnalyzer,
-    CodeMetrics,
-    FileMetrics,
-    AnalysisResult as SCCResult,
-)
-from supervisor_agent.analysis.semgrep_analyzer import (
-    SemgrepAnalyzer,
-    Finding,
-    SeverityLevel,
-    FindingCategory,
-    AnalysisResult as SemgrepResult,
-)
+import pytest
+
+from supervisor_agent.analysis.scc_analyzer import AnalysisResult as SCCResult
+from supervisor_agent.analysis.scc_analyzer import (CodeMetrics, FileMetrics,
+                                                    SCCAnalyzer)
+from supervisor_agent.analysis.semgrep_analyzer import \
+    AnalysisResult as SemgrepResult
+from supervisor_agent.analysis.semgrep_analyzer import (Finding,
+                                                        FindingCategory,
+                                                        SemgrepAnalyzer,
+                                                        SeverityLevel)
 from supervisor_agent.analysis.static_analysis_pipeline import (
-    StaticAnalysisPipeline,
-    PipelineResult,
-    UnifiedInsights,
-)
+    PipelineResult, StaticAnalysisPipeline, UnifiedInsights)
 
 
 class TestSCCAnalyzer:
@@ -516,9 +510,8 @@ class TestStaticAnalysisPipeline:
             )
 
             # Create mock pipeline result
-            from supervisor_agent.analysis.static_analysis_pipeline import (
-                PipelineMetrics,
-            )
+            from supervisor_agent.analysis.static_analysis_pipeline import \
+                PipelineMetrics
 
             pipeline_metrics = PipelineMetrics(
                 total_execution_time=5.0,
@@ -586,9 +579,8 @@ class TestIntegrationFunctions:
 
         mock_pipeline.analyze_repository.return_value = mock_result
 
-        from supervisor_agent.analysis.static_analysis_pipeline import (
-            quick_repository_analysis,
-        )
+        from supervisor_agent.analysis.static_analysis_pipeline import \
+            quick_repository_analysis
 
         result = quick_repository_analysis("/test/path")
 
@@ -617,9 +609,8 @@ class TestIntegrationFunctions:
         mock_result.unified_insights.ai_model_context = mock_context
         mock_pipeline.analyze_repository.return_value = mock_result
 
-        from supervisor_agent.analysis.static_analysis_pipeline import (
-            get_ai_analysis_context,
-        )
+        from supervisor_agent.analysis.static_analysis_pipeline import \
+            get_ai_analysis_context
 
         result = get_ai_analysis_context("/test/path")
 

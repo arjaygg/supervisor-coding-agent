@@ -8,21 +8,20 @@ Provides async execution of SCC and Semgrep analysis with results storage.
 import asyncio
 import json
 from datetime import datetime, timezone
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from celery import current_task
 from sqlalchemy.orm import Session
 
-from supervisor_agent.queue.celery_app import celery_app
-from supervisor_agent.db.database import get_db
-from supervisor_agent.db import models, schemas, crud
-from supervisor_agent.db.enums import TaskStatus
-from supervisor_agent.analysis import (
-    StaticAnalysisPipeline,
-    quick_repository_analysis,
-    get_ai_analysis_context,
-)
+from supervisor_agent.analysis import (StaticAnalysisPipeline,
+                                       get_ai_analysis_context,
+                                       quick_repository_analysis)
 from supervisor_agent.api.websocket import notify_task_update
 from supervisor_agent.config import settings
+from supervisor_agent.db import crud, models, schemas
+from supervisor_agent.db.database import get_db
+from supervisor_agent.db.enums import TaskStatus
+from supervisor_agent.queue.celery_app import celery_app
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

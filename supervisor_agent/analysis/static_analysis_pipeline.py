@@ -16,18 +16,16 @@ Following Lean principles with fast, actionable results for AI consumption.
 
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from supervisor_agent.analysis.scc_analyzer import (
-    SCCAnalyzer,
-    AnalysisResult as SCCResult,
-)
-from supervisor_agent.analysis.semgrep_analyzer import (
-    SemgrepAnalyzer,
-    AnalysisResult as SemgrepResult,
-)
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from supervisor_agent.analysis.scc_analyzer import AnalysisResult as SCCResult
+from supervisor_agent.analysis.scc_analyzer import SCCAnalyzer
+from supervisor_agent.analysis.semgrep_analyzer import \
+    AnalysisResult as SemgrepResult
+from supervisor_agent.analysis.semgrep_analyzer import SemgrepAnalyzer
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

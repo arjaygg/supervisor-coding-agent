@@ -10,6 +10,7 @@ from typing import List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from supervisor_agent.config import settings
 from supervisor_agent.core.analytics_engine import AnalyticsEngine
 from supervisor_agent.core.analytics_models import (AnalyticsQuery,
                                                     AnalyticsResult,
@@ -20,7 +21,6 @@ from supervisor_agent.core.analytics_models import (AnalyticsQuery,
                                                     TrendPrediction)
 from supervisor_agent.core.metrics_collector import MetricsCollector
 from supervisor_agent.db.database import get_db
-from supervisor_agent.config import settings
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -170,21 +170,23 @@ async def get_provider_dashboard():
     """Get comprehensive provider analytics dashboard data"""
     if not settings.multi_provider_enabled:
         raise HTTPException(
-            status_code=400, 
-            detail="Multi-provider system is not enabled"
+            status_code=400, detail="Multi-provider system is not enabled"
         )
-    
+
     try:
-        from supervisor_agent.core.multi_provider_service import multi_provider_service
-        
+        from supervisor_agent.core.multi_provider_service import \
+            multi_provider_service
+
         # Get provider status and analytics
         provider_status = await multi_provider_service.get_provider_status()
         analytics = await multi_provider_service.get_analytics()
-        
+
         # Get system health information
-        from supervisor_agent.core.enhanced_agent_manager import enhanced_agent_manager
+        from supervisor_agent.core.enhanced_agent_manager import \
+            enhanced_agent_manager
+
         system_health = await enhanced_agent_manager.get_system_health()
-        
+
         dashboard_data = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "overview": {
@@ -194,22 +196,21 @@ async def get_provider_dashboard():
                 "total_tasks_today": analytics.get("total_tasks_today", 0),
                 "total_cost_today": analytics.get("total_cost_today", 0.0),
                 "average_response_time": analytics.get("average_response_time", 0.0),
-                "success_rate": analytics.get("success_rate", 0.0)
+                "success_rate": analytics.get("success_rate", 0.0),
             },
             "providers": provider_status.get("providers", {}),
             "usage_analytics": analytics,
             "system_health": system_health,
             "cost_breakdown": analytics.get("cost_breakdown", {}),
             "performance_metrics": analytics.get("performance_metrics", {}),
-            "quota_status": provider_status.get("quota_status", {})
+            "quota_status": provider_status.get("quota_status", {}),
         }
-        
+
         return dashboard_data
-        
+
     except Exception as e:
         raise HTTPException(
-            status_code=500, 
-            detail=f"Failed to get provider dashboard data: {str(e)}"
+            status_code=500, detail=f"Failed to get provider dashboard data: {str(e)}"
         )
 
 
@@ -217,25 +218,27 @@ async def get_provider_dashboard():
 async def get_provider_metrics(
     provider_id: str,
     time_range: TimeRange = Query(TimeRange.DAY, description="Time range for metrics"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get detailed metrics for a specific provider"""
     if not settings.multi_provider_enabled:
         raise HTTPException(
-            status_code=400, 
-            detail="Multi-provider system is not enabled"
+            status_code=400, detail="Multi-provider system is not enabled"
         )
-    
+
     try:
-        from supervisor_agent.core.multi_provider_service import multi_provider_service
-        
+        from supervisor_agent.core.multi_provider_service import \
+            multi_provider_service
+
         # Get provider-specific metrics
-        provider_analytics = await multi_provider_service.get_provider_analytics(provider_id)
-        
+        provider_analytics = await multi_provider_service.get_provider_analytics(
+            provider_id
+        )
+
         # Get database metrics for this provider
         # This would require extending the existing metrics system to track provider_id
         # For now, return the service-level analytics
-        
+
         return {
             "provider_id": provider_id,
             "time_range": time_range.value,
@@ -243,20 +246,21 @@ async def get_provider_metrics(
             "metrics": provider_analytics,
             "performance": {
                 "success_rate": provider_analytics.get("success_rate", 0.0),
-                "average_response_time": provider_analytics.get("average_response_time", 0.0),
+                "average_response_time": provider_analytics.get(
+                    "average_response_time", 0.0
+                ),
                 "total_requests": provider_analytics.get("total_requests", 0),
                 "failed_requests": provider_analytics.get("failed_requests", 0),
                 "cost_today": provider_analytics.get("cost_today", 0.0),
-                "tokens_used": provider_analytics.get("tokens_used", 0)
+                "tokens_used": provider_analytics.get("tokens_used", 0),
             },
             "health": provider_analytics.get("health_status", {}),
-            "quota": provider_analytics.get("quota_status", {})
+            "quota": provider_analytics.get("quota_status", {}),
         }
-        
+
     except Exception as e:
         raise HTTPException(
-            status_code=500, 
-            detail=f"Failed to get provider metrics: {str(e)}"
+            status_code=500, detail=f"Failed to get provider metrics: {str(e)}"
         )
 
 
@@ -265,74 +269,94 @@ async def get_cost_optimization_recommendations():
     """Get cost optimization recommendations across providers"""
     if not settings.multi_provider_enabled:
         raise HTTPException(
-            status_code=400, 
-            detail="Multi-provider system is not enabled"
+            status_code=400, detail="Multi-provider system is not enabled"
         )
-    
+
     try:
-        from supervisor_agent.core.multi_provider_subscription_intelligence import subscription_intelligence
-        
-        recommendations = await subscription_intelligence.get_cost_optimization_recommendations()
-        
+        from supervisor_agent.core.multi_provider_subscription_intelligence import \
+            subscription_intelligence
+
+        recommendations = (
+            await subscription_intelligence.get_cost_optimization_recommendations()
+        )
+
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "recommendations": recommendations,
             "potential_savings": recommendations.get("potential_monthly_savings", 0.0),
             "optimization_opportunities": recommendations.get("opportunities", []),
             "provider_efficiency": recommendations.get("provider_efficiency", {}),
-            "usage_patterns": recommendations.get("usage_patterns", {})
+            "usage_patterns": recommendations.get("usage_patterns", {}),
         }
-        
+
     except Exception as e:
         raise HTTPException(
-            status_code=500, 
-            detail=f"Failed to get cost optimization recommendations: {str(e)}"
+            status_code=500,
+            detail=f"Failed to get cost optimization recommendations: {str(e)}",
         )
 
 
 @router.get("/providers/performance-comparison")
 async def get_provider_performance_comparison(
-    time_range: TimeRange = Query(TimeRange.DAY, description="Time range for comparison")
+    time_range: TimeRange = Query(
+        TimeRange.DAY, description="Time range for comparison"
+    )
 ):
     """Compare performance metrics across all providers"""
     if not settings.multi_provider_enabled:
         raise HTTPException(
-            status_code=400, 
-            detail="Multi-provider system is not enabled"
+            status_code=400, detail="Multi-provider system is not enabled"
         )
-    
+
     try:
-        from supervisor_agent.core.multi_provider_service import multi_provider_service
-        
+        from supervisor_agent.core.multi_provider_service import \
+            multi_provider_service
+
         analytics = await multi_provider_service.get_analytics()
         provider_status = await multi_provider_service.get_provider_status()
-        
+
         providers = provider_status.get("providers", {})
         comparison_data = {}
-        
+
         for provider_id, provider_info in providers.items():
-            provider_analytics = await multi_provider_service.get_provider_analytics(provider_id)
-            
+            provider_analytics = await multi_provider_service.get_provider_analytics(
+                provider_id
+            )
+
             comparison_data[provider_id] = {
                 "name": provider_info.get("name", provider_id),
                 "type": provider_info.get("type", "unknown"),
                 "health_score": provider_info.get("health_score", 0.0),
                 "success_rate": provider_analytics.get("success_rate", 0.0),
-                "average_response_time": provider_analytics.get("average_response_time", 0.0),
+                "average_response_time": provider_analytics.get(
+                    "average_response_time", 0.0
+                ),
                 "cost_per_request": provider_analytics.get("cost_per_request", 0.0),
                 "total_requests": provider_analytics.get("total_requests", 0),
                 "uptime_percentage": provider_analytics.get("uptime_percentage", 0.0),
-                "quota_utilization": provider_analytics.get("quota_utilization", 0.0)
+                "quota_utilization": provider_analytics.get("quota_utilization", 0.0),
             }
-        
+
         # Calculate rankings
         rankings = {
-            "fastest": sorted(comparison_data.items(), key=lambda x: x[1]["average_response_time"]),
-            "most_reliable": sorted(comparison_data.items(), key=lambda x: x[1]["success_rate"], reverse=True),
-            "most_cost_effective": sorted(comparison_data.items(), key=lambda x: x[1]["cost_per_request"]),
-            "healthiest": sorted(comparison_data.items(), key=lambda x: x[1]["health_score"], reverse=True)
+            "fastest": sorted(
+                comparison_data.items(), key=lambda x: x[1]["average_response_time"]
+            ),
+            "most_reliable": sorted(
+                comparison_data.items(),
+                key=lambda x: x[1]["success_rate"],
+                reverse=True,
+            ),
+            "most_cost_effective": sorted(
+                comparison_data.items(), key=lambda x: x[1]["cost_per_request"]
+            ),
+            "healthiest": sorted(
+                comparison_data.items(),
+                key=lambda x: x[1]["health_score"],
+                reverse=True,
+            ),
         }
-        
+
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "time_range": time_range.value,
@@ -340,14 +364,26 @@ async def get_provider_performance_comparison(
             "rankings": rankings,
             "summary": {
                 "total_providers": len(comparison_data),
-                "average_health_score": sum(p["health_score"] for p in comparison_data.values()) / len(comparison_data) if comparison_data else 0,
-                "average_success_rate": sum(p["success_rate"] for p in comparison_data.values()) / len(comparison_data) if comparison_data else 0,
-                "total_requests": sum(p["total_requests"] for p in comparison_data.values())
-            }
+                "average_health_score": (
+                    sum(p["health_score"] for p in comparison_data.values())
+                    / len(comparison_data)
+                    if comparison_data
+                    else 0
+                ),
+                "average_success_rate": (
+                    sum(p["success_rate"] for p in comparison_data.values())
+                    / len(comparison_data)
+                    if comparison_data
+                    else 0
+                ),
+                "total_requests": sum(
+                    p["total_requests"] for p in comparison_data.values()
+                ),
+            },
         }
-        
+
     except Exception as e:
         raise HTTPException(
-            status_code=500, 
-            detail=f"Failed to get provider performance comparison: {str(e)}"
+            status_code=500,
+            detail=f"Failed to get provider performance comparison: {str(e)}",
         )

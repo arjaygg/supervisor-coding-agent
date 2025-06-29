@@ -1,12 +1,16 @@
-import pytest
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-from supervisor_agent.core.subscription_intelligence import SubscriptionIntelligence
-from supervisor_agent.queue.tasks import process_single_task, process_task_batch
-from supervisor_agent.core.intelligent_task_processor import IntelligentTaskProcessor
+import pytest
+
+from supervisor_agent.core.intelligent_task_processor import \
+    IntelligentTaskProcessor
+from supervisor_agent.core.subscription_intelligence import \
+    SubscriptionIntelligence
 from supervisor_agent.db.models import Task, TaskStatus
+from supervisor_agent.queue.tasks import (process_single_task,
+                                          process_task_batch)
 
 
 class TestIntelligentTaskProcessor:

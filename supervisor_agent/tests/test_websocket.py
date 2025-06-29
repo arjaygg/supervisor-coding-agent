@@ -1,11 +1,13 @@
-import pytest
 import asyncio
 import json
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocket
-from unittest.mock import Mock, AsyncMock, patch
+
 from supervisor_agent.api.main import app
-from supervisor_agent.api.websocket import websocket_manager, WebSocketManager
+from supervisor_agent.api.websocket import WebSocketManager, websocket_manager
 from supervisor_agent.db.models import Task, TaskStatus
 
 

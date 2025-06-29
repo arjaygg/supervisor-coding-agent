@@ -1,15 +1,16 @@
-import pytest
-import tempfile
 import os
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
+import tempfile
+
+import pytest
 from fastapi.testclient import TestClient
-from supervisor_agent.db.database import get_db, Base
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session, sessionmaker
+
 from supervisor_agent.api.main import app
 from supervisor_agent.config import settings
-
 # Import models to register them with Base
 from supervisor_agent.db import models
+from supervisor_agent.db.database import Base, get_db
 
 
 @pytest.fixture(scope="function")
@@ -72,7 +73,7 @@ def test_client(test_engine):
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    
+
     # Create client with better error handling
     try:
         client = TestClient(app)
@@ -100,7 +101,7 @@ def sample_task_data():
 @pytest.fixture
 def sample_agent_data():
     """Sample agent data for testing"""
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
 
     return {
         "id": "test-agent-1",

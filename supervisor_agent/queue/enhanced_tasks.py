@@ -15,25 +15,25 @@ Key improvements:
 import asyncio
 import json
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from celery import current_task
 from sqlalchemy.orm import Session
 
-from supervisor_agent.queue.celery_app import celery_app
-from supervisor_agent.db.database import get_db
-from supervisor_agent.db import models, schemas, crud
-from supervisor_agent.db.enums import TaskStatus
-from supervisor_agent.core.agent import agent_manager
-from supervisor_agent.core.memory import shared_memory
-from supervisor_agent.core.quota import quota_manager
-from supervisor_agent.core.notifier import notification_manager
-from supervisor_agent.core.intelligent_task_processor import (
-    process_task_intelligently,
-    process_batch_intelligently,
-    TaskProcessorFactory,
-)
-from supervisor_agent.api.websocket import notify_task_update, notify_quota_update
+from supervisor_agent.api.websocket import (notify_quota_update,
+                                            notify_task_update)
 from supervisor_agent.config import settings
+from supervisor_agent.core.agent import agent_manager
+from supervisor_agent.core.intelligent_task_processor import (
+    TaskProcessorFactory, process_batch_intelligently,
+    process_task_intelligently)
+from supervisor_agent.core.memory import shared_memory
+from supervisor_agent.core.notifier import notification_manager
+from supervisor_agent.core.quota import quota_manager
+from supervisor_agent.db import crud, models, schemas
+from supervisor_agent.db.database import get_db
+from supervisor_agent.db.enums import TaskStatus
+from supervisor_agent.queue.celery_app import celery_app
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -247,9 +247,7 @@ def process_single_task_enhanced(self, task_id: int):
         logger.error(f"Error processing task {task_id}: {str(e)}", exc_info=True)
 
         # Update task status to failed
-        update_data = schemas.TaskUpdate(
-            status=TaskStatus.FAILED, error_message=str(e)
-        )
+        update_data = schemas.TaskUpdate(status=TaskStatus.FAILED, error_message=str(e))
         crud.TaskCRUD.update_task(db, task_id, update_data)
 
         # Send real-time error update
