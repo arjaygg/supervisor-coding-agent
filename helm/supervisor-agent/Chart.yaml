@@ -1,0 +1,38 @@
+apiVersion: v2
+name: supervisor-agent
+description: A Helm chart for Supervisor Coding Agent - AI-powered task orchestration and management system
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://github.com/your-org/supervisor-coding-agent
+sources:
+  - https://github.com/your-org/supervisor-coding-agent
+maintainers:
+  - name: Supervisor Agent Team
+    email: team@supervisor-agent.com
+keywords:
+  - ai
+  - automation
+  - coding
+  - orchestration
+  - task-management
+  - claude
+annotations:
+  category: Developer Tools
+dependencies:
+  - name: postgresql
+    version: 12.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: prometheus
+    version: 15.x.x
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.prometheus.enabled
+  - name: grafana
+    version: 6.x.x
+    repository: https://grafana.github.io/helm-charts
+    condition: monitoring.grafana.enabled

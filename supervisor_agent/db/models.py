@@ -14,9 +14,18 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.types import TypeDecorator, CHAR
-from enum import Enum
 import uuid
 from supervisor_agent.db.database import Base
+from supervisor_agent.db.enums import (
+    TaskType,
+    TaskStatus,
+    ChatThreadStatus,
+    MessageRole,
+    MessageType,
+    NotificationType,
+    ProviderType,
+    ProviderStatus,
+)
 
 
 class GUID(TypeDecorator):
@@ -60,66 +69,6 @@ class GUID(TypeDecorator):
                 value = uuid.UUID(value)
             return value
 
-
-class TaskType(str, Enum):
-    PR_REVIEW = "PR_REVIEW"
-    ISSUE_SUMMARY = "ISSUE_SUMMARY"
-    CODE_ANALYSIS = "CODE_ANALYSIS"
-    REFACTOR = "REFACTOR"
-    BUG_FIX = "BUG_FIX"
-    FEATURE = "FEATURE"
-
-
-class TaskStatus(str, Enum):
-    PENDING = "PENDING"
-    QUEUED = "QUEUED"
-    IN_PROGRESS = "IN_PROGRESS"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-    RETRY = "RETRY"
-
-
-class ChatThreadStatus(str, Enum):
-    ACTIVE = "ACTIVE"
-    ARCHIVED = "ARCHIVED"
-    COMPLETED = "COMPLETED"
-
-
-class MessageRole(str, Enum):
-    USER = "USER"
-    ASSISTANT = "ASSISTANT"
-    SYSTEM = "SYSTEM"
-
-
-class MessageType(str, Enum):
-    TEXT = "TEXT"
-    TASK_BREAKDOWN = "TASK_BREAKDOWN"
-    PROGRESS = "PROGRESS"
-    NOTIFICATION = "NOTIFICATION"
-    ERROR = "ERROR"
-
-
-class ProviderType(str, Enum):
-    CLAUDE_CLI = "claude_cli"
-    LOCAL_MOCK = "local_mock"
-    OPENAI = "openai"
-    ANTHROPIC_API = "anthropic_api"
-    CUSTOM = "custom"
-
-
-class ProviderStatus(str, Enum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    DEGRADED = "degraded"
-    MAINTENANCE = "maintenance"
-    ERROR = "error"
-
-
-class NotificationType(str, Enum):
-    TASK_COMPLETE = "TASK_COMPLETE"
-    TASK_FAILED = "TASK_FAILED"
-    AGENT_UPDATE = "AGENT_UPDATE"
-    SYSTEM_ALERT = "SYSTEM_ALERT"
 
 
 class Provider(Base):

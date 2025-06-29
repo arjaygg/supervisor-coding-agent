@@ -6,6 +6,7 @@ import asyncio
 
 from supervisor_agent.db.database import get_db
 from supervisor_agent.db import schemas, crud, models
+from supervisor_agent.db.enums import ChatThreadStatus, MessageRole
 from supervisor_agent.api.websocket import notify_chat_update
 from supervisor_agent.utils.logger import get_logger
 
@@ -61,7 +62,7 @@ async def create_chat_thread(
 async def get_chat_threads(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    status: Optional[models.ChatThreadStatus] = None,
+    status: Optional[ChatThreadStatus] = None,
     db: Session = Depends(get_db)
 ):
     """Get list of chat threads with statistics"""
@@ -227,7 +228,7 @@ async def send_message(
 
         # Create user message
         db_message = crud.ChatMessageCRUD.create_message(
-            db, thread_id, message, models.MessageRole.USER
+            db, thread_id, message, MessageRole.USER
         )
 
         # Send WebSocket notification

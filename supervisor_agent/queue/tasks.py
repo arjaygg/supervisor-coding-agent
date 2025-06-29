@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from supervisor_agent.queue.celery_app import celery_app
 from supervisor_agent.db.database import get_db
 from supervisor_agent.db import models, schemas, crud
+from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.core.agent import agent_manager
 from supervisor_agent.core.memory import shared_memory
 from supervisor_agent.core.quota import quota_manager
@@ -30,7 +31,7 @@ def process_single_task(self, task_id: int):
             return {"error": "Task not found"}
 
         # Update task status to in progress
-        update_data = schemas.TaskUpdate(status=models.TaskStatus.IN_PROGRESS)
+        update_data = schemas.TaskUpdate(status=TaskStatus.IN_PROGRESS)
         crud.TaskCRUD.update_task(db, task_id, update_data)
 
         # Get available agent
@@ -86,7 +87,7 @@ def process_single_task(self, task_id: int):
             crud.TaskSessionCRUD.create_session(db, session_data)
 
             # Update task status
-            update_data = schemas.TaskUpdate(status=models.TaskStatus.COMPLETED)
+            update_data = schemas.TaskUpdate(status=TaskStatus.COMPLETED)
             crud.TaskCRUD.update_task(db, task_id, update_data)
 
             # Store result in shared memory
@@ -123,7 +124,7 @@ def process_single_task(self, task_id: int):
             task.retry_count += 1
             if task.retry_count >= settings.max_retries:
                 update_data = schemas.TaskUpdate(
-                    status=models.TaskStatus.FAILED, error_message=error_message
+                    status=TaskStatus.FAILED, error_message=error_message
                 )
                 crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -137,7 +138,7 @@ def process_single_task(self, task_id: int):
                 logger.error(f"Task {task_id} failed after {task.retry_count} retries")
             else:
                 update_data = schemas.TaskUpdate(
-                    status=models.TaskStatus.RETRY, error_message=error_message
+                    status=TaskStatus.RETRY, error_message=error_message
                 )
                 crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -164,7 +165,7 @@ def process_single_task(self, task_id: int):
 
         # Update task status to failed
         update_data = schemas.TaskUpdate(
-            status=models.TaskStatus.FAILED, error_message=str(e)
+            status=TaskStatus.FAILED, error_message=str(e)
         )
         crud.TaskCRUD.update_task(db, task_id, update_data)
 
@@ -274,7 +275,7 @@ def process_task_batch(self, task_ids: List[int]):
             try:
                 # Update task status
                 update_data = schemas.TaskUpdate(
-                    status=models.TaskStatus.IN_PROGRESS, assigned_agent_id=agent.id
+                    status=TaskStatus.IN_PROGRESS, assigned_agent_id=agent.id
                 )
                 crud.TaskCRUD.update_task(db, task.id, update_data)
 
@@ -296,7 +297,7 @@ def process_task_batch(self, task_ids: List[int]):
                     )
                     crud.TaskSessionCRUD.create_session(db, session_data)
 
-                    update_data = schemas.TaskUpdate(status=models.TaskStatus.COMPLETED)
+                    update_data = schemas.TaskUpdate(status=TaskStatus.COMPLETED)
                     crud.TaskCRUD.update_task(db, task.id, update_data)
 
                     shared_memory.store_task_result(task, result)
@@ -304,7 +305,7 @@ def process_task_batch(self, task_ids: List[int]):
                 else:
                     # Handle failure
                     update_data = schemas.TaskUpdate(
-                        status=models.TaskStatus.FAILED,
+                        status=TaskStatus.FAILED,
                         error_message=result.get("error", "Unknown error"),
                     )
                     crud.TaskCRUD.update_task(db, task.id, update_data)
@@ -317,7 +318,7 @@ def process_task_batch(self, task_ids: List[int]):
             except Exception as e:
                 logger.error(f"Error processing task {task.id} in batch: {str(e)}")
                 update_data = schemas.TaskUpdate(
-                    status=models.TaskStatus.FAILED, error_message=str(e)
+                    status=TaskStatus.FAILED, error_message=str(e)
                 )
                 crud.TaskCRUD.update_task(db, task.id, update_data)
                 failed_count += 1

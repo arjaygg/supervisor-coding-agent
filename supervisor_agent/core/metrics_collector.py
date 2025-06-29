@@ -15,7 +15,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 
 from supervisor_agent.db.database import SessionLocal
-from supervisor_agent.db.models import Task, TaskStatus, Agent
+from supervisor_agent.db.models import Task, Agent
+from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.core.analytics_models import (
     MetricEntry,
     TaskMetrics,
