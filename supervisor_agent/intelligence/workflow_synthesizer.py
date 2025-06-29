@@ -17,7 +17,7 @@ from enum import Enum
 import structlog
 from pydantic import BaseModel, Field
 
-from supervisor_agent.db.workflow_models import (
+from supervisor_agent.core.workflow_models import (
     WorkflowDefinition, TaskDefinition, WorkflowStatus
 )
 from supervisor_agent.db.models import Task, TaskType

@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 import structlog
 
 from supervisor_agent.core.dag_resolver import DAGResolver, ValidationResult
-from supervisor_agent.db.workflow_models import (
+from supervisor_agent.core.workflow_models import (
     WorkflowDefinition, TaskDefinition, ExecutionPlan, DependencyDefinition
 )
 from supervisor_agent.intelligence.workflow_synthesizer import (

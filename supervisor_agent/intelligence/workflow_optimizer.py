@@ -30,7 +30,7 @@ from supervisor_agent.intelligence.ai_enhanced_dag_resolver import (
 from supervisor_agent.intelligence.parallel_execution_analyzer import (
     ParallelExecutionAnalyzer, ParallelizationAnalysis
 )
-from supervisor_agent.db.workflow_models import TaskDefinition, ExecutionPlan
+from supervisor_agent.core.workflow_models import TaskDefinition, ExecutionPlan
 from supervisor_agent.db.models import TaskType
 
 
