@@ -89,6 +89,12 @@ class InputValidationMiddleware(BaseHTTPMiddleware):
         if not settings.security_enabled:
             return await call_next(request)
         
+        # Skip validation for health checks and development endpoints
+        health_endpoints = ["/api/v1/health", "/api/v1/ping", "/api/v1/healthz", 
+                           "/api/v1/health/detailed", "/health", "/ping", "/healthz"]
+        if request.url.path in health_endpoints:
+            return await call_next(request)
+        
         # Validate request method
         if request.method not in {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}:
             logger.warning(f"Invalid HTTP method: {request.method}")
