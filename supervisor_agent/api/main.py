@@ -13,20 +13,22 @@ from supervisor_agent.api.routes.providers import router as providers_router
 from supervisor_agent.api.routes.tasks import router as tasks_router
 from supervisor_agent.api.routes.workflows import router as workflows_router
 from supervisor_agent.api.websocket import websocket_endpoint
-from supervisor_agent.api.websocket_analytics import \
-    router as analytics_ws_router
-from supervisor_agent.api.websocket_providers import \
-    router as providers_ws_router
+from supervisor_agent.api.websocket_analytics import router as analytics_ws_router
+from supervisor_agent.api.websocket_providers import router as providers_ws_router
 from supervisor_agent.auth.routes import router as auth_router
 from supervisor_agent.config import settings
 from supervisor_agent.core.quota import quota_manager
 from supervisor_agent.db.database import engine, get_db
 from supervisor_agent.db.models import Base
-from supervisor_agent.security.middleware import (InputValidationMiddleware,
-                                                  RequestLoggingMiddleware,
-                                                  SecurityHeadersMiddleware)
-from supervisor_agent.security.rate_limiter import (rate_limit_middleware,
-                                                    rate_limiter_cleanup_task)
+from supervisor_agent.security.middleware import (
+    InputValidationMiddleware,
+    RequestLoggingMiddleware,
+    SecurityHeadersMiddleware,
+)
+from supervisor_agent.security.rate_limiter import (
+    rate_limit_middleware,
+    rate_limiter_cleanup_task,
+)
 from supervisor_agent.utils.logger import get_logger, setup_logging
 
 
@@ -73,8 +75,9 @@ async def lifespan(app: FastAPI):
     # Initialize multi-provider service if enabled
     if settings.multi_provider_enabled:
         try:
-            from supervisor_agent.core.multi_provider_service import \
-                multi_provider_service
+            from supervisor_agent.core.multi_provider_service import (
+                multi_provider_service,
+            )
 
             await multi_provider_service.initialize()
             logger.info("Multi-provider service initialized successfully")
@@ -86,7 +89,9 @@ async def lifespan(app: FastAPI):
     if settings.security_enabled:
         try:
             from supervisor_agent.auth.crud import (
-                initialize_default_permissions, initialize_default_roles)
+                initialize_default_permissions,
+                initialize_default_roles,
+            )
 
             db = SessionLocal()
             try:

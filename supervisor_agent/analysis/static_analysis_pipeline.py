@@ -23,8 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from supervisor_agent.analysis.scc_analyzer import AnalysisResult as SCCResult
 from supervisor_agent.analysis.scc_analyzer import SCCAnalyzer
-from supervisor_agent.analysis.semgrep_analyzer import \
-    AnalysisResult as SemgrepResult
+from supervisor_agent.analysis.semgrep_analyzer import AnalysisResult as SemgrepResult
 from supervisor_agent.analysis.semgrep_analyzer import SemgrepAnalyzer
 from supervisor_agent.utils.logger import get_logger
 

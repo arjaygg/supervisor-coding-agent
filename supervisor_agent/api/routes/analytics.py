@@ -12,13 +12,17 @@ from sqlalchemy.orm import Session
 
 from supervisor_agent.config import settings
 from supervisor_agent.core.analytics_engine import AnalyticsEngine
-from supervisor_agent.core.analytics_models import (AnalyticsQuery,
-                                                    AnalyticsResult,
-                                                    AnalyticsSummary, Insight,
-                                                    MetricEntry,
-                                                    MetricEntryResponse,
-                                                    MetricType, TimeRange,
-                                                    TrendPrediction)
+from supervisor_agent.core.analytics_models import (
+    AnalyticsQuery,
+    AnalyticsResult,
+    AnalyticsSummary,
+    Insight,
+    MetricEntry,
+    MetricEntryResponse,
+    MetricType,
+    TimeRange,
+    TrendPrediction,
+)
 from supervisor_agent.core.metrics_collector import MetricsCollector
 from supervisor_agent.db.database import get_db
 
@@ -174,16 +178,14 @@ async def get_provider_dashboard():
         )
 
     try:
-        from supervisor_agent.core.multi_provider_service import \
-            multi_provider_service
+        from supervisor_agent.core.multi_provider_service import multi_provider_service
 
         # Get provider status and analytics
         provider_status = await multi_provider_service.get_provider_status()
         analytics = await multi_provider_service.get_analytics()
 
         # Get system health information
-        from supervisor_agent.core.enhanced_agent_manager import \
-            enhanced_agent_manager
+        from supervisor_agent.core.enhanced_agent_manager import enhanced_agent_manager
 
         system_health = await enhanced_agent_manager.get_system_health()
 
@@ -227,8 +229,7 @@ async def get_provider_metrics(
         )
 
     try:
-        from supervisor_agent.core.multi_provider_service import \
-            multi_provider_service
+        from supervisor_agent.core.multi_provider_service import multi_provider_service
 
         # Get provider-specific metrics
         provider_analytics = await multi_provider_service.get_provider_analytics(
@@ -273,8 +274,9 @@ async def get_cost_optimization_recommendations():
         )
 
     try:
-        from supervisor_agent.core.multi_provider_subscription_intelligence import \
-            subscription_intelligence
+        from supervisor_agent.core.multi_provider_subscription_intelligence import (
+            subscription_intelligence,
+        )
 
         recommendations = (
             await subscription_intelligence.get_cost_optimization_recommendations()
@@ -309,8 +311,7 @@ async def get_provider_performance_comparison(
         )
 
     try:
-        from supervisor_agent.core.multi_provider_service import \
-            multi_provider_service
+        from supervisor_agent.core.multi_provider_service import multi_provider_service
 
         analytics = await multi_provider_service.get_analytics()
         provider_status = await multi_provider_service.get_provider_status()
