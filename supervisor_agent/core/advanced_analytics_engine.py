@@ -35,6 +35,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from supervisor_agent.auth.models import User
 from supervisor_agent.core.analytics_models import (
     AnalyticsResult,
     Insight,
@@ -45,7 +46,6 @@ from supervisor_agent.core.analytics_models import (
     UserMetrics,
 )
 from supervisor_agent.db.database import SessionLocal
-from supervisor_agent.auth.models import User
 from supervisor_agent.db.models import Task, TaskSession
 from supervisor_agent.utils.logger import get_logger
 
