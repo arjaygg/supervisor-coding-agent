@@ -60,9 +60,18 @@ class TaskComplexity(Enum):
 
 @dataclass
 class ExecutionPlan:
-    steps: List[str]
+    steps: List[str] = field(default_factory=list)
     estimated_time: Optional[float] = None
     cost_estimate: Optional[float] = None
+    # Extended fields for comprehensive execution planning
+    plan_id: Optional[str] = None
+    original_task_id: Optional[str] = None
+    dependency_graph: Optional[Any] = None
+    provider_assignments: Optional[Dict[str, Any]] = None
+    execution_strategy: Optional['DistributionStrategy'] = None
+    estimated_total_time: Optional[float] = None
+    estimated_cost: Optional[float] = None
+    resource_allocation: Optional[Dict[str, Any]] = None
 
 
 class DistributionStrategy(Enum):
