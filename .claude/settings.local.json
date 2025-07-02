@@ -32,7 +32,10 @@
       "Bash(mv:*)",
       "Bash(gh issue create:*)",
       "Bash(gh label:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh api:*)"
     ],
     "deny": []
   },
