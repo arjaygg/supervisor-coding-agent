@@ -1,0 +1,515 @@
+name: 🤖 Automated PR Workflow
+
+on:
+  schedule:
+    # Run every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Specific PR number to process'
+        required: false
+        type: string
+      force_reprocess:
+        description: 'Force reprocess already processed PRs'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+  actions: write
+  id-token: write
+
+env:
+  GCP_REGION: asia-southeast1
+  ARTIFACT_REGISTRY: asia-southeast1-docker.pkg.dev
+
+jobs:
+  # Monitor and queue PRs for processing
+  monitor-prs:
+    name: 🔍 Monitor PRs
+    runs-on: ubuntu-latest
+    outputs:
+      prs_to_process: ${{ steps.get-prs.outputs.prs }}
+      has_prs: ${{ steps.get-prs.outputs.has_prs }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get open PRs
+        id: get-prs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const specificPr = '${{ github.event.inputs.pr_number }}';
+            const forceReprocess = '${{ github.event.inputs.force_reprocess }}' === 'true';
+            
+            let prs;
+            
+            if (specificPr) {
+              // Process specific PR
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: parseInt(specificPr)
+              });
+              
+              if (pr.state === 'open') {
+                prs = [pr];
+              } else {
+                prs = [];
+              }
+            } else {
+              // Get all open PRs
+              const { data: allPrs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                sort: 'created',
+                direction: 'asc'
+              });
+              
+              // Filter PRs that are ready for processing
+              prs = allPrs.filter(pr => {
+                // Skip draft PRs
+                if (pr.draft) return false;
+                
+                // Skip very recent PRs (less than 10 minutes old)
+                const createdAt = new Date(pr.created_at);
+                const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+                if (createdAt > tenMinutesAgo && !forceReprocess) return false;
+                
+                return true;
+              });
+            }
+            
+            // Format PR data for next job
+            const prData = prs.map(pr => ({
+              number: pr.number,
+              title: pr.title,
+              head_ref: pr.head.ref,
+              head_sha: pr.head.sha,
+              author: pr.user.login,
+              created_at: pr.created_at
+            }));
+            
+            core.setOutput('prs', JSON.stringify(prData));
+            core.setOutput('has_prs', prData.length > 0 ? 'true' : 'false');
+            
+            console.log(`Found ${prData.length} PRs to process:`, prData);
+
+  # Process each PR through the automated workflow
+  process-prs:
+    name: 🔄 Process PR #${{ matrix.pr.number }}
+    runs-on: ubuntu-latest
+    needs: monitor-prs
+    if: needs.monitor-prs.outputs.has_prs == 'true'
+    strategy:
+      matrix:
+        pr: ${{ fromJson(needs.monitor-prs.outputs.prs_to_process) }}
+      max-parallel: 2  # Process max 2 PRs concurrently
+      fail-fast: false
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Checkout PR branch
+        run: |
+          gh pr checkout ${{ matrix.pr.number }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 black isort mypy bandit semgrep safety pytest pytest-cov radon
+
+      - name: Check if PR already processed
+        id: check-processed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ matrix.pr.number }};
+            const forceReprocess = '${{ github.event.inputs.force_reprocess }}' === 'true';
+            
+            // Check for automated review comments
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            
+            const hasAutomatedReview = comments.some(comment => 
+              comment.body.includes('🤖 Automated Code Review Results') ||
+              comment.body.includes('✅ Ready for Deployment') ||
+              comment.body.includes('🎉 **PR Merged Successfully**')
+            );
+            
+            const shouldProcess = !hasAutomatedReview || forceReprocess;
+            
+            core.setOutput('should_process', shouldProcess ? 'true' : 'false');
+            console.log(`PR #${prNumber} should_process: ${shouldProcess}`);
+
+      # Step 1: Automated Code Review
+      - name: 1️⃣ Run automated code review
+        id: code-review
+        if: steps.check-processed.outputs.should_process == 'true'
+        run: |
+          echo "🔍 Running comprehensive code review for PR #${{ matrix.pr.number }}"
+          
+          # Create results directory
+          mkdir -p review-results
+          
+          # Initialize review status
+          REVIEW_PASSED=true
+          CRITICAL_ISSUES=0
+          WARNINGS=0
+          SECURITY_ISSUES=0
+          
+          # Static Analysis
+          echo "Running static analysis..."
+          
+          # Flake8
+          if ! flake8 supervisor_agent/ --format=json --output-file=review-results/flake8.json; then
+            echo "❌ Flake8 issues found"
+            CRITICAL_ISSUES=$((CRITICAL_ISSUES + 1))
+            REVIEW_PASSED=false
+          fi
+          
+          # Black formatting check
+          if ! black --check --diff supervisor_agent/; then
+            echo "❌ Black formatting issues found"
+            WARNINGS=$((WARNINGS + 1))
+          fi
+          
+          # isort check
+          if ! isort --check-only --diff supervisor_agent/; then
+            echo "❌ isort import sorting issues found"
+            WARNINGS=$((WARNINGS + 1))
+          fi
+          
+          # MyPy type checking
+          mypy supervisor_agent/ --ignore-missing-imports --json-report review-results/mypy || echo "⚠️ MyPy issues found (non-blocking)"
+          
+          # Security scans
+          echo "Running security scans..."
+          
+          # Bandit
+          if ! bandit -r supervisor_agent/ -f json -o review-results/bandit.json; then
+            echo "⚠️ Security issues found by Bandit"
+            SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
+          fi
+          
+          # Semgrep (if available)
+          if command -v semgrep >/dev/null; then
+            if ! semgrep --config=auto supervisor_agent/ --json --output=review-results/semgrep.json; then
+              echo "⚠️ Security issues found by Semgrep"
+              SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
+            fi
+          fi
+          
+          # Run tests
+          echo "Running tests..."
+          if ! pytest supervisor_agent/tests/ -v --cov=supervisor_agent --cov-report=json --cov-report=html --junitxml=review-results/test-results.xml; then
+            echo "❌ Tests failed"
+            CRITICAL_ISSUES=$((CRITICAL_ISSUES + 1))
+            REVIEW_PASSED=false
+          fi
+          
+          # Calculate test coverage
+          COVERAGE=0
+          if [ -f coverage.json ]; then
+            COVERAGE=$(python3 -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+          fi
+          
+          # Generate summary
+          echo "REVIEW_PASSED=$REVIEW_PASSED" >> $GITHUB_OUTPUT
+          echo "CRITICAL_ISSUES=$CRITICAL_ISSUES" >> $GITHUB_OUTPUT
+          echo "WARNINGS=$WARNINGS" >> $GITHUB_OUTPUT
+          echo "SECURITY_ISSUES=$SECURITY_ISSUES" >> $GITHUB_OUTPUT
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_OUTPUT
+          
+          echo "📊 Review Summary:"
+          echo "  Critical Issues: $CRITICAL_ISSUES"
+          echo "  Warnings: $WARNINGS"
+          echo "  Security Issues: $SECURITY_ISSUES"
+          echo "  Test Coverage: ${COVERAGE}%"
+          echo "  Overall Status: $([ "$REVIEW_PASSED" = "true" ] && echo "✅ PASSED" || echo "❌ FAILED")"
+
+      - name: Post code review results
+        if: steps.check-processed.outputs.should_process == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ matrix.pr.number }};
+            const reviewPassed = '${{ steps.code-review.outputs.REVIEW_PASSED }}' === 'true';
+            const criticalIssues = '${{ steps.code-review.outputs.CRITICAL_ISSUES }}';
+            const warnings = '${{ steps.code-review.outputs.WARNINGS }}';
+            const securityIssues = '${{ steps.code-review.outputs.SECURITY_ISSUES }}';
+            const coverage = '${{ steps.code-review.outputs.COVERAGE }}';
+            
+            const status = reviewPassed ? '✅ APPROVED' : '❌ CHANGES REQUIRED';
+            
+            const comment = `## 🤖 Automated Code Review Results
+
+**Status**: ${status}
+
+### Summary
+- **Critical Issues**: ${criticalIssues}
+- **Warnings**: ${warnings}
+- **Security Issues**: ${securityIssues}
+- **Test Coverage**: ${coverage}%
+
+### Analysis Results
+- ${criticalIssues === '0' ? '✅' : '❌'} **Static Analysis** (flake8, mypy)
+- ${warnings === '0' ? '✅' : '⚠️'} **Code Formatting** (black, isort)
+- ${securityIssues === '0' ? '✅' : '⚠️'} **Security Scan** (bandit, semgrep)
+- **Test Coverage**: ${parseFloat(coverage) >= 80 ? '✅' : '⚠️'} ${coverage}% ${parseFloat(coverage) >= 80 ? '(Good)' : '(Target: 80%+)'}
+
+${reviewPassed ? 
+  '### ✅ Ready for Deployment\nThis PR passes all automated checks and is ready for deployment.' :
+  '### ❌ Action Required\nPlease address the critical issues before proceeding with deployment.'
+}
+
+*Generated by automated workflow at ${new Date().toISOString()}*`;
+
+            await github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      # Step 2: Deploy if review passed
+      - name: 2️⃣ Deploy to staging
+        id: deploy
+        if: steps.check-processed.outputs.should_process == 'true' && steps.code-review.outputs.REVIEW_PASSED == 'true'
+        run: |
+          echo "🚀 Deploying PR #${{ matrix.pr.number }} to staging..."
+          
+          # Trigger deployment via comment
+          gh pr comment ${{ matrix.pr.number }} --body "/deploy dev"
+          
+          echo "✅ Deployment triggered"
+          echo "DEPLOY_TRIGGERED=true" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 3: Wait for deployment and run post-deploy tests
+      - name: 3️⃣ Wait for deployment and test
+        id: post-deploy-test
+        if: steps.deploy.outputs.DEPLOY_TRIGGERED == 'true'
+        run: |
+          echo "⏳ Waiting for deployment to complete..."
+          
+          # Wait for deployment workflow to complete
+          TIMEOUT=1800  # 30 minutes
+          ELAPSED=0
+          DEPLOY_SUCCESS=false
+          
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            echo "Checking deployment status... (${ELAPSED}s elapsed)"
+            
+            # Check recent workflow runs
+            RUNS=$(gh run list --limit 5 --json status,conclusion,name,headBranch)
+            
+            # Look for completed Deploy Apps workflow
+            if echo "$RUNS" | jq -r '.[] | select(.name | contains("Deploy Apps")) | select(.status == "completed") | .conclusion' | grep -q "success"; then
+              echo "✅ Deployment completed successfully"
+              DEPLOY_SUCCESS=true
+              break
+            elif echo "$RUNS" | jq -r '.[] | select(.name | contains("Deploy Apps")) | select(.status == "completed") | .conclusion' | grep -q "failure"; then
+              echo "❌ Deployment failed"
+              break
+            fi
+            
+            sleep 60
+            ELAPSED=$((ELAPSED + 60))
+          done
+          
+          if [ "$DEPLOY_SUCCESS" = "true" ]; then
+            echo "🧪 Running post-deployment tests..."
+            
+            # Run smoke tests
+            if python3 tests/e2e_smoke_tests.py --env dev --critical-only --output post-deploy-results.json; then
+              echo "✅ Post-deploy tests passed"
+              echo "TESTS_PASSED=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Post-deploy tests failed"
+              echo "TESTS_PASSED=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "❌ Deployment did not complete successfully"
+            echo "TESTS_PASSED=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post deployment results
+        if: steps.deploy.outputs.DEPLOY_TRIGGERED == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ matrix.pr.number }};
+            const testsPassed = '${{ steps.post-deploy-test.outputs.TESTS_PASSED }}' === 'true';
+            
+            const comment = testsPassed ? 
+              `✅ **Deployment and Testing Successful**
+
+🚀 **Deployment Status**: ✅ Completed
+🧪 **Post-Deploy Tests**: ✅ Passed
+
+All critical smoke tests are passing. PR is ready for merge.
+
+*Environment*: Development
+*Deployed at*: ${new Date().toISOString()}` :
+              `❌ **Deployment or Testing Failed**
+
+🚀 **Deployment Status**: ❌ Failed or incomplete  
+🧪 **Post-Deploy Tests**: ❌ Failed
+
+Please review the workflow logs and fix any issues before proceeding.
+
+*Failed at*: ${new Date().toISOString()}`;
+
+            await github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      # Step 4: Auto-merge if all checks pass
+      - name: 4️⃣ Auto-merge PR
+        id: merge
+        if: steps.post-deploy-test.outputs.TESTS_PASSED == 'true'
+        run: |
+          echo "🎯 Attempting to merge PR #${{ matrix.pr.number }}"
+          
+          # Check if PR is still mergeable
+          PR_STATUS=$(gh pr view ${{ matrix.pr.number }} --json mergeable,state | jq -r '.mergeable + "," + .state')
+          
+          if echo "$PR_STATUS" | grep -q "MERGEABLE,OPEN"; then
+            echo "✅ PR is mergeable, proceeding with merge..."
+            
+            # Merge PR with squash
+            if gh pr merge ${{ matrix.pr.number }} --squash --delete-branch; then
+              echo "🎉 PR merged successfully!"
+              echo "MERGE_SUCCESS=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Failed to merge PR"
+              echo "MERGE_SUCCESS=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "⚠️ PR is not mergeable (status: $PR_STATUS)"
+            echo "MERGE_SUCCESS=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post final status
+        if: always() && steps.check-processed.outputs.should_process == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ matrix.pr.number }};
+            const reviewPassed = '${{ steps.code-review.outputs.REVIEW_PASSED }}' === 'true';
+            const deployTriggered = '${{ steps.deploy.outputs.DEPLOY_TRIGGERED }}' === 'true';
+            const testsPassed = '${{ steps.post-deploy-test.outputs.TESTS_PASSED }}' === 'true';
+            const mergeSuccess = '${{ steps.merge.outputs.MERGE_SUCCESS }}' === 'true';
+            
+            if (mergeSuccess) {
+              const comment = `🎉 **Automated Workflow Completed Successfully**
+
+**PR #${prNumber} has been automatically processed and merged!**
+
+### Workflow Summary:
+- ✅ **Code Review**: Passed all automated checks
+- ✅ **Deployment**: Successfully deployed to development
+- ✅ **Testing**: All post-deploy tests passed
+- ✅ **Merge**: Squashed and merged to main branch
+
+### Next Steps:
+- 🚀 Changes are now live in the main branch
+- 📦 Tagged release will be created automatically
+- 🔄 Cleanup: Feature branch has been deleted
+
+*This PR was processed entirely through automated workflow with zero manual intervention.*
+
+---
+*Automated by GitHub Actions • ${new Date().toISOString()}*`;
+
+              await github.rest.issues.createComment({
+                issue_number: prNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } else if (!reviewPassed) {
+              console.log(`PR #${prNumber}: Stopped at code review stage`);
+            } else if (!deployTriggered) {
+              console.log(`PR #${prNumber}: Deployment not triggered`);
+            } else if (!testsPassed) {
+              console.log(`PR #${prNumber}: Post-deploy tests failed`);
+            } else {
+              console.log(`PR #${prNumber}: Merge failed or not attempted`);
+            }
+
+      - name: Upload review artifacts
+        if: always() && steps.check-processed.outputs.should_process == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: review-results-pr-${{ matrix.pr.number }}
+          path: |
+            review-results/
+            coverage.json
+            htmlcov/
+            post-deploy-results.json
+          retention-days: 7
+
+  # Summary job to report overall status
+  workflow-summary:
+    name: 📊 Workflow Summary
+    runs-on: ubuntu-latest
+    needs: [monitor-prs, process-prs]
+    if: always()
+    steps:
+      - name: Generate workflow summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const hasPrs = '${{ needs.monitor-prs.outputs.has_prs }}' === 'true';
+            
+            if (!hasPrs) {
+              console.log('🔍 No PRs found for processing');
+              core.summary.addHeading('🤖 Automated PR Workflow - No Action Required');
+              core.summary.addRaw('No open PRs found that require processing.');
+            } else {
+              const prs = JSON.parse('${{ needs.monitor-prs.outputs.prs_to_process }}');
+              
+              core.summary.addHeading('🤖 Automated PR Workflow Summary');
+              core.summary.addRaw(`Processed ${prs.length} PR(s):`);
+              
+              for (const pr of prs) {
+                core.summary.addRaw(`\n- **PR #${pr.number}**: ${pr.title}`);
+              }
+              
+              core.summary.addRaw(`\n\n*Workflow completed at ${new Date().toISOString()}*`);
+            }
+            
+            await core.summary.write();
+            
+            console.log('📈 Automated PR workflow completed');
+            console.log(`Total PRs processed: ${hasPrs ? JSON.parse('${{ needs.monitor-prs.outputs.prs_to_process }}').length : 0}`);
