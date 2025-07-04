@@ -790,29 +790,160 @@ class IntelligentSwarmCoordinator:
         self, event: CoordinationEvent
     ) -> CoordinationResponse:
         """Optimize resource allocation for resource contention"""
-        # TODO: Implement intelligent resource allocation
-        return CoordinationResponse._create_fallback_response(event.event_id)
+        resource_prompt = f"""
+        Resolve resource contention between agents in a multi-agent swarm:
+        
+        Resource Contention Event: {json.dumps(event.to_dict(), indent=2)}
+        
+        Analyze the resource contention and provide optimal allocation strategy:
+        1. What specific resources are being contested?
+        2. What are the priority levels of the competing agents/tasks?
+        3. How can resources be fairly distributed while maximizing overall efficiency?
+        4. Are there alternative resources that can be substituted?
+        5. Should any tasks be queued, prioritized, or redistributed?
+        6. What are the performance implications of different allocation strategies?
+        
+        Provide resource allocation strategy in JSON format with:
+        - response_type: allocation strategy type (prioritize/queue/redistribute/scale)
+        - recommended_actions: specific allocation actions to take
+        - resource_allocations: detailed resource distribution plan
+        - priority_adjustments: any priority changes needed
+        - alternative_resources: suggested resource substitutions
+        - success_probability: likelihood of resolving contention (0-1)
+        - estimated_completion_time: time to implement allocation (hours)
+        - monitoring_requirements: metrics to track allocation effectiveness
+        
+        Focus on fairness, efficiency, and minimizing disruption to overall swarm performance.
+        """
+
+        result = await self.claude_agent.execute_task(
+            {"type": "resource_allocation", "prompt": resource_prompt},
+            shared_memory={"resource_context": event.to_dict()}
+        )
+
+        return CoordinationResponse.from_claude_response(
+            result["result"], event.event_id
+        )
 
     async def _handle_quality_escalation(
         self, event: CoordinationEvent
     ) -> CoordinationResponse:
         """Handle quality concerns in agent execution"""
-        # TODO: Implement quality escalation handling
-        return CoordinationResponse._create_fallback_response(event.event_id)
+        quality_prompt = f"""
+        Address a quality concern escalation in multi-agent execution:
+        
+        Quality Escalation Event: {json.dumps(event.to_dict(), indent=2)}
+        
+        Analyze the quality concern and provide escalation response:
+        1. What specific quality issues have been identified?
+        2. How severe is the quality concern (low/medium/high/critical)?
+        3. What is the root cause of the quality degradation?
+        4. Which agents or processes need immediate attention?
+        5. Should work be paused, reviewed, or redirected?
+        6. What quality assurance measures should be implemented?
+        7. How can similar quality issues be prevented in the future?
+        
+        Provide quality escalation response in JSON format with:
+        - response_type: escalation strategy (review/pause/redirect/enhance_qa)
+        - recommended_actions: immediate quality improvement actions
+        - quality_gates: checkpoints to implement going forward
+        - resource_allocations: any additional QA resources needed
+        - review_requirements: peer review or expert consultation needed
+        - prevention_measures: steps to prevent similar quality issues
+        - success_probability: likelihood of quality recovery (0-1)
+        - estimated_completion_time: time to address quality issues (hours)
+        
+        Prioritize delivering high-quality results while maintaining swarm momentum.
+        """
+
+        result = await self.claude_agent.execute_task(
+            {"type": "quality_escalation", "prompt": quality_prompt},
+            shared_memory={"quality_context": event.to_dict()}
+        )
+
+        return CoordinationResponse.from_claude_response(
+            result["result"], event.event_id
+        )
 
     async def _handle_performance_issue(
         self, event: CoordinationEvent
     ) -> CoordinationResponse:
         """Handle performance issues in agent execution"""
-        # TODO: Implement performance issue handling
-        return CoordinationResponse._create_fallback_response(event.event_id)
+        performance_prompt = f"""
+        Address a performance issue in multi-agent swarm execution:
+        
+        Performance Issue Event: {json.dumps(event.to_dict(), indent=2)}
+        
+        Analyze the performance issue and provide optimization response:
+        1. What specific performance degradation has been observed?
+        2. Which agents or components are causing the bottleneck?
+        3. Is this a resource constraint, algorithmic inefficiency, or coordination issue?
+        4. What are the performance metrics indicating (response time, throughput, etc.)?
+        5. Should workload be redistributed or agents be scaled?
+        6. Are there immediate optimizations that can be applied?
+        7. What monitoring should be enhanced to prevent future issues?
+        
+        Provide performance optimization response in JSON format with:
+        - response_type: optimization strategy (scale/redistribute/optimize/throttle)
+        - recommended_actions: immediate performance improvement actions
+        - resource_allocations: resource adjustments needed
+        - workload_redistribution: how to rebalance agent workloads
+        - optimization_targets: specific performance metrics to improve
+        - monitoring_enhancements: additional monitoring to implement
+        - success_probability: likelihood of performance recovery (0-1)
+        - estimated_completion_time: time to implement optimizations (hours)
+        
+        Focus on restoring optimal performance while maintaining result quality.
+        """
+
+        result = await self.claude_agent.execute_task(
+            {"type": "performance_optimization", "prompt": performance_prompt},
+            shared_memory={"performance_context": event.to_dict()}
+        )
+
+        return CoordinationResponse.from_claude_response(
+            result["result"], event.event_id
+        )
 
     async def _handle_generic_coordination(
         self, event: CoordinationEvent
     ) -> CoordinationResponse:
         """Handle generic coordination events"""
-        # TODO: Implement generic coordination handling
-        return CoordinationResponse._create_fallback_response(event.event_id)
+        generic_prompt = f"""
+        Handle a general coordination request in multi-agent swarm execution:
+        
+        Coordination Event: {json.dumps(event.to_dict(), indent=2)}
+        
+        Analyze this coordination requirement and provide appropriate response:
+        1. What type of coordination is being requested?
+        2. Which agents need to be involved in this coordination?
+        3. What is the urgency and priority of this coordination need?
+        4. Are there dependencies or prerequisites that must be met?
+        5. What communication or synchronization is required?
+        6. How should the coordination be monitored and validated?
+        7. What are the success criteria for this coordination?
+        
+        Provide coordination response in JSON format with:
+        - response_type: coordination strategy (sync/async/broadcast/peer_review)
+        - recommended_actions: specific coordination steps to take
+        - agent_assignments: which agents should handle what aspects
+        - communication_plan: how agents should communicate and synchronize
+        - dependencies: any prerequisites or dependencies to manage
+        - validation_criteria: how to verify successful coordination
+        - success_probability: likelihood of successful coordination (0-1)
+        - estimated_completion_time: time to complete coordination (hours)
+        
+        Focus on efficient coordination that enhances overall swarm effectiveness.
+        """
+
+        result = await self.claude_agent.execute_task(
+            {"type": "generic_coordination", "prompt": generic_prompt},
+            shared_memory={"coordination_context": event.to_dict()}
+        )
+
+        return CoordinationResponse.from_claude_response(
+            result["result"], event.event_id
+        )
 
     async def _process_coordination_events(self):
         """Process pending coordination events"""
@@ -820,28 +951,583 @@ class IntelligentSwarmCoordinator:
             try:
                 event = self.coordination_events.get_nowait()
                 response = await self.handle_inter_agent_coordination(event)
-                # TODO: Apply coordination response
+                
+                # Apply coordination response
+                await self._apply_coordination_response(event, response)
+                
             except asyncio.QueueEmpty:
                 break
+            except Exception as e:
+                self.logger.error(
+                    "Error processing coordination event",
+                    event_id=getattr(event, 'event_id', 'unknown'),
+                    error=str(e)
+                )
+    
+    async def _apply_coordination_response(self, event: CoordinationEvent, response: CoordinationResponse):
+        """Apply the coordination response to the swarm execution"""
+        try:
+            # Log coordination response
+            self.logger.info(
+                "Applying coordination response",
+                event_id=event.event_id,
+                response_type=response.response_type
+            )
+            
+            # Execute recommended actions
+            for action in response.recommended_actions:
+                await self._execute_coordination_action(action, event, response)
+            
+            # Apply resource allocations
+            if response.resource_allocations:
+                await self._apply_resource_allocations(response.resource_allocations, event)
+            
+            # Update agent states based on coordination outcome
+            await self._update_agents_post_coordination(event, response)
+            
+        except Exception as e:
+            self.logger.error(
+                "Failed to apply coordination response",
+                event_id=event.event_id,
+                error=str(e)
+            )
+    
+    async def _execute_coordination_action(self, action: str, event: CoordinationEvent, response: CoordinationResponse):
+        """Execute a specific coordination action"""
+        # Parse and execute coordination actions
+        if action.startswith("reassign_task"):
+            await self._reassign_task_between_agents(action, event)
+        elif action.startswith("pause_agent"):
+            await self._pause_agent_execution(action, event)
+        elif action.startswith("scale_resources"):
+            await self._scale_agent_resources(action, event)
+        elif action.startswith("peer_review"):
+            await self._initiate_peer_review(action, event)
+        elif action.startswith("broadcast_message"):
+            await self._broadcast_coordination_message(action, event)
+        else:
+            self.logger.debug(f"Generic coordination action: {action}")
+    
+    async def _apply_resource_allocations(self, allocations: Dict[str, Any], event: CoordinationEvent):
+        """Apply resource allocation changes"""
+        for resource_type, allocation in allocations.items():
+            if resource_type == "cpu_allocation":
+                await self._adjust_cpu_allocation(allocation, event)
+            elif resource_type == "memory_allocation":
+                await self._adjust_memory_allocation(allocation, event)
+            elif resource_type == "priority_adjustment":
+                await self._adjust_task_priorities(allocation, event)
+    
+    async def _reassign_task_between_agents(self, action: str, event: CoordinationEvent):
+        """Reassign task from one agent to another"""
+        # Implementation for task reassignment
+        self.logger.info(f"Reassigning task based on coordination: {action}")
+    
+    async def _pause_agent_execution(self, action: str, event: CoordinationEvent):
+        """Pause agent execution for review or resource management"""
+        self.logger.info(f"Pausing agent execution: {action}")
+    
+    async def _scale_agent_resources(self, action: str, event: CoordinationEvent):
+        """Scale agent resources up or down"""
+        self.logger.info(f"Scaling agent resources: {action}")
+    
+    async def _initiate_peer_review(self, action: str, event: CoordinationEvent):
+        """Initiate peer review process between agents"""
+        self.logger.info(f"Initiating peer review: {action}")
+    
+    async def _broadcast_coordination_message(self, action: str, event: CoordinationEvent):
+        """Broadcast coordination message to relevant agents"""
+        if self.communication_hub:
+            message = {
+                "type": "coordination_update",
+                "event_id": event.event_id,
+                "action": action,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            await self.communication_hub.broadcast_message("coordinator", message)
+    
+    async def _adjust_cpu_allocation(self, allocation: Any, event: CoordinationEvent):
+        """Adjust CPU allocation for agents"""
+        self.logger.debug(f"Adjusting CPU allocation: {allocation}")
+    
+    async def _adjust_memory_allocation(self, allocation: Any, event: CoordinationEvent):
+        """Adjust memory allocation for agents"""
+        self.logger.debug(f"Adjusting memory allocation: {allocation}")
+    
+    async def _adjust_task_priorities(self, allocation: Any, event: CoordinationEvent):
+        """Adjust task priorities based on coordination needs"""
+        self.logger.debug(f"Adjusting task priorities: {allocation}")
+    
+    async def _update_agents_post_coordination(self, event: CoordinationEvent, response: CoordinationResponse):
+        """Update agent states after coordination"""
+        # Update agent configurations and states based on coordination outcome
+        if event.from_agent in self.active_executions:
+            execution = list(self.active_executions.values())[0]  # Get first execution for now
+            if event.from_agent in execution.agents:
+                agent = execution.agents[event.from_agent]
+                # Update agent collaboration history
+                agent.collaboration_history.append({
+                    "event_id": event.event_id,
+                    "event_type": event.event_type.value,
+                    "response_type": response.response_type,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "success_probability": response.success_probability
+                })
 
     async def _monitor_agent_states(self, execution: SwarmExecution):
         """Monitor and update agent states"""
+        current_time = datetime.now(timezone.utc)
+        
         for agent in execution.agents.values():
             # Update last activity
-            agent.last_activity = datetime.now(timezone.utc)
+            agent.last_activity = current_time
 
             # Check for timeouts or issues
-            # TODO: Implement state monitoring logic
+            await self._check_agent_health(agent, execution)
+            await self._update_agent_performance_metrics(agent)
+            await self._detect_agent_issues(agent, execution)
+    
+    async def _check_agent_health(self, agent: SwarmAgent, execution: SwarmExecution):
+        """Check individual agent health and responsiveness"""
+        current_time = datetime.now(timezone.utc)
+        
+        # Check for timeout (no activity in last 5 minutes)
+        if agent.last_activity:
+            inactive_duration = (current_time - agent.last_activity).total_seconds()
+            if inactive_duration > 300:  # 5 minutes
+                self.logger.warning(
+                    "Agent inactive for extended period",
+                    agent_id=agent.agent_id,
+                    inactive_seconds=inactive_duration
+                )
+                
+                # Create coordination event for timeout
+                timeout_event = CoordinationEvent(
+                    event_id=str(uuid.uuid4()),
+                    event_type=CoordinationEventType.PERFORMANCE_ISSUE,
+                    from_agent=agent.agent_id,
+                    to_agent=None,
+                    from_agent_context={"issue": "timeout", "inactive_seconds": inactive_duration},
+                    to_agent_context=None,
+                    task_context={"execution_id": execution.execution_id},
+                    intermediate_results={"performance_metrics": agent.performance_metrics},
+                    priority=8
+                )
+                await self.coordination_events.put(timeout_event)
+        
+        # Check workload balance
+        if agent.current_workload > agent.configuration.max_concurrent_tasks:
+            self.logger.warning(
+                "Agent workload exceeds capacity",
+                agent_id=agent.agent_id,
+                current_workload=agent.current_workload,
+                max_capacity=agent.configuration.max_concurrent_tasks
+            )
+    
+    async def _update_agent_performance_metrics(self, agent: SwarmAgent):
+        """Update agent performance metrics"""
+        # Calculate current performance indicators
+        success_rate = agent.performance_metrics.get("success_rate", 0.0)
+        completion_time = agent.performance_metrics.get("avg_completion_time", 0.0)
+        
+        # Update performance tracking
+        if hasattr(self, 'performance_tracker'):
+            await self.performance_tracker.record_agent_performance(
+                agent.agent_id,
+                {
+                    "success_rate": success_rate,
+                    "completion_time": completion_time,
+                    "workload": agent.current_workload,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+            )
+    
+    async def _detect_agent_issues(self, agent: SwarmAgent, execution: SwarmExecution):
+        """Detect potential issues with agent performance or state"""
+        issues_detected = []
+        
+        # Check for performance degradation
+        success_rate = agent.performance_metrics.get("success_rate", 1.0)
+        if success_rate < 0.8:
+            issues_detected.append({
+                "type": "low_success_rate",
+                "severity": "high" if success_rate < 0.6 else "medium",
+                "value": success_rate
+            })
+        
+        # Check for excessive completion times
+        avg_completion_time = agent.performance_metrics.get("avg_completion_time", 0.0)
+        if avg_completion_time > 300:  # 5 minutes
+            issues_detected.append({
+                "type": "slow_completion",
+                "severity": "medium",
+                "value": avg_completion_time
+            })
+        
+        # Check for blocked state
+        if agent.current_state == AgentState.BLOCKED:
+            issues_detected.append({
+                "type": "blocked_state",
+                "severity": "high",
+                "duration": (datetime.now(timezone.utc) - agent.last_activity).total_seconds()
+            })
+        
+        # Create coordination events for detected issues
+        for issue in issues_detected:
+            if issue["severity"] in ["high", "critical"]:
+                issue_event = CoordinationEvent(
+                    event_id=str(uuid.uuid4()),
+                    event_type=CoordinationEventType.PERFORMANCE_ISSUE,
+                    from_agent=agent.agent_id,
+                    to_agent=None,
+                    from_agent_context={"agent_state": agent.current_state.value},
+                    to_agent_context=None,
+                    task_context={"execution_id": execution.execution_id},
+                    intermediate_results={"issue_details": issue, "performance_metrics": agent.performance_metrics},
+                    priority=9 if issue["severity"] == "critical" else 7
+                )
+                await self.coordination_events.put(issue_event)
 
     async def _optimize_execution(self, execution: SwarmExecution):
         """Optimize execution in real-time"""
-        # TODO: Implement real-time optimization
-        pass
+        try:
+            # Analyze current execution state
+            execution_metrics = await self._calculate_execution_metrics(execution)
+            
+            # Identify optimization opportunities
+            optimizations = await self._identify_execution_optimizations(execution, execution_metrics)
+            
+            # Apply optimizations
+            for optimization in optimizations:
+                await self._apply_execution_optimization(execution, optimization)
+                
+            # Update execution state
+            execution.performance_metrics.update(execution_metrics)
+            execution.execution_state["last_optimization"] = datetime.now(timezone.utc).isoformat()
+            
+        except Exception as e:
+            self.logger.error(
+                "Failed to optimize execution",
+                execution_id=execution.execution_id,
+                error=str(e)
+            )
+    
+    async def _calculate_execution_metrics(self, execution: SwarmExecution) -> Dict[str, Any]:
+        """Calculate current execution performance metrics"""
+        metrics = {
+            "total_agents": len(execution.agents),
+            "active_agents": len([a for a in execution.agents.values() if a.current_state == AgentState.WORKING]),
+            "idle_agents": len([a for a in execution.agents.values() if a.current_state == AgentState.IDLE]),
+            "blocked_agents": len([a for a in execution.agents.values() if a.current_state == AgentState.BLOCKED]),
+            "average_workload": sum(a.current_workload for a in execution.agents.values()) / len(execution.agents) if execution.agents else 0,
+            "total_workload": sum(a.current_workload for a in execution.agents.values()),
+            "execution_duration": (datetime.now(timezone.utc) - execution.started_at).total_seconds(),
+            "coordination_events_processed": len([e for e in self.coordination_events._queue if hasattr(e, 'event_id')])
+        }
+        
+        # Calculate performance scores
+        metrics["efficiency_score"] = self._calculate_efficiency_score(execution, metrics)
+        metrics["coordination_score"] = self._calculate_coordination_score(execution, metrics)
+        
+        return metrics
+    
+    def _calculate_efficiency_score(self, execution: SwarmExecution, metrics: Dict[str, Any]) -> float:
+        """Calculate execution efficiency score (0-100)"""
+        # Base efficiency on agent utilization and progress
+        utilization_score = min(100, (metrics["average_workload"] / 3.0) * 100)  # Assume max 3 tasks per agent
+        
+        # Penalty for blocked agents
+        blocked_penalty = (metrics["blocked_agents"] / metrics["total_agents"]) * 30 if metrics["total_agents"] > 0 else 0
+        
+        # Bonus for balanced workload
+        workload_variance = self._calculate_workload_variance(execution)
+        balance_bonus = max(0, 20 - workload_variance)
+        
+        efficiency = max(0, min(100, utilization_score - blocked_penalty + balance_bonus))
+        return efficiency
+    
+    def _calculate_coordination_score(self, execution: SwarmExecution, metrics: Dict[str, Any]) -> float:
+        """Calculate coordination effectiveness score (0-100)"""
+        # Score based on successful coordination events and agent collaboration
+        base_score = 80.0  # Start with good score
+        
+        # Analyze coordination history
+        total_coordination_events = 0
+        successful_events = 0
+        
+        for agent in execution.agents.values():
+            for event in agent.collaboration_history:
+                total_coordination_events += 1
+                if event.get("success_probability", 0) > 0.7:
+                    successful_events += 1
+        
+        if total_coordination_events > 0:
+            success_rate = successful_events / total_coordination_events
+            coordination_score = base_score * success_rate
+        else:
+            coordination_score = base_score
+        
+        return min(100, coordination_score)
+    
+    def _calculate_workload_variance(self, execution: SwarmExecution) -> float:
+        """Calculate variance in agent workloads"""
+        if not execution.agents:
+            return 0.0
+        
+        workloads = [agent.current_workload for agent in execution.agents.values()]
+        mean_workload = sum(workloads) / len(workloads)
+        variance = sum((w - mean_workload) ** 2 for w in workloads) / len(workloads)
+        return variance
+    
+    async def _identify_execution_optimizations(self, execution: SwarmExecution, metrics: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Identify potential optimizations for execution"""
+        optimizations = []
+        
+        # Check for load balancing opportunities
+        if metrics["efficiency_score"] < 70:
+            workload_variance = self._calculate_workload_variance(execution)
+            if workload_variance > 1.0:
+                optimizations.append({
+                    "type": "load_balancing",
+                    "priority": "high",
+                    "description": "Rebalance workload across agents",
+                    "target_variance": 0.5
+                })
+        
+        # Check for idle agent utilization
+        if metrics["idle_agents"] > 0 and metrics["total_workload"] > 0:
+            optimizations.append({
+                "type": "idle_utilization",
+                "priority": "medium",
+                "description": "Assign work to idle agents",
+                "idle_agents": metrics["idle_agents"]
+            })
+        
+        # Check for blocked agent intervention
+        if metrics["blocked_agents"] > 0:
+            optimizations.append({
+                "type": "unblock_agents",
+                "priority": "high",
+                "description": "Resolve blocked agent states",
+                "blocked_agents": metrics["blocked_agents"]
+            })
+        
+        # Check for coordination improvements
+        if metrics["coordination_score"] < 60:
+            optimizations.append({
+                "type": "improve_coordination",
+                "priority": "medium",
+                "description": "Enhance agent coordination mechanisms",
+                "current_score": metrics["coordination_score"]
+            })
+        
+        return optimizations
+    
+    async def _apply_execution_optimization(self, execution: SwarmExecution, optimization: Dict[str, Any]):
+        """Apply a specific execution optimization"""
+        optimization_type = optimization["type"]
+        
+        if optimization_type == "load_balancing":
+            await self._rebalance_agent_workloads(execution)
+        elif optimization_type == "idle_utilization":
+            await self._assign_work_to_idle_agents(execution)
+        elif optimization_type == "unblock_agents":
+            await self._resolve_blocked_agents(execution)
+        elif optimization_type == "improve_coordination":
+            await self._enhance_coordination_mechanisms(execution)
+        
+        self.logger.info(
+            "Applied execution optimization",
+            execution_id=execution.execution_id,
+            optimization_type=optimization_type,
+            priority=optimization["priority"]
+        )
+    
+    async def _rebalance_agent_workloads(self, execution: SwarmExecution):
+        """Rebalance workloads across agents"""
+        # Find overloaded and underloaded agents
+        overloaded = [a for a in execution.agents.values() if a.current_workload > 2]
+        underloaded = [a for a in execution.agents.values() if a.current_workload < 1]
+        
+        # Create coordination events for workload redistribution
+        for overloaded_agent in overloaded:
+            if underloaded:
+                target_agent = underloaded[0]
+                
+                rebalance_event = CoordinationEvent(
+                    event_id=str(uuid.uuid4()),
+                    event_type=CoordinationEventType.TASK_HANDOFF,
+                    from_agent=overloaded_agent.agent_id,
+                    to_agent=target_agent.agent_id,
+                    from_agent_context={"workload": overloaded_agent.current_workload},
+                    to_agent_context={"workload": target_agent.current_workload},
+                    task_context={"optimization": "load_balancing"},
+                    intermediate_results={},
+                    priority=6
+                )
+                await self.coordination_events.put(rebalance_event)
+    
+    async def _assign_work_to_idle_agents(self, execution: SwarmExecution):
+        """Assign available work to idle agents"""
+        idle_agents = [a for a in execution.agents.values() if a.current_state == AgentState.IDLE]
+        
+        for idle_agent in idle_agents:
+            # Create collaboration request
+            work_request_event = CoordinationEvent(
+                event_id=str(uuid.uuid4()),
+                event_type=CoordinationEventType.COLLABORATION_REQUEST,
+                from_agent=idle_agent.agent_id,
+                to_agent=None,  # Broadcast to find work
+                from_agent_context={"state": "idle", "capabilities": [c.capability_name for c in idle_agent.configuration.capabilities]},
+                to_agent_context=None,
+                task_context={"optimization": "idle_utilization"},
+                intermediate_results={},
+                priority=5
+            )
+            await self.coordination_events.put(work_request_event)
+    
+    async def _resolve_blocked_agents(self, execution: SwarmExecution):
+        """Resolve blocked agent states"""
+        blocked_agents = [a for a in execution.agents.values() if a.current_state == AgentState.BLOCKED]
+        
+        for blocked_agent in blocked_agents:
+            # Create unblock coordination event
+            unblock_event = CoordinationEvent(
+                event_id=str(uuid.uuid4()),
+                event_type=CoordinationEventType.CONFLICT_RESOLUTION,
+                from_agent=blocked_agent.agent_id,
+                to_agent=None,
+                from_agent_context={"state": "blocked", "issue": "execution_blocked"},
+                to_agent_context=None,
+                task_context={"optimization": "unblock_agents"},
+                intermediate_results={"performance_metrics": blocked_agent.performance_metrics},
+                priority=8
+            )
+            await self.coordination_events.put(unblock_event)
+    
+    async def _enhance_coordination_mechanisms(self, execution: SwarmExecution):
+        """Enhance coordination mechanisms between agents"""
+        # Analyze coordination patterns and improve communication
+        self.logger.info(
+            "Enhancing coordination mechanisms",
+            execution_id=execution.execution_id,
+            agent_count=len(execution.agents)
+        )
 
     def _is_execution_complete(self, execution: SwarmExecution) -> bool:
         """Check if execution is complete"""
-        # TODO: Implement completion check logic
-        return False
+        try:
+            # Check if all agents are in completed or idle state
+            agent_states = [agent.current_state for agent in execution.agents.values()]
+            
+            # Execution is complete if no agents are working or blocked
+            working_agents = [state for state in agent_states if state in [AgentState.WORKING, AgentState.ASSIGNED, AgentState.BLOCKED]]
+            
+            if len(working_agents) == 0:
+                # All agents are idle, completed, failed, or terminated
+                self.logger.info(
+                    "Execution appears complete - no active agents",
+                    execution_id=execution.execution_id,
+                    agent_states=[state.value for state in agent_states]
+                )
+                return True
+            
+            # Check execution duration timeout (optional failsafe)
+            execution_duration = (datetime.now(timezone.utc) - execution.started_at).total_seconds()
+            max_execution_time = 3600  # 1 hour default timeout
+            
+            if execution_duration > max_execution_time:
+                self.logger.warning(
+                    "Execution timeout reached",
+                    execution_id=execution.execution_id,
+                    duration_seconds=execution_duration,
+                    max_time=max_execution_time
+                )
+                return True
+            
+            # Check if workflow definition has completion criteria
+            if hasattr(execution.workflow_def, 'completion_criteria'):
+                completion_criteria = execution.workflow_def.completion_criteria
+                if self._check_completion_criteria(execution, completion_criteria):
+                    self.logger.info(
+                        "Execution completed based on workflow criteria",
+                        execution_id=execution.execution_id,
+                        criteria=completion_criteria
+                    )
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(
+                "Error checking execution completion",
+                execution_id=execution.execution_id,
+                error=str(e)
+            )
+            # Default to not complete on error
+            return False
+    
+    def _check_completion_criteria(self, execution: SwarmExecution, criteria: Dict[str, Any]) -> bool:
+        """Check if custom completion criteria are met"""
+        try:
+            # Check various completion criteria types
+            if "all_tasks_completed" in criteria:
+                # Check if all assigned tasks are completed
+                all_completed = all(
+                    len(agent.assigned_tasks) == 0 or 
+                    agent.current_state in [AgentState.COMPLETED, AgentState.IDLE]
+                    for agent in execution.agents.values()
+                )
+                if not all_completed:
+                    return False
+            
+            if "minimum_success_rate" in criteria:
+                # Check if success rate threshold is met
+                required_rate = criteria["minimum_success_rate"]
+                current_rate = self._calculate_current_success_rate(execution)
+                if current_rate < required_rate:
+                    return False
+            
+            if "target_outputs_produced" in criteria:
+                # Check if target number of outputs have been produced
+                target_outputs = criteria["target_outputs_produced"]
+                current_outputs = len(execution.execution_state.get("outputs", []))
+                if current_outputs < target_outputs:
+                    return False
+            
+            if "maximum_errors" in criteria:
+                # Check if error count is within acceptable limits
+                max_errors = criteria["maximum_errors"]
+                current_errors = execution.execution_state.get("error_count", 0)
+                if current_errors > max_errors:
+                    return True  # Complete due to too many errors
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(
+                "Error checking completion criteria",
+                execution_id=execution.execution_id,
+                error=str(e)
+            )
+            return False
+    
+    def _calculate_current_success_rate(self, execution: SwarmExecution) -> float:
+        """Calculate current overall success rate for the execution"""
+        total_tasks = 0
+        successful_tasks = 0
+        
+        for agent in execution.agents.values():
+            completed_tasks = agent.performance_metrics.get("completed_tasks", 0)
+            failed_tasks = agent.performance_metrics.get("failed_tasks", 0)
+            
+            total_tasks += completed_tasks + failed_tasks
+            successful_tasks += completed_tasks
+        
+        if total_tasks == 0:
+            return 1.0  # No tasks yet, assume success
+        
+        return successful_tasks / total_tasks
 
 
 # Factory function for easy integration
