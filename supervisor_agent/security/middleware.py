@@ -46,7 +46,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # Add cache control for sensitive endpoints
         if request.url.path.startswith("/api/v1/auth"):
-            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Cache-Control"] = (
+                "no-cache, no-store, must-revalidate"
+            )
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
 
@@ -133,14 +135,18 @@ class InputValidationMiddleware(BaseHTTPMiddleware):
             await self._validate_headers(request)
         except HTTPException as e:
             logger.warning(f"Header validation failed: {e.detail}")
-            return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+            return JSONResponse(
+                status_code=e.status_code, content={"detail": e.detail}
+            )
 
         # Validate query parameters
         try:
             await self._validate_query_params(request)
         except HTTPException as e:
             logger.warning(f"Query parameter validation failed: {e.detail}")
-            return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+            return JSONResponse(
+                status_code=e.status_code, content={"detail": e.detail}
+            )
 
         # For POST/PUT/PATCH requests, validate body
         if request.method in {"POST", "PUT", "PATCH"}:
@@ -171,7 +177,9 @@ class InputValidationMiddleware(BaseHTTPMiddleware):
                 suspicious_headers.append(name)
 
         if suspicious_headers:
-            logger.warning(f"Suspicious headers detected: {suspicious_headers}")
+            logger.warning(
+                f"Suspicious headers detected: {suspicious_headers}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid header content detected",

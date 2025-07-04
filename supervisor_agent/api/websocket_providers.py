@@ -8,7 +8,7 @@ health status updates, and task execution events.
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -71,7 +71,9 @@ class ProviderWebSocketManager:
     async def start_monitoring(self):
         """Start the background monitoring task"""
         if self._monitoring_task is None or self._monitoring_task.done():
-            self._monitoring_task = asyncio.create_task(self._monitoring_loop())
+            self._monitoring_task = asyncio.create_task(
+                self._monitoring_loop()
+            )
             logger.info("Started provider monitoring task")
 
     async def stop_monitoring(self):
@@ -88,7 +90,9 @@ class ProviderWebSocketManager:
         """Send initial status to a newly connected client"""
         try:
             # Get comprehensive status
-            provider_status = await multi_provider_service.get_provider_status()
+            provider_status = (
+                await multi_provider_service.get_provider_status()
+            )
             system_health = await enhanced_agent_manager.get_system_health()
             analytics = await multi_provider_service.get_analytics()
 
@@ -203,7 +207,9 @@ class ProviderWebSocketManager:
 
             # Compare with last status and identify changes
             if self._last_status:
-                changes = self._detect_changes(self._last_status, current_status)
+                changes = self._detect_changes(
+                    self._last_status, current_status
+                )
 
                 for change in changes:
                     await self.broadcast_update(change["type"], change["data"])
@@ -219,7 +225,9 @@ class ProviderWebSocketManager:
             await self.broadcast_update("system_health", system_health)
 
             # Send analytics updates every minute
-            if datetime.now(timezone.utc).second < 5:  # Roughly once per minute
+            if (
+                datetime.now(timezone.utc).second < 5
+            ):  # Roughly once per minute
                 analytics = await multi_provider_service.get_analytics()
                 await self.broadcast_update("analytics", analytics)
 
@@ -252,8 +260,12 @@ class ProviderWebSocketManager:
                                 "provider_id": provider_id,
                                 "old_status": old_health,
                                 "new_status": new_health,
-                                "health_score": new_info.get("health_score", 0.0),
-                                "severity": self._get_health_severity(new_health),
+                                "health_score": new_info.get(
+                                    "health_score", 0.0
+                                ),
+                                "severity": self._get_health_severity(
+                                    new_health
+                                ),
                             },
                         }
                     )
@@ -270,7 +282,9 @@ class ProviderWebSocketManager:
                                 "provider_id": provider_id,
                                 "old_score": old_score,
                                 "new_score": new_score,
-                                "severity": "warning" if new_score < 0.5 else "info",
+                                "severity": (
+                                    "warning" if new_score < 0.5 else "info"
+                                ),
                             },
                         }
                     )
@@ -297,7 +311,10 @@ class ProviderWebSocketManager:
                 changes.append(
                     {
                         "type": "provider_removed",
-                        "data": {"provider_id": provider_id, "severity": "warning"},
+                        "data": {
+                            "provider_id": provider_id,
+                            "severity": "warning",
+                        },
                     }
                 )
 
@@ -325,7 +342,9 @@ class ProviderWebSocketManager:
                                 "requests_remaining": new_quota.get(
                                     "requests_remaining", 0
                                 ),
-                                "severity": self._get_quota_severity(new_quota_status),
+                                "severity": self._get_quota_severity(
+                                    new_quota_status
+                                ),
                             },
                         }
                     )
@@ -397,8 +416,12 @@ async def websocket_provider_monitoring(websocket: WebSocket):
                 # Handle subscription updates
                 if message.get("type") == "update_filters":
                     new_filters = message.get("filters", {})
-                    provider_ws_manager.subscription_filters[websocket] = new_filters
-                    logger.info(f"Updated filters for WebSocket client: {new_filters}")
+                    provider_ws_manager.subscription_filters[websocket] = (
+                        new_filters
+                    )
+                    logger.info(
+                        f"Updated filters for WebSocket client: {new_filters}"
+                    )
 
                 elif message.get("type") == "ping":
                     # Respond to ping
@@ -406,7 +429,9 @@ async def websocket_provider_monitoring(websocket: WebSocket):
                         json.dumps(
                             {
                                 "type": "pong",
-                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                                "timestamp": datetime.now(
+                                    timezone.utc
+                                ).isoformat(),
                             }
                         )
                     )
@@ -415,7 +440,9 @@ async def websocket_provider_monitoring(websocket: WebSocket):
                 break
             except json.JSONDecodeError:
                 await websocket.send_text(
-                    json.dumps({"type": "error", "message": "Invalid JSON format"})
+                    json.dumps(
+                        {"type": "error", "message": "Invalid JSON format"}
+                    )
                 )
             except Exception as e:
                 logger.error(f"Error handling WebSocket message: {str(e)}")
@@ -445,7 +472,9 @@ async def websocket_single_provider(websocket: WebSocket, provider_id: str):
                 if message.get("type") == "get_status":
                     # Send current provider status
                     status = await multi_provider_service.get_provider_status()
-                    provider_info = status.get("providers", {}).get(provider_id)
+                    provider_info = status.get("providers", {}).get(
+                        provider_id
+                    )
 
                     if provider_info:
                         await websocket.send_text(
@@ -454,7 +483,9 @@ async def websocket_single_provider(websocket: WebSocket, provider_id: str):
                                     "type": "provider_status",
                                     "provider_id": provider_id,
                                     "data": provider_info,
-                                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                                    "timestamp": datetime.now(
+                                        timezone.utc
+                                    ).isoformat(),
                                 }
                             )
                         )

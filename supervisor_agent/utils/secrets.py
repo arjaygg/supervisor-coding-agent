@@ -9,15 +9,12 @@ Provides a unified interface for managing secrets across different environments:
 Follows security best practices with encryption and access logging.
 """
 
-import base64
-import json
-import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 try:
     from google.api_core import exceptions as gcp_exceptions
@@ -105,7 +102,9 @@ class SecretsManager:
         if provider == SecretProvider.GOOGLE_SECRET_MANAGER:
             self._init_google_secret_manager()
 
-        logger.info(f"Secrets manager initialized with provider: {provider.value}")
+        logger.info(
+            f"Secrets manager initialized with provider: {provider.value}"
+        )
 
     def _init_google_secret_manager(self):
         """Initialize Google Secret Manager client."""
@@ -140,9 +139,14 @@ class SecretsManager:
 
     def _cache_secret(self, secret_name: str, value: Any):
         """Cache a secret value."""
-        self._cache[secret_name] = {"value": value, "cached_at": datetime.now()}
+        self._cache[secret_name] = {
+            "value": value,
+            "cached_at": datetime.now(),
+        }
 
-    def _log_access(self, secret_name: str, provider: SecretProvider, success: bool):
+    def _log_access(
+        self, secret_name: str, provider: SecretProvider, success: bool
+    ):
         """Log secret access for audit purposes."""
         if not self.audit_logging:
             return
@@ -192,7 +196,9 @@ class SecretsManager:
                 try:
                     return file_path.read_text().strip()
                 except Exception as e:
-                    logger.warning(f"Failed to read secret file {file_path}: {e}")
+                    logger.warning(
+                        f"Failed to read secret file {file_path}: {e}"
+                    )
 
         return None
 
@@ -201,13 +207,15 @@ class SecretsManager:
     ) -> Optional[str]:
         """Get secret from Google Secret Manager."""
         if not self._gsm_client:
-            raise SecretProviderError("Google Secret Manager client not initialized")
+            raise SecretProviderError(
+                "Google Secret Manager client not initialized"
+            )
 
         try:
-            name = (
-                f"projects/{self.project_id}/secrets/{secret_name}/versions/{version}"
+            name = f"projects/{self.project_id}/secrets/{secret_name}/versions/{version}"
+            response = self._gsm_client.access_secret_version(
+                request={"name": name}
             )
-            response = self._gsm_client.access_secret_version(request={"name": name})
             return response.payload.data.decode("UTF-8")
         except gcp_exceptions.NotFound:
             return None
@@ -256,7 +264,9 @@ class SecretsManager:
             elif provider == SecretProvider.FILE:
                 value = self._get_from_file(secret_name)
             elif provider == SecretProvider.GOOGLE_SECRET_MANAGER:
-                value = self._get_from_google_secret_manager(secret_name, version)
+                value = self._get_from_google_secret_manager(
+                    secret_name, version
+                )
             elif provider == SecretProvider.MOCK:
                 value = f"mock-{secret_name}"  # For testing
             else:
@@ -297,7 +307,9 @@ class SecretsManager:
             raise SecretProviderError(f"Unexpected error getting secret: {e}")
 
     def get_secrets_batch(
-        self, secret_names: list[str], provider: Optional[SecretProvider] = None
+        self,
+        secret_names: list[str],
+        provider: Optional[SecretProvider] = None,
     ) -> Dict[str, Optional[str]]:
         """Get multiple secrets in batch."""
         results = {}
@@ -310,7 +322,10 @@ class SecretsManager:
         return results
 
     def set_secret(
-        self, secret_name: str, value: str, provider: Optional[SecretProvider] = None
+        self,
+        secret_name: str,
+        value: str,
+        provider: Optional[SecretProvider] = None,
     ) -> bool:
         """
         Set a secret value (only supported for some providers).
@@ -337,10 +352,14 @@ class SecretsManager:
                 f"Provider {provider.value} doesn't support setting secrets"
             )
 
-    def _set_in_google_secret_manager(self, secret_name: str, value: str) -> bool:
+    def _set_in_google_secret_manager(
+        self, secret_name: str, value: str
+    ) -> bool:
         """Set secret in Google Secret Manager."""
         if not self._gsm_client:
-            raise SecretProviderError("Google Secret Manager client not initialized")
+            raise SecretProviderError(
+                "Google Secret Manager client not initialized"
+            )
 
         try:
             # Create secret if it doesn't exist
@@ -431,7 +450,9 @@ class SecretsManager:
                     health["details"]["gsm_connection"] = "ok"
                 else:
                     health["healthy"] = False
-                    health["details"]["gsm_connection"] = "client_not_initialized"
+                    health["details"][
+                        "gsm_connection"
+                    ] = "client_not_initialized"
 
         except Exception as e:
             health["healthy"] = False
@@ -466,7 +487,8 @@ def get_secrets_manager() -> SecretsManager:
             provider=provider,
             project_id=project_id,
             cache_ttl=int(os.getenv("SECRETS_CACHE_TTL", "300")),
-            audit_logging=os.getenv("SECRETS_AUDIT_LOGGING", "true").lower() == "true",
+            audit_logging=os.getenv("SECRETS_AUDIT_LOGGING", "true").lower()
+            == "true",
         )
 
     return _secrets_manager
@@ -500,9 +522,19 @@ def get_claude_api_keys() -> list[str]:
 def get_notification_config() -> Dict[str, str]:
     """Get notification configuration from secrets."""
     return {
-        "slack_token": get_secret("SLACK_BOT_TOKEN", default="", required=False),
-        "slack_channel": get_secret("SLACK_CHANNEL", default="#alerts", required=False),
-        "email_smtp_host": get_secret("EMAIL_SMTP_HOST", default="", required=False),
-        "email_username": get_secret("EMAIL_USERNAME", default="", required=False),
-        "email_password": get_secret("EMAIL_PASSWORD", default="", required=False),
+        "slack_token": get_secret(
+            "SLACK_BOT_TOKEN", default="", required=False
+        ),
+        "slack_channel": get_secret(
+            "SLACK_CHANNEL", default="#alerts", required=False
+        ),
+        "email_smtp_host": get_secret(
+            "EMAIL_SMTP_HOST", default="", required=False
+        ),
+        "email_username": get_secret(
+            "EMAIL_USERNAME", default="", required=False
+        ),
+        "email_password": get_secret(
+            "EMAIL_PASSWORD", default="", required=False
+        ),
     }

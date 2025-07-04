@@ -88,7 +88,9 @@ class Provider(Base):
     # Relationships
     tasks = relationship("Task", back_populates="provider")
     usage_entries = relationship(
-        "ProviderUsage", back_populates="provider", cascade="all, delete-orphan"
+        "ProviderUsage",
+        back_populates="provider",
+        cascade="all, delete-orphan",
     )
 
     # Indexes for performance
@@ -106,7 +108,9 @@ class ProviderUsage(Base):
         String, ForeignKey("providers.id", ondelete="CASCADE"), nullable=False
     )
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
-    request_id = Column(String, nullable=True)  # For tracking individual requests
+    request_id = Column(
+        String, nullable=True
+    )  # For tracking individual requests
     tokens_used = Column(Integer, nullable=False, default=0)
     cost_usd = Column(
         String, nullable=False, default="0.00"
@@ -124,7 +128,9 @@ class ProviderUsage(Base):
 
     # Indexes for efficient queries
     __table_args__ = (
-        Index("ix_provider_usage_provider_timestamp", "provider_id", "timestamp"),
+        Index(
+            "ix_provider_usage_provider_timestamp", "provider_id", "timestamp"
+        ),
         Index("ix_provider_usage_task_provider", "task_id", "provider_id"),
         Index("ix_provider_usage_success_timestamp", "success", "timestamp"),
     )
@@ -141,18 +147,26 @@ class Task(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     assigned_agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
-    assigned_provider_id = Column(String, ForeignKey("providers.id"), nullable=True)
+    assigned_provider_id = Column(
+        String, ForeignKey("providers.id"), nullable=True
+    )
     retry_count = Column(Integer, default=0)
     error_message = Column(Text, nullable=True)
-    chat_thread_id = Column(GUID(), ForeignKey("chat_threads.id"), nullable=True)
-    source_message_id = Column(GUID(), ForeignKey("chat_messages.id"), nullable=True)
+    chat_thread_id = Column(
+        GUID(), ForeignKey("chat_threads.id"), nullable=True
+    )
+    source_message_id = Column(
+        GUID(), ForeignKey("chat_messages.id"), nullable=True
+    )
 
     # Relationships
     agent = relationship("Agent", back_populates="tasks")
     provider = relationship("Provider", back_populates="tasks")
     sessions = relationship("TaskSession", back_populates="task")
     chat_thread = relationship("ChatThread", back_populates="tasks")
-    source_message = relationship("ChatMessage", foreign_keys=[source_message_id])
+    source_message = relationship(
+        "ChatMessage", foreign_keys=[source_message_id]
+    )
 
 
 class TaskSession(Base):
@@ -249,7 +263,9 @@ class ChatThread(Base):
     status = Column(SQLEnum(ChatThreadStatus), default=ChatThreadStatus.ACTIVE)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    user_id = Column(String(255), nullable=True)  # for future multi-user support
+    user_id = Column(
+        String(255), nullable=True
+    )  # for future multi-user support
     thread_metadata = Column("metadata", JSON, default=dict)
 
     # Relationships
@@ -261,7 +277,9 @@ class ChatThread(Base):
     )
     tasks = relationship("Task", back_populates="chat_thread")
     notifications = relationship(
-        "ChatNotification", back_populates="thread", cascade="all, delete-orphan"
+        "ChatNotification",
+        back_populates="thread",
+        cascade="all, delete-orphan",
     )
 
     # Indexes for performance
@@ -276,7 +294,9 @@ class ChatMessage(Base):
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
     thread_id = Column(
-        GUID(), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False
+        GUID(),
+        ForeignKey("chat_threads.id", ondelete="CASCADE"),
+        nullable=False,
     )
     role = Column(SQLEnum(MessageRole), nullable=False)
     content = Column(Text, nullable=False)
@@ -286,13 +306,17 @@ class ChatMessage(Base):
     )  # for storing task refs, progress data, etc.
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     edited_at = Column(DateTime(timezone=True), nullable=True)
-    parent_message_id = Column(GUID(), ForeignKey("chat_messages.id"), nullable=True)
+    parent_message_id = Column(
+        GUID(), ForeignKey("chat_messages.id"), nullable=True
+    )
 
     # Relationships
     thread = relationship("ChatThread", back_populates="messages")
     parent_message = relationship("ChatMessage", remote_side=[id])
     child_messages = relationship(
-        "ChatMessage", remote_side=[parent_message_id], overlaps="parent_message"
+        "ChatMessage",
+        remote_side=[parent_message_id],
+        overlaps="parent_message",
     )
 
     # Indexes for performance
@@ -307,7 +331,9 @@ class ChatNotification(Base):
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
     thread_id = Column(
-        GUID(), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False
+        GUID(),
+        ForeignKey("chat_threads.id", ondelete="CASCADE"),
+        nullable=False,
     )
     type = Column(SQLEnum(NotificationType), nullable=False)
     title = Column(String(255), nullable=False)

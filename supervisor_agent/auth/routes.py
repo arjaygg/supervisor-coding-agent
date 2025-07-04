@@ -56,12 +56,14 @@ async def register(
     # Check if user already exists
     if UserCRUD.get_user_by_email(db, user_create.email):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
         )
 
     if UserCRUD.get_user_by_username(db, user_create.username):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken",
         )
 
     # Create user with default 'user' role if no roles specified
@@ -96,28 +98,38 @@ async def login(
         log_security_event(
             db,
             "login_failed",
-            details={"username": form_data.username, "reason": "user_not_found"},
+            details={
+                "username": form_data.username,
+                "reason": "user_not_found",
+            },
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
             success=False,
         )
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
         )
 
     # Verify password
-    if not jwt_handler.verify_password(form_data.password, user.hashed_password):
+    if not jwt_handler.verify_password(
+        form_data.password, user.hashed_password
+    ):
         log_security_event(
             db,
             "login_failed",
             user_id=user.id,
-            details={"username": form_data.username, "reason": "invalid_password"},
+            details={
+                "username": form_data.username,
+                "reason": "invalid_password",
+            },
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
             success=False,
         )
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
         )
 
     if not user.is_active:
@@ -125,13 +137,17 @@ async def login(
             db,
             "login_failed",
             user_id=user.id,
-            details={"username": form_data.username, "reason": "user_inactive"},
+            details={
+                "username": form_data.username,
+                "reason": "user_inactive",
+            },
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
             success=False,
         )
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive",
         )
 
     # Create token pair
@@ -192,7 +208,8 @@ async def refresh_token(
             success=False,
         )
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
         )
 
     user_id = payload.get("sub")
@@ -211,7 +228,8 @@ async def refresh_token(
             success=False,
         )
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Session not found"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session not found",
         )
 
     # Get user
@@ -305,7 +323,9 @@ async def logout_all(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
+async def get_current_user_info(
+    current_user: User = Depends(get_current_user),
+):
     """Get current user information"""
     return UserResponse.model_validate(current_user)
 
@@ -329,7 +349,9 @@ async def update_current_user(
         "user_updated",
         user_id=current_user.id,
         details={
-            "updated_fields": list(user_update.model_dump(exclude_unset=True).keys())
+            "updated_fields": list(
+                user_update.model_dump(exclude_unset=True).keys()
+            )
         },
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
@@ -396,13 +418,18 @@ async def create_api_key(
     db: Session = Depends(get_db),
 ):
     """Create a new API key"""
-    api_key, full_key = APIKeyCRUD.create_api_key(db, current_user.id, api_key_create)
+    api_key, full_key = APIKeyCRUD.create_api_key(
+        db, current_user.id, api_key_create
+    )
 
     log_security_event(
         db,
         "api_key_created",
         user_id=current_user.id,
-        details={"api_key_name": api_key_create.name, "prefix": api_key.key_prefix},
+        details={
+            "api_key_name": api_key_create.name,
+            "prefix": api_key.key_prefix,
+        },
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
@@ -414,7 +441,8 @@ async def create_api_key(
 
 @router.get("/api-keys", response_model=List[APIKeyResponse])
 async def get_api_keys(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Get user's API keys"""
     api_keys = APIKeyCRUD.get_api_keys(db, current_user.id)
@@ -473,12 +501,14 @@ async def create_user_admin(
     # Check if user already exists
     if UserCRUD.get_user_by_email(db, user_create.email):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
         )
 
     if UserCRUD.get_user_by_username(db, user_create.username):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken",
         )
 
     user = UserCRUD.create_user(db, user_create)
@@ -517,7 +547,9 @@ async def update_user_admin(
         user_id=current_user.id,
         details={
             "updated_user_id": user_id,
-            "updated_fields": list(user_update.model_dump(exclude_unset=True).keys()),
+            "updated_fields": list(
+                user_update.model_dump(exclude_unset=True).keys()
+            ),
         },
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
@@ -576,7 +608,8 @@ async def create_role(
     """Create role (admin only)"""
     if RoleCRUD.get_role_by_name(db, role_create.name):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Role name already exists"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Role name already exists",
         )
 
     role = RoleCRUD.create_role(db, role_create)

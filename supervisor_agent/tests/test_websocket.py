@@ -73,7 +73,9 @@ class TestWebSocketManager:
         """Test that sending updates handles disconnected clients gracefully."""
         manager = WebSocketManager()
         mock_websocket = Mock(spec=WebSocket)
-        mock_websocket.send_text = AsyncMock(side_effect=Exception("Connection closed"))
+        mock_websocket.send_text = AsyncMock(
+            side_effect=Exception("Connection closed")
+        )
 
         manager.connect(mock_websocket)
 
@@ -135,7 +137,9 @@ class TestWebSocketIntegration:
     @pytest.mark.asyncio
     async def test_task_creation_sends_websocket_update(self):
         """Test that creating a task sends a WebSocket update."""
-        with patch("supervisor_agent.api.websocket.websocket_manager") as mock_manager:
+        with patch(
+            "supervisor_agent.api.websocket.websocket_manager"
+        ) as mock_manager:
             mock_manager.send_task_update = AsyncMock()
 
             # Mock task creation
@@ -157,7 +161,9 @@ class TestWebSocketIntegration:
     @pytest.mark.asyncio
     async def test_task_status_change_sends_websocket_update(self):
         """Test that changing task status sends a WebSocket update."""
-        with patch("supervisor_agent.api.websocket.websocket_manager") as mock_manager:
+        with patch(
+            "supervisor_agent.api.websocket.websocket_manager"
+        ) as mock_manager:
             mock_manager.send_task_update = AsyncMock()
 
             # Mock task status change
@@ -197,12 +203,16 @@ class TestUS1_1_Acceptance:
             for route in app.routes
             if hasattr(route, "path") and route.path == "/ws"
         ]
-        assert len(websocket_routes) >= 1, "WebSocket endpoint /ws should be available"
+        assert (
+            len(websocket_routes) >= 1
+        ), "WebSocket endpoint /ws should be available"
 
     @pytest.mark.asyncio
     async def test_task_updates_trigger_websocket_notifications(self):
         """Test that task updates trigger WebSocket notifications."""
-        with patch("supervisor_agent.api.websocket.websocket_manager") as mock_manager:
+        with patch(
+            "supervisor_agent.api.websocket.websocket_manager"
+        ) as mock_manager:
             mock_manager.send_task_update = AsyncMock()
 
             # This would be called when a task is updated
@@ -246,7 +256,9 @@ class TestUS1_1_Acceptance:
         }
 
         for field in expected_fields:
-            assert field in sample_message, f"Message should contain {field} field"
+            assert (
+                field in sample_message
+            ), f"Message should contain {field} field"
 
         # Verify task contains AI suggestion
         assert "ai_suggestion" in sample_message["task"]

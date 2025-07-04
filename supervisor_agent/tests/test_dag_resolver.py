@@ -36,8 +36,18 @@ class TestDAGResolver:
             name="Linear Workflow",
             description="Simple linear workflow",
             tasks=[
-                {"id": "A", "name": "Task A", "type": "CODE_ANALYSIS", "config": {}},
-                {"id": "B", "name": "Task B", "type": "PR_REVIEW", "config": {}},
+                {
+                    "id": "A",
+                    "name": "Task A",
+                    "type": "CODE_ANALYSIS",
+                    "config": {},
+                },
+                {
+                    "id": "B",
+                    "name": "Task B",
+                    "type": "PR_REVIEW",
+                    "config": {},
+                },
                 {"id": "C", "name": "Task C", "type": "BUG_FIX", "config": {}},
             ],
             dependencies=[
@@ -53,9 +63,24 @@ class TestDAGResolver:
             name="Parallel Workflow",
             description="Workflow with parallel execution",
             tasks=[
-                {"id": "A", "name": "Task A", "type": "CODE_ANALYSIS", "config": {}},
-                {"id": "B", "name": "Task B", "type": "PR_REVIEW", "config": {}},
-                {"id": "C", "name": "Task C", "type": "REFACTOR", "config": {}},
+                {
+                    "id": "A",
+                    "name": "Task A",
+                    "type": "CODE_ANALYSIS",
+                    "config": {},
+                },
+                {
+                    "id": "B",
+                    "name": "Task B",
+                    "type": "PR_REVIEW",
+                    "config": {},
+                },
+                {
+                    "id": "C",
+                    "name": "Task C",
+                    "type": "REFACTOR",
+                    "config": {},
+                },
                 {"id": "D", "name": "Task D", "type": "BUG_FIX", "config": {}},
             ],
             dependencies=[
@@ -73,8 +98,18 @@ class TestDAGResolver:
             name="Circular Workflow",
             description="Workflow with circular dependency",
             tasks=[
-                {"id": "A", "name": "Task A", "type": "CODE_ANALYSIS", "config": {}},
-                {"id": "B", "name": "Task B", "type": "PR_REVIEW", "config": {}},
+                {
+                    "id": "A",
+                    "name": "Task A",
+                    "type": "CODE_ANALYSIS",
+                    "config": {},
+                },
+                {
+                    "id": "B",
+                    "name": "Task B",
+                    "type": "PR_REVIEW",
+                    "config": {},
+                },
                 {"id": "C", "name": "Task C", "type": "BUG_FIX", "config": {}},
             ],
             dependencies=[
@@ -106,7 +141,9 @@ class TestDAGResolver:
         assert result.is_valid is True
         assert result.error_message is None
 
-    def test_validate_circular_dependency(self, dag_resolver, circular_workflow):
+    def test_validate_circular_dependency(
+        self, dag_resolver, circular_workflow
+    ):
         """Test detection of circular dependencies"""
 
         result = dag_resolver.validate_dag(circular_workflow)
@@ -118,7 +155,10 @@ class TestDAGResolver:
         """Test validation of empty workflow"""
 
         empty_workflow = WorkflowDefinition(
-            name="Empty", description="Empty workflow", tasks=[], dependencies=[]
+            name="Empty",
+            description="Empty workflow",
+            tasks=[],
+            dependencies=[],
         )
 
         result = dag_resolver.validate_dag(empty_workflow)
@@ -133,7 +173,12 @@ class TestDAGResolver:
             name="Duplicate IDs",
             description="Workflow with duplicate task IDs",
             tasks=[
-                {"id": "A", "name": "Task A1", "type": "CODE_ANALYSIS", "config": {}},
+                {
+                    "id": "A",
+                    "name": "Task A1",
+                    "type": "CODE_ANALYSIS",
+                    "config": {},
+                },
                 {
                     "id": "A",
                     "name": "Task A2",
@@ -156,8 +201,18 @@ class TestDAGResolver:
             name="Invalid Dependency",
             description="Workflow with invalid dependency",
             tasks=[
-                {"id": "A", "name": "Task A", "type": "CODE_ANALYSIS", "config": {}},
-                {"id": "B", "name": "Task B", "type": "PR_REVIEW", "config": {}},
+                {
+                    "id": "A",
+                    "name": "Task A",
+                    "type": "CODE_ANALYSIS",
+                    "config": {},
+                },
+                {
+                    "id": "B",
+                    "name": "Task B",
+                    "type": "PR_REVIEW",
+                    "config": {},
+                },
             ],
             dependencies=[
                 {
@@ -180,7 +235,12 @@ class TestDAGResolver:
             name="Self Dependency",
             description="Workflow with self dependency",
             tasks=[
-                {"id": "A", "name": "Task A", "type": "CODE_ANALYSIS", "config": {}}
+                {
+                    "id": "A",
+                    "name": "Task A",
+                    "type": "CODE_ANALYSIS",
+                    "config": {},
+                }
             ],
             dependencies=[
                 {
@@ -196,7 +256,9 @@ class TestDAGResolver:
         assert result.is_valid is False
         assert "cannot depend on itself" in result.error_message
 
-    def test_create_execution_plan_linear(self, dag_resolver, simple_linear_workflow):
+    def test_create_execution_plan_linear(
+        self, dag_resolver, simple_linear_workflow
+    ):
         """Test execution plan creation for linear workflow"""
 
         plan = dag_resolver.create_execution_plan(simple_linear_workflow)
@@ -216,7 +278,9 @@ class TestDAGResolver:
         # Verify dependency map
         assert plan.dependency_map == {"B": ["A"], "C": ["B"]}
 
-    def test_create_execution_plan_parallel(self, dag_resolver, parallel_workflow):
+    def test_create_execution_plan_parallel(
+        self, dag_resolver, parallel_workflow
+    ):
         """Test execution plan creation for parallel workflow"""
 
         plan = dag_resolver.create_execution_plan(parallel_workflow)
@@ -224,13 +288,18 @@ class TestDAGResolver:
         # Verify execution order
         assert len(plan.execution_order) == 3  # Three groups
         assert plan.execution_order[0] == ["A"]  # A runs first
-        assert set(plan.execution_order[1]) == {"B", "C"}  # B and C run in parallel
+        assert set(plan.execution_order[1]) == {
+            "B",
+            "C",
+        }  # B and C run in parallel
         assert plan.execution_order[2] == ["D"]  # D runs after B and C
 
         # Verify dependency map
         assert plan.dependency_map == {"B": ["A"], "C": ["A"], "D": ["B", "C"]}
 
-    def test_create_execution_plan_invalid_dag(self, dag_resolver, circular_workflow):
+    def test_create_execution_plan_invalid_dag(
+        self, dag_resolver, circular_workflow
+    ):
         """Test execution plan creation with invalid DAG"""
 
         with pytest.raises(InvalidDAGError):
@@ -265,7 +334,9 @@ class TestDAGResolver:
         with pytest.raises(
             CircularDependencyError, match="Circular dependency detected"
         ):
-            dag_resolver._detect_circular_dependencies(task_ids, dependency_map)
+            dag_resolver._detect_circular_dependencies(
+                task_ids, dependency_map
+            )
 
     def test_detect_circular_dependencies_no_cycle(self, dag_resolver):
         """Test circular dependency detection with no cycle"""
@@ -323,7 +394,9 @@ class TestDAGResolver:
         task_ids = {"A", "B", "C"}
         dependency_map = {"B": ["A"], "C": ["B"]}
 
-        result = dag_resolver._has_disconnected_components(task_ids, dependency_map)
+        result = dag_resolver._has_disconnected_components(
+            task_ids, dependency_map
+        )
 
         assert result is False
 
@@ -333,7 +406,9 @@ class TestDAGResolver:
         task_ids = {"A", "B", "C", "D"}
         dependency_map = {"B": ["A"]}  # C and D are disconnected
 
-        result = dag_resolver._has_disconnected_components(task_ids, dependency_map)
+        result = dag_resolver._has_disconnected_components(
+            task_ids, dependency_map
+        )
 
         assert result is True
 
@@ -343,17 +418,23 @@ class TestDAGResolver:
         task_ids = {"A"}
         dependency_map = {}
 
-        result = dag_resolver._has_disconnected_components(task_ids, dependency_map)
+        result = dag_resolver._has_disconnected_components(
+            task_ids, dependency_map
+        )
 
         assert result is False
 
     def test_can_task_execute_success_condition(self, dag_resolver):
         """Test task execution permission with success condition"""
 
-        dependency_results = {"task_a": {"status": "COMPLETED", "success": True}}
+        dependency_results = {
+            "task_a": {"status": "COMPLETED", "success": True}
+        }
 
         dependencies = [
-            DependencyDefinition("task_b", "task_a", DependencyCondition.SUCCESS)
+            DependencyDefinition(
+                "task_b", "task_a", DependencyCondition.SUCCESS
+            )
         ]
 
         result = dag_resolver.can_task_execute(
@@ -368,7 +449,9 @@ class TestDAGResolver:
         dependency_results = {"task_a": {"status": "FAILED", "success": False}}
 
         dependencies = [
-            DependencyDefinition("task_b", "task_a", DependencyCondition.FAILURE)
+            DependencyDefinition(
+                "task_b", "task_a", DependencyCondition.FAILURE
+            )
         ]
 
         result = dag_resolver.can_task_execute(
@@ -383,7 +466,9 @@ class TestDAGResolver:
         dependency_results = {"task_a": {"status": "FAILED", "success": False}}
 
         dependencies = [
-            DependencyDefinition("task_b", "task_a", DependencyCondition.COMPLETION)
+            DependencyDefinition(
+                "task_b", "task_a", DependencyCondition.COMPLETION
+            )
         ]
 
         result = dag_resolver.can_task_execute(
@@ -398,7 +483,9 @@ class TestDAGResolver:
         dependency_results = {"task_a": {"status": "FAILED", "success": False}}
 
         dependencies = [
-            DependencyDefinition("task_b", "task_a", DependencyCondition.SUCCESS)
+            DependencyDefinition(
+                "task_b", "task_a", DependencyCondition.SUCCESS
+            )
         ]
 
         result = dag_resolver.can_task_execute(
@@ -488,7 +575,11 @@ class TestStandardDependencyChecker:
         result = {"status": "COMPLETED", "success": True, "error_count": 0}
 
         can_execute = dependency_checker.can_execute(
-            "task_b", "task_a", result, DependencyCondition.CUSTOM, "{error_count} == 0"
+            "task_b",
+            "task_a",
+            result,
+            DependencyCondition.CUSTOM,
+            "{error_count} == 0",
         )
 
         assert can_execute is True
@@ -515,7 +606,11 @@ class TestStandardDependencyChecker:
 
         # Should handle invalid expression gracefully
         can_execute = dependency_checker.can_execute(
-            "task_b", "task_a", result, DependencyCondition.CUSTOM, "invalid syntax {{"
+            "task_b",
+            "task_a",
+            result,
+            DependencyCondition.CUSTOM,
+            "invalid syntax {{",
         )
 
         assert can_execute is False

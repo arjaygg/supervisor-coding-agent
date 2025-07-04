@@ -49,16 +49,22 @@ class TestMetricsCollector:
         return task
 
     @pytest.mark.asyncio
-    async def test_collect_task_metrics_success(self, metrics_collector, mock_task):
+    async def test_collect_task_metrics_success(
+        self, metrics_collector, mock_task
+    ):
         """Test successful task metrics collection"""
 
-        with patch.object(metrics_collector, "session_factory") as mock_session:
+        with patch.object(
+            metrics_collector, "session_factory"
+        ) as mock_session:
             mock_db = Mock()
             mock_session.return_value = mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = (
                 mock_task
             )
-            mock_db.query.return_value.params.return_value.first.return_value = None
+            mock_db.query.return_value.params.return_value.first.return_value = (
+                None
+            )
 
             metrics = await metrics_collector.collect_task_metrics(1)
 
@@ -72,10 +78,14 @@ class TestMetricsCollector:
     async def test_collect_task_metrics_not_found(self, metrics_collector):
         """Test task metrics collection for non-existent task"""
 
-        with patch.object(metrics_collector, "session_factory") as mock_session:
+        with patch.object(
+            metrics_collector, "session_factory"
+        ) as mock_session:
             mock_db = Mock()
             mock_session.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = None
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                None
+            )
 
             with pytest.raises(ValueError, match="Task 999 not found"):
                 await metrics_collector.collect_task_metrics(999)
@@ -103,7 +113,9 @@ class TestMetricsCollector:
                             []
                         )
 
-                        metrics = await metrics_collector.collect_system_metrics()
+                        metrics = (
+                            await metrics_collector.collect_system_metrics()
+                        )
 
                         assert isinstance(metrics, SystemMetrics)
                         assert metrics.cpu_usage_percent == 45.5
@@ -115,7 +127,9 @@ class TestMetricsCollector:
     async def test_store_metric(self, metrics_collector):
         """Test metric storage"""
 
-        with patch.object(metrics_collector, "session_factory") as mock_session:
+        with patch.object(
+            metrics_collector, "session_factory"
+        ) as mock_session:
             mock_db = Mock()
             mock_session.return_value = mock_db
 
@@ -133,7 +147,9 @@ class TestMetricsCollector:
     async def test_store_string_metric(self, metrics_collector):
         """Test storing string-valued metrics"""
 
-        with patch.object(metrics_collector, "session_factory") as mock_session:
+        with patch.object(
+            metrics_collector, "session_factory"
+        ) as mock_session:
             mock_db = Mock()
             mock_session.return_value = mock_db
 
@@ -179,7 +195,9 @@ class TestAnalyticsEngine:
             mock_session.return_value = mock_db
 
             # Mock cache miss
-            mock_db.query.return_value.filter.return_value.first.return_value = None
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                None
+            )
 
             # Mock query execution
             with patch.object(
@@ -190,14 +208,18 @@ class TestAnalyticsEngine:
                 with patch.object(
                     analytics_engine, "_cache_result", new_callable=AsyncMock
                 ):
-                    result = await analytics_engine.process_metrics(sample_query)
+                    result = await analytics_engine.process_metrics(
+                        sample_query
+                    )
 
                     assert result.cache_hit is False
                     assert result.total_points == 0
                     assert result.processing_time_ms >= 0
 
     @pytest.mark.asyncio
-    async def test_process_metrics_with_cache_hit(self, analytics_engine, sample_query):
+    async def test_process_metrics_with_cache_hit(
+        self, analytics_engine, sample_query
+    ):
         """Test metrics processing with cache hit"""
 
         with patch.object(analytics_engine, "session_factory") as mock_session:
@@ -244,8 +266,12 @@ class TestAnalyticsEngine:
             insights = await analytics_engine.generate_insights(TimeRange.DAY)
 
             assert len(insights) >= 1
-            assert any("High Error Rate" in insight.title for insight in insights)
-            assert any("High CPU Usage" in insight.title for insight in insights)
+            assert any(
+                "High Error Rate" in insight.title for insight in insights
+            )
+            assert any(
+                "High CPU Usage" in insight.title for insight in insights
+            )
 
     @pytest.mark.asyncio
     async def test_predict_trends_insufficient_data(self, analytics_engine):
@@ -330,11 +356,19 @@ class TestAnalyticsIntegration:
         engine = AnalyticsEngine()
 
         # Mock database operations
-        with patch.object(collector, "session_factory") as mock_collector_session:
-            with patch.object(engine, "session_factory") as mock_engine_session:
+        with patch.object(
+            collector, "session_factory"
+        ) as mock_collector_session:
+            with patch.object(
+                engine, "session_factory"
+            ) as mock_engine_session:
                 mock_db = Mock()
-                mock_collector_session.return_value.__aenter__.return_value = mock_db
-                mock_engine_session.return_value.__aenter__.return_value = mock_db
+                mock_collector_session.return_value.__aenter__.return_value = (
+                    mock_db
+                )
+                mock_engine_session.return_value.__aenter__.return_value = (
+                    mock_db
+                )
 
                 # Test metric storage
                 await collector.store_metric(
@@ -387,12 +421,16 @@ class TestAnalyticsIntegration:
                     minutes=task_id
                 )
                 mock_task.updated_at = datetime.now(timezone.utc)
-                mock_task.error_message = "Test error" if task_id == 5 else None
+                mock_task.error_message = (
+                    "Test error" if task_id == 5 else None
+                )
 
                 mock_db.query.return_value.filter.return_value.first.return_value = (
                     mock_task
                 )
-                mock_db.query.return_value.params.return_value.first.return_value = None
+                mock_db.query.return_value.params.return_value.first.return_value = (
+                    None
+                )
 
                 await collector.collect_and_store_task_metrics(task_id)
 
@@ -416,7 +454,9 @@ class TestAnalyticsIntegration:
         with patch.object(engine, "session_factory") as mock_session:
             mock_db = Mock()
             mock_session.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = None
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                None
+            )
 
             # This should not raise an exception but handle gracefully
             try:
@@ -424,7 +464,9 @@ class TestAnalyticsIntegration:
                 assert result is not None
             except Exception as e:
                 # If an exception occurs, it should be a handled analytics exception
-                assert "analytics" in str(e).lower() or "query" in str(e).lower()
+                assert (
+                    "analytics" in str(e).lower() or "query" in str(e).lower()
+                )
 
 
 class TestAnalyticsModels:

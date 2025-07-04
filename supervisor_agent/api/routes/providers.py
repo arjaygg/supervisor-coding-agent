@@ -7,12 +7,10 @@ Provides endpoints for managing and monitoring the multi-provider system.
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
 
 from supervisor_agent.core.multi_provider_service import multi_provider_service
-from supervisor_agent.db.database import get_db
 from supervisor_agent.db.enums import TaskType
 from supervisor_agent.db.models import Task
 
@@ -24,11 +22,15 @@ router = APIRouter(prefix="/api/v1/providers", tags=["providers"])
 class ProviderConfig(BaseModel):
     """Provider configuration model"""
 
-    type: str = Field(..., description="Provider type (claude_cli, local_mock, etc.)")
+    type: str = Field(
+        ..., description="Provider type (claude_cli, local_mock, etc.)"
+    )
     config: Dict[str, Any] = Field(
         default_factory=dict, description="Provider-specific configuration"
     )
-    priority: Optional[int] = Field(None, description="Provider priority (1-10)")
+    priority: Optional[int] = Field(
+        None, description="Provider priority (1-10)"
+    )
     enabled: bool = Field(True, description="Whether provider is enabled")
 
 
@@ -40,7 +42,9 @@ class TaskExecutionRequest(BaseModel):
     routing_strategy: Optional[str] = Field(
         None, description="Routing strategy (optimal, fastest, cheapest, etc.)"
     )
-    context: Optional[Dict[str, Any]] = Field(None, description="Execution context")
+    context: Optional[Dict[str, Any]] = Field(
+        None, description="Execution context"
+    )
     shared_memory: Optional[Dict[str, Any]] = Field(
         None, description="Shared memory between tasks"
     )
@@ -63,7 +67,9 @@ class ProviderRecommendationRequest(BaseModel):
 
     task_type: str = Field(..., description="Type of task")
     payload: Dict[str, Any] = Field(..., description="Task payload")
-    context: Optional[Dict[str, Any]] = Field(None, description="Execution context")
+    context: Optional[Dict[str, Any]] = Field(
+        None, description="Execution context"
+    )
 
 
 @router.get("/status")
@@ -73,7 +79,10 @@ async def get_provider_status():
     """
     try:
         if not multi_provider_service.is_enabled():
-            return {"enabled": False, "message": "Multi-provider system is not enabled"}
+            return {
+                "enabled": False,
+                "message": "Multi-provider system is not enabled",
+            }
 
         status = await multi_provider_service.get_provider_status()
         status["enabled"] = True
@@ -116,7 +125,9 @@ async def execute_task(request: TaskExecutionRequest):
 
         # Create task object
         task = Task(
-            type=TaskType(request.task_type), payload=request.payload, status="pending"
+            type=TaskType(request.task_type),
+            payload=request.payload,
+            status="pending",
         )
 
         # Mock agent processor for demonstration
@@ -196,11 +207,15 @@ async def get_provider_recommendations(request: ProviderRecommendationRequest):
 
         # Create task object for recommendation
         task = Task(
-            type=TaskType(request.task_type), payload=request.payload, status="pending"
+            type=TaskType(request.task_type),
+            payload=request.payload,
+            status="pending",
         )
 
-        recommendations = await multi_provider_service.get_provider_recommendations(
-            task=task, context=request.context
+        recommendations = (
+            await multi_provider_service.get_provider_recommendations(
+                task=task, context=request.context
+            )
         )
 
         return {
@@ -226,11 +241,15 @@ async def register_provider(provider_id: str, config: ProviderConfig):
             )
 
         success = await multi_provider_service.register_provider(
-            provider_id=provider_id, provider_type=config.type, config=config.config
+            provider_id=provider_id,
+            provider_type=config.type,
+            config=config.config,
         )
 
         if not success:
-            raise HTTPException(status_code=400, detail="Failed to register provider")
+            raise HTTPException(
+                status_code=400, detail="Failed to register provider"
+            )
 
         return {
             "success": True,
@@ -260,7 +279,8 @@ async def unregister_provider(provider_id: str):
 
         if not success:
             raise HTTPException(
-                status_code=404, detail="Provider not found or failed to unregister"
+                status_code=404,
+                detail="Provider not found or failed to unregister",
             )
 
         return {
@@ -304,7 +324,9 @@ async def get_provider_health(provider_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting provider health for {provider_id}: {str(e)}")
+        logger.error(
+            f"Error getting provider health for {provider_id}: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -331,9 +353,9 @@ async def get_provider_usage(
             "usage_data": {
                 "requests_today": analytics.get("total_requests_today", 0),
                 "cost_today": analytics.get("total_cost_today", 0.0),
-                "quota_utilization": analytics.get("quota_utilization", {}).get(
-                    provider_id, 0.0
-                ),
+                "quota_utilization": analytics.get(
+                    "quota_utilization", {}
+                ).get(provider_id, 0.0),
             },
             "period_days": days,
         }
@@ -343,7 +365,9 @@ async def get_provider_usage(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting provider usage for {provider_id}: {str(e)}")
+        logger.error(
+            f"Error getting provider usage for {provider_id}: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -352,7 +376,9 @@ async def list_providers(
     include_health: bool = Query(
         False, description="Include health status in response"
     ),
-    provider_type: Optional[str] = Query(None, description="Filter by provider type"),
+    provider_type: Optional[str] = Query(
+        None, description="Filter by provider type"
+    ),
 ):
     """
     List all registered providers

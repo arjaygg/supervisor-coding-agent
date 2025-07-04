@@ -17,7 +17,10 @@ class TestClaudeCliIntegration:
         # Test with mock environment
         with patch.dict(
             os.environ,
-            {"CLAUDE_CLI_PATH": "mock", "CLAUDE_API_KEYS": "mock-key-1,mock-key-2"},
+            {
+                "CLAUDE_CLI_PATH": "mock",
+                "CLAUDE_API_KEYS": "mock-key-1,mock-key-2",
+            },
         ):
             from supervisor_agent.config import create_settings
 

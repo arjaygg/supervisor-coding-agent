@@ -21,6 +21,8 @@ class ResourceConflictResolver:
         """Coordinates resource reservation. Placeholder."""
         return {"reservation_status": "success"}
 
-    async def handle_resource_preemption(self, high_priority_task: Task) -> Dict:
+    async def handle_resource_preemption(
+        self, high_priority_task: Task
+    ) -> Dict:
         """Handles resource preemption. Placeholder."""
         return {"preemption_status": "success"}

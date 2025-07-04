@@ -93,7 +93,9 @@ class AgentConfiguration:
     max_concurrent_tasks: int = 3
 
     @classmethod
-    def from_claude_response(cls, response: str, agent_id: str) -> "AgentConfiguration":
+    def from_claude_response(
+        cls, response: str, agent_id: str
+    ) -> "AgentConfiguration":
         """Create agent configuration from Claude response"""
         try:
             data = json.loads(response)
@@ -105,7 +107,9 @@ class AgentConfiguration:
                     capability_name=cap_data.get("capability_name", "generic"),
                     proficiency_level=cap_data.get("proficiency_level", 0.5),
                     tools_required=cap_data.get("tools_required", []),
-                    estimated_throughput=cap_data.get("estimated_throughput", 1.0),
+                    estimated_throughput=cap_data.get(
+                        "estimated_throughput", 1.0
+                    ),
                     quality_score=cap_data.get("quality_score", 0.7),
                 )
                 capabilities.append(capability)
@@ -117,7 +121,9 @@ class AgentConfiguration:
                 ),
                 capabilities=capabilities,
                 resource_limits=data.get("resource_limits", {}),
-                communication_preferences=data.get("communication_preferences", {}),
+                communication_preferences=data.get(
+                    "communication_preferences", {}
+                ),
                 collaboration_rules=data.get("collaboration_rules", {}),
                 performance_targets=data.get("performance_targets", {}),
                 tools_access=data.get("tools_access", []),
@@ -147,7 +153,10 @@ class AgentConfiguration:
             resource_limits={"memory_gb": 4, "cpu_cores": 2},
             communication_preferences={"protocol": "async", "batch_size": 10},
             collaboration_rules={"max_handoffs": 3, "peer_review": True},
-            performance_targets={"tasks_per_hour": 2, "quality_threshold": 0.8},
+            performance_targets={
+                "tasks_per_hour": 2,
+                "quality_threshold": 0.8,
+            },
             tools_access=["basic_tools"],
         )
 
@@ -175,12 +184,16 @@ class SwarmAgent:
             return False
 
         # Check capability match
-        required_capabilities = task_requirements.get("required_capabilities", [])
+        required_capabilities = task_requirements.get(
+            "required_capabilities", []
+        )
         agent_capabilities = [
             cap.capability_name for cap in self.configuration.capabilities
         ]
 
-        return any(req_cap in agent_capabilities for req_cap in required_capabilities)
+        return any(
+            req_cap in agent_capabilities for req_cap in required_capabilities
+        )
 
     def get_capability_score(self, capability_name: str) -> float:
         """Get proficiency score for a specific capability"""
@@ -203,7 +216,9 @@ class CoordinationEvent:
     task_context: Dict[str, Any]
     intermediate_results: Dict[str, Any]
     priority: int = 5  # 1-10, higher is more urgent
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -246,13 +261,17 @@ class CoordinationResponse:
                 recommended_actions=data.get("recommended_actions", []),
                 resource_allocations=data.get("resource_allocations", {}),
                 success_probability=data.get("success_probability", 0.5),
-                estimated_completion_time=data.get("estimated_completion_time", 1.0),
+                estimated_completion_time=data.get(
+                    "estimated_completion_time", 1.0
+                ),
             )
         except (json.JSONDecodeError, KeyError):
             return cls._create_fallback_response(event_id)
 
     @classmethod
-    def _create_fallback_response(cls, event_id: str) -> "CoordinationResponse":
+    def _create_fallback_response(
+        cls, event_id: str
+    ) -> "CoordinationResponse":
         """Create fallback coordination response"""
         return cls(
             response_id=str(uuid.uuid4()),
@@ -276,7 +295,9 @@ class SwarmExecution:
     coordinator: "IntelligentSwarmCoordinator"
     execution_state: Dict[str, Any] = field(default_factory=dict)
     performance_metrics: Dict[str, Any] = field(default_factory=dict)
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 class CommunicationNetwork:
@@ -307,7 +328,9 @@ class CommunicationNetwork:
                 }
             )
 
-    async def broadcast_message(self, from_agent: str, message: Dict[str, Any]):
+    async def broadcast_message(
+        self, from_agent: str, message: Dict[str, Any]
+    ):
         """Broadcast message to all agents"""
         await self.broadcast_queue.put(
             {
@@ -336,7 +359,9 @@ class CommunicationNetwork:
         while not self.broadcast_queue.empty():
             try:
                 message = self.broadcast_queue.get_nowait()
-                if message["from"] != agent_id:  # Don't send own broadcasts back
+                if (
+                    message["from"] != agent_id
+                ):  # Don't send own broadcasts back
                     broadcast_messages.append(message)
                 temp_queue.put_nowait(message)
             except asyncio.QueueEmpty:
@@ -362,7 +387,9 @@ class DynamicAgentPool:
         self.agent_types: Dict[AgentSpecialization, int] = {}
         self.performance_tracker = AgentPerformanceTracker()
 
-    async def create_agent(self, configuration: AgentConfiguration) -> SwarmAgent:
+    async def create_agent(
+        self, configuration: AgentConfiguration
+    ) -> SwarmAgent:
         """Create a new agent with the given configuration"""
         agent = SwarmAgent(
             agent_id=configuration.agent_id,
@@ -401,7 +428,9 @@ class DynamicAgentPool:
         score = 0.0
 
         # Capability match score
-        required_capabilities = task_requirements.get("required_capabilities", [])
+        required_capabilities = task_requirements.get(
+            "required_capabilities", []
+        )
         for req_cap in required_capabilities:
             capability_score = agent.get_capability_score(req_cap)
             score += capability_score
@@ -411,7 +440,9 @@ class DynamicAgentPool:
         score -= workload_penalty
 
         # Performance bonus
-        performance_bonus = agent.performance_metrics.get("success_rate", 0.5) * 0.2
+        performance_bonus = (
+            agent.performance_metrics.get("success_rate", 0.5) * 0.2
+        )
         score += performance_bonus
 
         return score
@@ -432,7 +463,9 @@ class AgentPerformanceTracker:
         # TODO: Implement performance pattern analysis
         return {}
 
-    async def record_agent_performance(self, agent_id: str, metrics: Dict[str, Any]):
+    async def record_agent_performance(
+        self, agent_id: str, metrics: Dict[str, Any]
+    ):
         """Record performance metrics for an agent"""
         if agent_id not in self.performance_data:
             self.performance_data[agent_id] = {
@@ -456,9 +489,9 @@ class AgentPerformanceTracker:
             old_avg = data["average_completion_time"]
             old_count = data["total_tasks"] - 1
             new_time = metrics["completion_time"]
-            data["average_completion_time"] = (old_avg * old_count + new_time) / data[
-                "total_tasks"
-            ]
+            data["average_completion_time"] = (
+                old_avg * old_count + new_time
+            ) / data["total_tasks"]
 
         if "quality_score" in metrics:
             data["quality_scores"].append(metrics["quality_score"])
@@ -473,7 +506,9 @@ class AIConflictResolver:
     def __init__(self, claude_agent: ClaudeAgentWrapper):
         self.claude_agent = claude_agent
 
-    async def resolve_conflict(self, event: CoordinationEvent) -> CoordinationResponse:
+    async def resolve_conflict(
+        self, event: CoordinationEvent
+    ) -> CoordinationResponse:
         """Resolve conflicts between agents using AI"""
 
         conflict_prompt = f"""
@@ -516,7 +551,9 @@ class IntelligentSwarmCoordinator:
     and real-time optimization of swarm execution.
     """
 
-    def __init__(self, claude_agent: ClaudeAgentWrapper, agent_pool: DynamicAgentPool):
+    def __init__(
+        self, claude_agent: ClaudeAgentWrapper, agent_pool: DynamicAgentPool
+    ):
         self.claude_agent = claude_agent
         self.agent_pool = agent_pool
         self.communication_hub = None  # Set during execution
@@ -577,7 +614,9 @@ class IntelligentSwarmCoordinator:
 
         except Exception as e:
             self.logger.error(
-                "Swarm orchestration failed", execution_id=execution_id, error=str(e)
+                "Swarm orchestration failed",
+                execution_id=execution_id,
+                error=str(e),
             )
             raise
 
@@ -594,13 +633,27 @@ class IntelligentSwarmCoordinator:
 
         if coordination_event.event_type == CoordinationEventType.TASK_HANDOFF:
             return await self._handle_intelligent_handoff(coordination_event)
-        elif coordination_event.event_type == CoordinationEventType.CONFLICT_RESOLUTION:
-            return await self.conflict_resolver.resolve_conflict(coordination_event)
-        elif coordination_event.event_type == CoordinationEventType.RESOURCE_CONTENTION:
+        elif (
+            coordination_event.event_type
+            == CoordinationEventType.CONFLICT_RESOLUTION
+        ):
+            return await self.conflict_resolver.resolve_conflict(
+                coordination_event
+            )
+        elif (
+            coordination_event.event_type
+            == CoordinationEventType.RESOURCE_CONTENTION
+        ):
             return await self._optimize_resource_allocation(coordination_event)
-        elif coordination_event.event_type == CoordinationEventType.QUALITY_CONCERN:
+        elif (
+            coordination_event.event_type
+            == CoordinationEventType.QUALITY_CONCERN
+        ):
             return await self._handle_quality_escalation(coordination_event)
-        elif coordination_event.event_type == CoordinationEventType.PERFORMANCE_ISSUE:
+        elif (
+            coordination_event.event_type
+            == CoordinationEventType.PERFORMANCE_ISSUE
+        ):
             return await self._handle_performance_issue(coordination_event)
         else:
             return await self._handle_generic_coordination(coordination_event)
@@ -652,7 +705,10 @@ class IntelligentSwarmCoordinator:
 
         result = await self.claude_agent.execute_task(
             {"type": "agent_configuration", "prompt": config_prompt},
-            shared_memory={"workflow": workflow_def.to_dict(), "context": context},
+            shared_memory={
+                "workflow": workflow_def.to_dict(),
+                "context": context,
+            },
         )
 
         return await self._parse_agent_config_response(result["result"])
@@ -712,7 +768,8 @@ class IntelligentSwarmCoordinator:
     async def _coordinate_execution(self, execution: SwarmExecution):
         """Coordinate the execution of a swarm"""
         self.logger.info(
-            "Starting execution coordination", execution_id=execution.execution_id
+            "Starting execution coordination",
+            execution_id=execution.execution_id,
         )
 
         try:
@@ -731,7 +788,8 @@ class IntelligentSwarmCoordinator:
                 await asyncio.sleep(1.0)
 
             self.logger.info(
-                "Execution coordination completed", execution_id=execution.execution_id
+                "Execution coordination completed",
+                execution_id=execution.execution_id,
             )
 
         except Exception as e:

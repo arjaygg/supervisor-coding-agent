@@ -10,7 +10,9 @@ import pytest
 
 from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.db.models import Task, TaskType
-from supervisor_agent.orchestration.agent_specialization_engine import AgentSpecialty
+from supervisor_agent.orchestration.agent_specialization_engine import (
+    AgentSpecialty,
+)
 from supervisor_agent.orchestration.multi_provider_coordinator import (
     MultiProviderCoordinator,
 )
@@ -28,7 +30,10 @@ from supervisor_agent.orchestration.task_distribution_engine import (
     TaskSplit,
     create_task_distribution_engine,
 )
-from supervisor_agent.providers.base_provider import ProviderType, TaskCapability
+from supervisor_agent.providers.base_provider import (
+    ProviderType,
+    TaskCapability,
+)
 
 
 class TestIntelligentTaskSplitter:
@@ -75,12 +80,14 @@ class TestIntelligentTaskSplitter:
     def test_calculate_complexity_score(self, task_splitter):
         """Test complexity score calculation."""
         simple_content = "show the status"
-        complex_content = (
-            "analyze and optimize the system architecture then integrate with databases"
-        )
+        complex_content = "analyze and optimize the system architecture then integrate with databases"
 
-        simple_score = task_splitter._calculate_complexity_score(simple_content)
-        complex_score = task_splitter._calculate_complexity_score(complex_content)
+        simple_score = task_splitter._calculate_complexity_score(
+            simple_content
+        )
+        complex_score = task_splitter._calculate_complexity_score(
+            complex_content
+        )
 
         assert simple_score < complex_score
         assert simple_score >= 0
@@ -88,9 +95,7 @@ class TestIntelligentTaskSplitter:
 
     def test_estimate_steps(self, task_splitter):
         """Test step estimation."""
-        content_with_steps = (
-            "First, analyze the data. Then, process the results. Finally, validate."
-        )
+        content_with_steps = "First, analyze the data. Then, process the results. Finally, validate."
         content_simple = "show status"
 
         steps_complex = task_splitter._estimate_steps(content_with_steps)
@@ -118,17 +123,20 @@ class TestIntelligentTaskSplitter:
         """Test complexity level determination."""
         # Test simple task
         assert (
-            task_splitter._determine_complexity_level(0.3, 2) == TaskComplexity.SIMPLE
+            task_splitter._determine_complexity_level(0.3, 2)
+            == TaskComplexity.SIMPLE
         )
 
         # Test moderate task
         assert (
-            task_splitter._determine_complexity_level(0.8, 4) == TaskComplexity.MODERATE
+            task_splitter._determine_complexity_level(0.8, 4)
+            == TaskComplexity.MODERATE
         )
 
         # Test complex task
         assert (
-            task_splitter._determine_complexity_level(1.5, 10) == TaskComplexity.COMPLEX
+            task_splitter._determine_complexity_level(1.5, 10)
+            == TaskComplexity.COMPLEX
         )
 
         # Test highly complex task
@@ -147,7 +155,9 @@ class TestIntelligentTaskSplitter:
 
         # Complex task with many dependencies should use hierarchical splitting
         strategy = task_splitter._recommend_splitting_strategy(
-            TaskComplexity.COMPLEX, "complex task", ["dep1", "dep2", "dep3", "dep4"]
+            TaskComplexity.COMPLEX,
+            "complex task",
+            ["dep1", "dep2", "dep3", "dep4"],
         )
         assert strategy == SplittingStrategy.HIERARCHICAL_SPLIT
 
@@ -162,7 +172,9 @@ class TestIntelligentTaskSplitter:
         assert analysis.confidence_score > 0
         assert isinstance(analysis.reasoning, str)
 
-    def test_analyze_task_complexity_complex(self, task_splitter, complex_task):
+    def test_analyze_task_complexity_complex(
+        self, task_splitter, complex_task
+    ):
         """Test complexity analysis for complex task."""
         analysis = task_splitter.analyze_task_complexity(complex_task)
 
@@ -235,7 +247,9 @@ class TestDependencyManager:
             ),
         ]
 
-    def test_build_dependency_graph(self, dependency_manager, sample_task_splits):
+    def test_build_dependency_graph(
+        self, dependency_manager, sample_task_splits
+    ):
         """Test dependency graph building."""
         graph = dependency_manager.build_dependency_graph(sample_task_splits)
 
@@ -247,16 +261,32 @@ class TestDependencyManager:
 
     def test_circular_dependency_detection(self, dependency_manager):
         """Test circular dependency detection."""
-        edges_with_cycle = {"A": ["B"], "B": ["C"], "C": ["A"]}  # Creates cycle
+        edges_with_cycle = {
+            "A": ["B"],
+            "B": ["C"],
+            "C": ["A"],
+        }  # Creates cycle
 
         edges_no_cycle = {"A": ["B"], "B": ["C"], "C": []}
 
-        assert dependency_manager._has_circular_dependencies(edges_with_cycle) is True
-        assert dependency_manager._has_circular_dependencies(edges_no_cycle) is False
+        assert (
+            dependency_manager._has_circular_dependencies(edges_with_cycle)
+            is True
+        )
+        assert (
+            dependency_manager._has_circular_dependencies(edges_no_cycle)
+            is False
+        )
 
-    def test_execution_levels_calculation(self, dependency_manager, sample_task_splits):
+    def test_execution_levels_calculation(
+        self, dependency_manager, sample_task_splits
+    ):
         """Test execution levels calculation."""
-        edges = {"task_1_0": [], "task_1_1": ["task_1_0"], "task_1_2": ["task_1_1"]}
+        edges = {
+            "task_1_0": [],
+            "task_1_1": ["task_1_0"],
+            "task_1_2": ["task_1_1"],
+        }
 
         levels = dependency_manager._calculate_execution_levels(
             sample_task_splits, edges
@@ -267,7 +297,9 @@ class TestDependencyManager:
         assert levels[1] == ["task_1_1"]
         assert levels[2] == ["task_1_2"]
 
-    def test_critical_path_identification(self, dependency_manager, sample_task_splits):
+    def test_critical_path_identification(
+        self, dependency_manager, sample_task_splits
+    ):
         """Test critical path identification."""
         graph = dependency_manager.build_dependency_graph(sample_task_splits)
 
@@ -280,15 +312,19 @@ class TestDependencyManager:
         parallel_levels = [["A", "B", "C"]]
         parallel_tasks = [Mock(split_id=f"task_{i}") for i in range(3)]
 
-        potential_high = dependency_manager._calculate_parallelization_potential(
-            parallel_levels, parallel_tasks
+        potential_high = (
+            dependency_manager._calculate_parallelization_potential(
+                parallel_levels, parallel_tasks
+            )
         )
 
         # All tasks must run sequentially
         sequential_levels = [["A"], ["B"], ["C"]]
 
-        potential_low = dependency_manager._calculate_parallelization_potential(
-            sequential_levels, parallel_tasks
+        potential_low = (
+            dependency_manager._calculate_parallelization_potential(
+                sequential_levels, parallel_tasks
+            )
         )
 
         assert potential_high > potential_low
@@ -342,10 +378,14 @@ class TestTaskDistributionEngine:
         )
 
     @pytest.mark.asyncio
-    async def test_distribute_task_simple(self, distribution_engine, sample_task):
+    async def test_distribute_task_simple(
+        self, distribution_engine, sample_task
+    ):
         """Test task distribution for simple case."""
         # Mock task loading
-        with patch.object(distribution_engine, "_load_task", return_value=sample_task):
+        with patch.object(
+            distribution_engine, "_load_task", return_value=sample_task
+        ):
             result = await distribution_engine.distribute_task(
                 sample_task, strategy=DistributionStrategy.DEPENDENCY_AWARE
             )
@@ -385,13 +425,17 @@ class TestTaskDistributionEngine:
         assert "failed" in result.error_message.lower()
 
     @pytest.mark.asyncio
-    async def test_strategy_optimization(self, distribution_engine, sample_task):
+    async def test_strategy_optimization(
+        self, distribution_engine, sample_task
+    ):
         """Test distribution strategy optimization."""
         # Test with different constraints
         constraints_cost = {"optimize_cost": True}
         constraints_performance = {"optimize_performance": True}
 
-        with patch.object(distribution_engine, "_load_task", return_value=sample_task):
+        with patch.object(
+            distribution_engine, "_load_task", return_value=sample_task
+        ):
             result_cost = await distribution_engine.distribute_task(
                 sample_task,
                 strategy=DistributionStrategy.DEPENDENCY_AWARE,
@@ -416,7 +460,9 @@ class TestTaskDistributionEngine:
         """Test provider assignment logic."""
         preferred_providers = [ProviderType.CLAUDE_CLI]
 
-        with patch.object(distribution_engine, "_load_task", return_value=sample_task):
+        with patch.object(
+            distribution_engine, "_load_task", return_value=sample_task
+        ):
             result = await distribution_engine.distribute_task(
                 sample_task, providers=preferred_providers
             )
@@ -425,7 +471,9 @@ class TestTaskDistributionEngine:
         assert result.execution_plan is not None
 
         # Check that preferred providers are used
-        assigned_providers = set(result.execution_plan.provider_assignments.values())
+        assigned_providers = set(
+            result.execution_plan.provider_assignments.values()
+        )
         assert ProviderType.CLAUDE_CLI in assigned_providers
 
     def test_resource_allocation_calculation(self, distribution_engine):
@@ -494,12 +542,16 @@ class TestTaskDistributionEngine:
             resource_allocation={},
         )
 
-        validation = await distribution_engine._validate_execution_plan(execution_plan)
+        validation = await distribution_engine._validate_execution_plan(
+            execution_plan
+        )
 
         assert "valid" in validation
         assert "warnings" in validation
         assert "recommendations" in validation
-        assert len(validation["warnings"]) > 0  # Should warn about high cost and time
+        assert (
+            len(validation["warnings"]) > 0
+        )  # Should warn about high cost and time
 
     def test_get_execution_plan(self, distribution_engine):
         """Test execution plan retrieval."""
@@ -524,7 +576,9 @@ class TestTaskDistributionEngine:
         assert retrieved_result == mock_result
 
         # Test non-existent result
-        non_existent = distribution_engine.get_distribution_result("non_existent")
+        non_existent = distribution_engine.get_distribution_result(
+            "non_existent"
+        )
         assert non_existent is None
 
 
@@ -617,7 +671,9 @@ class TestTaskSplitGeneration:
             assert split.parallelizable is True
             assert len(split.dependencies) == 0
 
-    def test_hierarchical_split_strategy(self, distribution_engine, sample_task):
+    def test_hierarchical_split_strategy(
+        self, distribution_engine, sample_task
+    ):
         """Test hierarchical split strategy."""
         analysis = ComplexityAnalysis(
             complexity_level=TaskComplexity.COMPLEX,
@@ -634,7 +690,9 @@ class TestTaskSplitGeneration:
             sample_task, analysis
         )
 
-        assert len(splits) >= 3  # At least planning, implementation, validation
+        assert (
+            len(splits) >= 3
+        )  # At least planning, implementation, validation
 
         # Check for planning phase
         planning_tasks = [s for s in splits if "plan" in s.split_id]
@@ -679,13 +737,18 @@ class TestDistributionStrategies:
         # Even if we request parallel, should be optimized to sequential for simple tasks
         optimized = asyncio.run(
             distribution_engine._optimize_distribution_strategy(
-                simple_task, DistributionStrategy.PARALLEL, analysis, dependency_graph
+                simple_task,
+                DistributionStrategy.PARALLEL,
+                analysis,
+                dependency_graph,
             )
         )
 
         assert optimized == DistributionStrategy.SEQUENTIAL
 
-    def test_strategy_optimization_high_parallelization(self, distribution_engine):
+    def test_strategy_optimization_high_parallelization(
+        self, distribution_engine
+    ):
         """Test strategy optimization for high parallelization potential."""
         complex_task = Mock()
         complex_task.id = 2
@@ -806,7 +869,9 @@ class TestIntegration:
             return_value=[ProviderType.CLAUDE_CLI, ProviderType.OPENAI]
         )
 
-        engine = TaskDistributionEngine(multi_provider_coordinator=mock_coordinator)
+        engine = TaskDistributionEngine(
+            multi_provider_coordinator=mock_coordinator
+        )
 
         # Mock task loading
         with patch.object(engine, "_load_task", return_value=task):
@@ -818,7 +883,9 @@ class TestIntegration:
 
         # Verify complete result
         assert result.success is True
-        assert len(result.task_splits) > 1  # Should be split into multiple tasks
+        assert (
+            len(result.task_splits) > 1
+        )  # Should be split into multiple tasks
         assert result.complexity_analysis.complexity_level in [
             TaskComplexity.MODERATE,
             TaskComplexity.COMPLEX,
@@ -858,7 +925,9 @@ class TestIntegration:
             side_effect=Exception("Provider coordinator failed")
         )
 
-        engine = TaskDistributionEngine(multi_provider_coordinator=mock_coordinator)
+        engine = TaskDistributionEngine(
+            multi_provider_coordinator=mock_coordinator
+        )
 
         task = Task(
             id=888,
@@ -876,7 +945,9 @@ class TestIntegration:
         assert len(result.task_splits) > 0
 
         # Should use fallback provider
-        assigned_providers = set(result.execution_plan.provider_assignments.values())
+        assigned_providers = set(
+            result.execution_plan.provider_assignments.values()
+        )
         assert ProviderType.CLAUDE_CLI in assigned_providers
 
     def test_performance_characteristics(self):

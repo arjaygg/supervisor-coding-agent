@@ -244,7 +244,10 @@ async def test_claude_cli_prompt_content(mock_subprocess, mock_task):
     mock_subprocess.return_value.stderr = ""
 
     agent = ClaudeAgentWrapper("test-agent", "test-key")
-    shared_memory = {"previous_result": "Some context", "project_info": "Test project"}
+    shared_memory = {
+        "previous_result": "Some context",
+        "project_info": "Test project",
+    }
 
     await agent.execute_task(mock_task, shared_memory)
 
@@ -324,7 +327,11 @@ async def test_claude_cli_error_handling_details(mock_subprocess, mock_task):
             "stderr": "Rate limit exceeded",
             "expected": "Rate limit exceeded",
         },
-        {"returncode": 3, "stderr": "Invalid request", "expected": "Invalid request"},
+        {
+            "returncode": 3,
+            "stderr": "Invalid request",
+            "expected": "Invalid request",
+        },
     ]
 
     agent = ClaudeAgentWrapper("test-agent", "test-key")

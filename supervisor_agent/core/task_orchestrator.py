@@ -135,7 +135,9 @@ class ConditionEvaluatorInterface(ABC):
     """Abstract interface for condition evaluation"""
 
     @abstractmethod
-    def evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
+    def evaluate_condition(
+        self, condition: str, context: Dict[str, Any]
+    ) -> bool:
         """Evaluate a workflow condition"""
         pass
 
@@ -166,7 +168,9 @@ class WorkflowContextManager:
         if workflow_id in self.contexts:
             self.contexts[workflow_id].update(updates)
 
-    def add_task_result(self, workflow_id: str, task_id: str, result: TaskResult):
+    def add_task_result(
+        self, workflow_id: str, task_id: str, result: TaskResult
+    ):
         """Add task result to context"""
         if workflow_id not in self.task_results:
             self.task_results[workflow_id] = {}
@@ -197,9 +201,13 @@ class ConditionalWorkflowEngine:
     ) -> bool:
         """Evaluate branch condition"""
         try:
-            return self.condition_evaluator.evaluate_condition(condition, context)
+            return self.condition_evaluator.evaluate_condition(
+                condition, context
+            )
         except Exception as e:
-            logger.error(f"Failed to evaluate condition '{condition}': {str(e)}")
+            logger.error(
+                f"Failed to evaluate condition '{condition}': {str(e)}"
+            )
             return False
 
     def generate_dynamic_tasks(
@@ -276,7 +284,9 @@ class CronScheduler:
             logger.debug(f"Next run for {workflow_id}: {next_run}")
 
         except Exception as e:
-            logger.error(f"Failed to calculate next run for {workflow_id}: {str(e)}")
+            logger.error(
+                f"Failed to calculate next run for {workflow_id}: {str(e)}"
+            )
 
     def get_due_workflows(self, current_time: datetime = None) -> List[str]:
         """Get workflows that are due for execution"""
@@ -316,7 +326,9 @@ class TaskOrchestrator:
         self.task_executor = task_executor
         self.dag_resolver = DAGResolver()
         self.context_manager = WorkflowContextManager()
-        self.conditional_engine = ConditionalWorkflowEngine(condition_evaluator)
+        self.conditional_engine = ConditionalWorkflowEngine(
+            condition_evaluator
+        )
         self.scheduler = CronScheduler()
         self.max_concurrent_tasks = max_concurrent_tasks
 
@@ -338,7 +350,9 @@ class TaskOrchestrator:
             )
 
         # Create execution context
-        execution_context = self.context_manager.create_context(workflow_id, context)
+        execution_context = self.context_manager.create_context(
+            workflow_id, context
+        )
 
         # Initialize workflow result
         workflow_result = WorkflowResult(
@@ -355,7 +369,9 @@ class TaskOrchestrator:
         return workflow_id
 
     async def execute_workflow(
-        self, workflow_id: str, execution_mode: ExecutionMode = ExecutionMode.MIXED
+        self,
+        workflow_id: str,
+        execution_mode: ExecutionMode = ExecutionMode.MIXED,
     ) -> WorkflowResult:
         """Execute workflow with specified mode"""
         if workflow_id not in self.active_workflows:
@@ -405,13 +421,17 @@ class TaskOrchestrator:
 
         return workflow_result
 
-    async def _execute_parallel(self, workflow_id: str, context: Dict[str, Any]):
+    async def _execute_parallel(
+        self, workflow_id: str, context: Dict[str, Any]
+    ):
         """Execute workflow with maximum parallelization"""
         # This would implement parallel execution logic
         # For now, placeholder implementation
         logger.info(f"Executing workflow {workflow_id} in parallel mode")
 
-    async def _execute_sequential(self, workflow_id: str, context: Dict[str, Any]):
+    async def _execute_sequential(
+        self, workflow_id: str, context: Dict[str, Any]
+    ):
         """Execute workflow sequentially"""
         # This would implement sequential execution logic
         logger.info(f"Executing workflow {workflow_id} in sequential mode")
@@ -428,7 +448,9 @@ class TaskOrchestrator:
         try:
             # Basic validation
             if not definition.tasks:
-                return ValidationResult(False, "Workflow must have at least one task")
+                return ValidationResult(
+                    False, "Workflow must have at least one task"
+                )
 
             # Validate DAG structure
             task_ids = {task.id for task in definition.tasks}
@@ -450,12 +472,18 @@ class TaskOrchestrator:
         except Exception as e:
             return ValidationResult(False, f"Validation error: {str(e)}")
 
-    async def schedule_workflow(self, workflow_id: str, schedule: Schedule) -> bool:
+    async def schedule_workflow(
+        self, workflow_id: str, schedule: Schedule
+    ) -> bool:
         """Schedule workflow for recurring execution"""
         try:
             # Validate cron expression
-            if not self.scheduler.validate_cron_expression(schedule.cron_expression):
-                raise ValueError(f"Invalid cron expression: {schedule.cron_expression}")
+            if not self.scheduler.validate_cron_expression(
+                schedule.cron_expression
+            ):
+                raise ValueError(
+                    f"Invalid cron expression: {schedule.cron_expression}"
+                )
 
             self.scheduler.add_schedule(workflow_id, schedule)
             logger.info(
@@ -464,7 +492,9 @@ class TaskOrchestrator:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to schedule workflow {workflow_id}: {str(e)}")
+            logger.error(
+                f"Failed to schedule workflow {workflow_id}: {str(e)}"
+            )
             return False
 
     async def cancel_workflow(self, workflow_id: str) -> bool:
@@ -487,7 +517,9 @@ class TaskOrchestrator:
             logger.error(f"Failed to cancel workflow {workflow_id}: {str(e)}")
             return False
 
-    async def get_workflow_status(self, workflow_id: str) -> Optional[WorkflowResult]:
+    async def get_workflow_status(
+        self, workflow_id: str
+    ) -> Optional[WorkflowResult]:
         """Get current workflow status"""
         return self.active_workflows.get(workflow_id)
 
@@ -516,13 +548,17 @@ class TaskOrchestrator:
                 for result in workflow_result.task_results.values()
                 if result.status == TaskStatus.FAILED
             ),
-            "context_variables": context.get("variables", {}) if context else {},
+            "context_variables": (
+                context.get("variables", {}) if context else {}
+            ),
             "metadata": workflow_result.metadata,
         }
 
     async def cleanup_completed_workflows(self, older_than_hours: int = 24):
         """Clean up completed workflows older than specified hours"""
-        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=older_than_hours)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(
+            hours=older_than_hours
+        )
         to_remove = []
 
         for workflow_id, result in self.active_workflows.items():

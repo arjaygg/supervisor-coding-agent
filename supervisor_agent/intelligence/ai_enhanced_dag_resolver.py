@@ -82,7 +82,9 @@ class AIEnhancedDAGResolver(DAGResolver):
     """
 
     def __init__(
-        self, claude_agent: ClaudeAgentWrapper = None, provider_coordinator=None
+        self,
+        claude_agent: ClaudeAgentWrapper = None,
+        provider_coordinator=None,
     ):
         """
         Initialize AI-enhanced DAG resolver.
@@ -152,7 +154,9 @@ class AIEnhancedDAGResolver(DAGResolver):
             return await self._create_fallback_plan(workflow)
 
     async def predict_execution_bottlenecks(
-        self, execution_plan: ExecutionPlan, current_state: Dict[str, Any] = None
+        self,
+        execution_plan: ExecutionPlan,
+        current_state: Dict[str, Any] = None,
     ) -> List[Dict[str, Any]]:
         """
         Predict potential bottlenecks in workflow execution using AI.
@@ -184,7 +188,8 @@ class AIEnhancedDAGResolver(DAGResolver):
             bottlenecks = self._parse_bottleneck_predictions(result["result"])
 
             self.logger.info(
-                "Bottleneck prediction completed", bottleneck_count=len(bottlenecks)
+                "Bottleneck prediction completed",
+                bottleneck_count=len(bottlenecks),
             )
 
             return bottlenecks
@@ -212,15 +217,22 @@ class AIEnhancedDAGResolver(DAGResolver):
 
         try:
             # Build optimization prompt
-            optimization_prompt = self._build_parallel_optimization_prompt(workflow)
+            optimization_prompt = self._build_parallel_optimization_prompt(
+                workflow
+            )
 
             # Get AI recommendations
             result = await self.claude_agent.execute_task(
-                {"type": "parallel_optimization", "prompt": optimization_prompt}
+                {
+                    "type": "parallel_optimization",
+                    "prompt": optimization_prompt,
+                }
             )
 
             # Parse optimization recommendations
-            optimizations = self._parse_parallel_optimizations(result["result"])
+            optimizations = self._parse_parallel_optimizations(
+                result["result"]
+            )
 
             self.logger.info(
                 "Parallel execution optimization completed",
@@ -230,7 +242,9 @@ class AIEnhancedDAGResolver(DAGResolver):
             return optimizations
 
         except Exception as e:
-            self.logger.error("Parallel execution optimization failed", error=str(e))
+            self.logger.error(
+                "Parallel execution optimization failed", error=str(e)
+            )
             return self._optimize_parallel_heuristic(workflow)
 
     async def suggest_resource_allocation(
@@ -261,7 +275,10 @@ class AIEnhancedDAGResolver(DAGResolver):
                 )
 
                 result = await self.claude_agent.execute_task(
-                    {"type": "resource_allocation", "prompt": allocation_prompt}
+                    {
+                        "type": "resource_allocation",
+                        "prompt": allocation_prompt,
+                    }
                 )
 
                 return self._parse_resource_allocation(result["result"])
@@ -271,7 +288,9 @@ class AIEnhancedDAGResolver(DAGResolver):
                 )
 
         except Exception as e:
-            self.logger.error("Resource allocation suggestion failed", error=str(e))
+            self.logger.error(
+                "Resource allocation suggestion failed", error=str(e)
+            )
             return self._suggest_resource_allocation_heuristic(
                 execution_plan, resource_constraints
             )
@@ -338,13 +357,18 @@ class AIEnhancedDAGResolver(DAGResolver):
 
         try:
             result = await self.claude_agent.execute_task(
-                {"type": "execution_plan_optimization", "prompt": optimization_prompt}
+                {
+                    "type": "execution_plan_optimization",
+                    "prompt": optimization_prompt,
+                }
             )
 
             return json.loads(result["result"])
 
         except Exception as e:
-            self.logger.error("AI optimization generation failed", error=str(e))
+            self.logger.error(
+                "AI optimization generation failed", error=str(e)
+            )
             return self._get_heuristic_optimizations(workflow, base_plan)
 
     async def _apply_ai_optimizations(
@@ -354,7 +378,8 @@ class AIEnhancedDAGResolver(DAGResolver):
 
         # Apply parallel optimization recommendations
         optimized_execution_order = await self._optimize_execution_order(
-            base_plan.execution_order, optimizations.get("parallel_opportunities", [])
+            base_plan.execution_order,
+            optimizations.get("parallel_opportunities", []),
         )
 
         # Calculate efficiency metrics
@@ -363,9 +388,15 @@ class AIEnhancedDAGResolver(DAGResolver):
         )
 
         # Extract predictions and suggestions
-        bottleneck_predictions = optimizations.get("bottleneck_predictions", [])
-        optimization_suggestions = optimizations.get("optimization_suggestions", [])
-        resource_allocation_hints = optimizations.get("resource_optimization", {})
+        bottleneck_predictions = optimizations.get(
+            "bottleneck_predictions", []
+        )
+        optimization_suggestions = optimizations.get(
+            "optimization_suggestions", []
+        )
+        resource_allocation_hints = optimizations.get(
+            "resource_optimization", {}
+        )
 
         return OptimizedExecutionPlan(
             execution_order=optimized_execution_order,
@@ -421,7 +452,9 @@ class AIEnhancedDAGResolver(DAGResolver):
         return dependencies
 
     def _build_bottleneck_analysis_prompt(
-        self, execution_plan: ExecutionPlan, current_state: Dict[str, Any] = None
+        self,
+        execution_plan: ExecutionPlan,
+        current_state: Dict[str, Any] = None,
     ) -> str:
         """Build prompt for AI bottleneck analysis"""
 
@@ -517,7 +550,9 @@ class AIEnhancedDAGResolver(DAGResolver):
         }}
         """
 
-    def _parse_bottleneck_predictions(self, ai_response: str) -> List[Dict[str, Any]]:
+    def _parse_bottleneck_predictions(
+        self, ai_response: str
+    ) -> List[Dict[str, Any]]:
         """Parse AI bottleneck predictions from response"""
         try:
             data = json.loads(ai_response)
@@ -525,7 +560,9 @@ class AIEnhancedDAGResolver(DAGResolver):
         except json.JSONDecodeError:
             return []
 
-    def _parse_parallel_optimizations(self, ai_response: str) -> Dict[str, Any]:
+    def _parse_parallel_optimizations(
+        self, ai_response: str
+    ) -> Dict[str, Any]:
         """Parse AI parallel optimization recommendations"""
         try:
             return json.loads(ai_response)
@@ -540,7 +577,9 @@ class AIEnhancedDAGResolver(DAGResolver):
             return {"cpu_allocation": {}, "memory_allocation": {}}
 
     async def _optimize_execution_order(
-        self, base_order: List[List[str]], parallel_opportunities: List[Dict[str, Any]]
+        self,
+        base_order: List[List[str]],
+        parallel_opportunities: List[Dict[str, Any]],
     ) -> List[List[str]]:
         """Optimize execution order based on AI recommendations"""
 
@@ -680,14 +719,18 @@ class AIEnhancedDAGResolver(DAGResolver):
         return {
             "parallel_groups": parallel_groups,
             "optimization_metrics": {
-                "total_speedup": len(independent_tasks) if independent_tasks else 1,
+                "total_speedup": (
+                    len(independent_tasks) if independent_tasks else 1
+                ),
                 "resource_efficiency": 0.7,
                 "complexity_increase": 0.1,
             },
         }
 
     def _suggest_resource_allocation_heuristic(
-        self, execution_plan: OptimizedExecutionPlan, constraints: Dict[str, Any] = None
+        self,
+        execution_plan: OptimizedExecutionPlan,
+        constraints: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """Heuristic resource allocation when AI is unavailable"""
 
@@ -725,7 +768,9 @@ class AIEnhancedDAGResolver(DAGResolver):
 
         return {
             "parallel_opportunities": [],
-            "bottleneck_predictions": self._predict_bottlenecks_heuristic(base_plan),
+            "bottleneck_predictions": self._predict_bottlenecks_heuristic(
+                base_plan
+            ),
             "resource_optimization": self._suggest_resource_allocation_heuristic(
                 OptimizedExecutionPlan(
                     execution_order=base_plan.execution_order,

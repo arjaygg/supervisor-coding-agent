@@ -147,11 +147,13 @@ class WorkflowOptimizer:
             self.workflow_synthesizer = None
 
         self.dag_resolver = AIEnhancedDAGResolver(
-            claude_agent=claude_agent, provider_coordinator=provider_coordinator
+            claude_agent=claude_agent,
+            provider_coordinator=provider_coordinator,
         )
 
         self.parallel_analyzer = ParallelExecutionAnalyzer(
-            claude_agent=claude_agent, provider_coordinator=provider_coordinator
+            claude_agent=claude_agent,
+            provider_coordinator=provider_coordinator,
         )
 
         # Optimization strategy configurations
@@ -236,8 +238,10 @@ class WorkflowOptimizer:
             )
 
             # Step 4: Create optimized execution plan
-            execution_plan = await self.dag_resolver.create_intelligent_execution_plan(
-                optimized_workflow, historical_data
+            execution_plan = (
+                await self.dag_resolver.create_intelligent_execution_plan(
+                    optimized_workflow, historical_data
+                )
             )
 
             # Step 5: Analyze parallelization opportunities
@@ -249,7 +253,10 @@ class WorkflowOptimizer:
 
             # Step 6: Calculate optimization metrics
             optimization_metrics = await self._calculate_optimization_metrics(
-                original_workflow, optimized_workflow, execution_plan, baseline_metrics
+                original_workflow,
+                optimized_workflow,
+                execution_plan,
+                baseline_metrics,
             )
 
             # Step 7: Validate optimization results
@@ -280,7 +287,9 @@ class WorkflowOptimizer:
 
         except Exception as e:
             self.logger.error("Workflow optimization failed", error=str(e))
-            return await self._create_fallback_optimization_result(workflow, strategy)
+            return await self._create_fallback_optimization_result(
+                workflow, strategy
+            )
 
     async def compare_optimization_strategies(
         self,
@@ -319,13 +328,16 @@ class WorkflowOptimizer:
                 results[strategy.value] = result
             except Exception as e:
                 self.logger.error(
-                    "Strategy comparison failed", strategy=strategy.value, error=str(e)
+                    "Strategy comparison failed",
+                    strategy=strategy.value,
+                    error=str(e),
                 )
 
         # Log comparison summary
         if results:
             best_speed = max(
-                results.values(), key=lambda r: r.optimization_metrics.speedup_factor
+                results.values(),
+                key=lambda r: r.optimization_metrics.speedup_factor,
             )
             best_efficiency = max(
                 results.values(),
@@ -403,7 +415,9 @@ class WorkflowOptimizer:
                 "execution_stages": len(
                     optimization_result.execution_plan.execution_order
                 ),
-                "total_tasks": len(optimization_result.execution_plan.task_map),
+                "total_tasks": len(
+                    optimization_result.execution_plan.task_map
+                ),
                 "dependencies_resolved": len(
                     optimization_result.execution_plan.dependency_map
                 ),
@@ -432,7 +446,9 @@ class WorkflowOptimizer:
                         if r.priority == OptimizationPriority.LOW
                     ]
                 ),
-                "total_recommendations": len(optimization_result.recommendations),
+                "total_recommendations": len(
+                    optimization_result.recommendations
+                ),
             },
         }
 
@@ -479,7 +495,9 @@ class WorkflowOptimizer:
         total_dependencies = sum(
             len(task.dependencies or []) for task in workflow.tasks
         )
-        dependency_complexity = total_dependencies / task_count if task_count > 0 else 0
+        dependency_complexity = (
+            total_dependencies / task_count if task_count > 0 else 0
+        )
 
         return {
             "task_count": task_count,
@@ -507,8 +525,10 @@ class WorkflowOptimizer:
 
         if self.claude_agent:
             try:
-                ai_recommendations = await self._get_ai_optimization_recommendations(
-                    workflow, strategy, historical_data, constraints
+                ai_recommendations = (
+                    await self._get_ai_optimization_recommendations(
+                        workflow, strategy, historical_data, constraints
+                    )
                 )
                 recommendations.extend(ai_recommendations)
             except Exception as e:
@@ -589,11 +609,15 @@ class WorkflowOptimizer:
                 description=rec_data.get("description", ""),
                 impact=rec_data.get("impact", "medium"),
                 effort=rec_data.get("effort", "medium"),
-                priority=OptimizationPriority(rec_data.get("priority", "medium")),
+                priority=OptimizationPriority(
+                    rec_data.get("priority", "medium")
+                ),
                 implementation_steps=rec_data.get("implementation_steps", []),
                 expected_benefit=rec_data.get("expected_benefit", {}),
                 risks=rec_data.get("risks", []),
-                monitoring_requirements=rec_data.get("monitoring_requirements", []),
+                monitoring_requirements=rec_data.get(
+                    "monitoring_requirements", []
+                ),
             )
             recommendations.append(recommendation)
 
@@ -610,7 +634,9 @@ class WorkflowOptimizer:
         recommendations = []
 
         # Analyze for parallelization opportunities
-        independent_tasks = [task for task in workflow.tasks if not task.dependencies]
+        independent_tasks = [
+            task for task in workflow.tasks if not task.dependencies
+        ]
         if len(independent_tasks) > 1:
             recommendations.append(
                 OptimizationRecommendation(
@@ -672,7 +698,9 @@ class WorkflowOptimizer:
             )
 
         # Dependency optimization
-        max_dependencies = max(len(task.dependencies or []) for task in workflow.tasks)
+        max_dependencies = max(
+            len(task.dependencies or []) for task in workflow.tasks
+        )
         if max_dependencies > 3:
             recommendations.append(
                 OptimizationRecommendation(
@@ -690,7 +718,10 @@ class WorkflowOptimizer:
                         "execution_time_reduction_percent": 15,
                         "parallelization_improvement": 40,
                     },
-                    risks=["Increased task complexity", "Cache management overhead"],
+                    risks=[
+                        "Increased task complexity",
+                        "Cache management overhead",
+                    ],
                     monitoring_requirements=[
                         "Dependency resolution times",
                         "Cache hit rates",
@@ -714,7 +745,9 @@ class WorkflowOptimizer:
             effort_score = {"low": 3, "medium": 2, "high": 1}[
                 rec.effort
             ]  # Lower effort is better
-            priority_score = {"high": 3, "medium": 2, "low": 1}[rec.priority.value]
+            priority_score = {"high": 3, "medium": 2, "low": 1}[
+                rec.priority.value
+            ]
 
             # Adjust based on strategy
             type_weight = 1.0
@@ -730,13 +763,18 @@ class WorkflowOptimizer:
         seen = set()
 
         for rec in recommendations:
-            key = (rec.type, rec.description[:50])  # Use first 50 chars of description
+            key = (
+                rec.type,
+                rec.description[:50],
+            )  # Use first 50 chars of description
             if key not in seen:
                 seen.add(key)
                 unique_recommendations.append(rec)
 
         # Sort by calculated score (highest first)
-        return sorted(unique_recommendations, key=calculate_score, reverse=True)
+        return sorted(
+            unique_recommendations, key=calculate_score, reverse=True
+        )
 
     async def _apply_optimizations(
         self,
@@ -765,7 +803,9 @@ class WorkflowOptimizer:
         baseline_time = baseline_metrics["baseline_execution_time_minutes"]
         optimized_time = execution_plan.estimated_execution_time_minutes
 
-        speedup_factor = baseline_time / optimized_time if optimized_time > 0 else 1.0
+        speedup_factor = (
+            baseline_time / optimized_time if optimized_time > 0 else 1.0
+        )
 
         return OptimizationMetrics(
             baseline_execution_time_minutes=baseline_time,
@@ -809,7 +849,9 @@ class WorkflowOptimizer:
         }
 
     async def _create_fallback_optimization_result(
-        self, workflow: EnhancedWorkflowDefinition, strategy: OptimizationStrategy
+        self,
+        workflow: EnhancedWorkflowDefinition,
+        strategy: OptimizationStrategy,
     ) -> WorkflowOptimizationResult:
         """Create fallback optimization result when main optimization fails"""
 
@@ -882,4 +924,6 @@ async def create_workflow_optimizer(
     Returns:
         Configured WorkflowOptimizer instance
     """
-    return WorkflowOptimizer(claude_agent, tenant_context, provider_coordinator)
+    return WorkflowOptimizer(
+        claude_agent, tenant_context, provider_coordinator
+    )

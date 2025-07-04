@@ -120,7 +120,9 @@ class MultiProviderSubscriptionIntelligence:
         self._daily_usage: Dict[str, Dict[str, int]] = defaultdict(
             lambda: defaultdict(int)
         )
-        self._cost_tracking: Dict[str, List[Tuple[datetime, float]]] = defaultdict(list)
+        self._cost_tracking: Dict[str, List[Tuple[datetime, float]]] = (
+            defaultdict(list)
+        )
         self._response_times: Dict[str, List[float]] = defaultdict(list)
 
         # Quota management
@@ -153,7 +155,9 @@ class MultiProviderSubscriptionIntelligence:
             await self._update_quota_information()
 
             # Get available providers
-            available_providers = await self._get_available_providers(exclude_providers)
+            available_providers = await self._get_available_providers(
+                exclude_providers
+            )
             if not available_providers:
                 logger.warning("No available providers for request")
                 return None
@@ -180,7 +184,9 @@ class MultiProviderSubscriptionIntelligence:
                 return None
 
             # Select provider with highest score
-            optimal_provider = max(provider_scores.items(), key=lambda x: x[1])[0]
+            optimal_provider = max(
+                provider_scores.items(), key=lambda x: x[1]
+            )[0]
 
             logger.info(
                 f"Selected optimal provider: {optimal_provider} (score: {provider_scores[optimal_provider]:.3f})"
@@ -279,7 +285,9 @@ class MultiProviderSubscriptionIntelligence:
             )
 
             # Calculate success rate
-            total_successes = sum(len(times) for times in self._response_times.values())
+            total_successes = sum(
+                len(times) for times in self._response_times.values()
+            )
             success_rate = (
                 total_successes / total_requests if total_requests > 0 else 1.0
             )
@@ -312,7 +320,8 @@ class MultiProviderSubscriptionIntelligence:
 
             # Quota utilization
             quota_util = {
-                pid: info.usage_percentage for pid, info in self.provider_quotas.items()
+                pid: info.usage_percentage
+                for pid, info in self.provider_quotas.items()
             }
 
             # Generate recommendations
@@ -331,7 +340,9 @@ class MultiProviderSubscriptionIntelligence:
             )
 
         except Exception as e:
-            logger.error(f"Error generating cross-provider analytics: {str(e)}")
+            logger.error(
+                f"Error generating cross-provider analytics: {str(e)}"
+            )
             return CrossProviderAnalytics(
                 total_requests_today=0,
                 total_cost_today=0.0,
@@ -344,7 +355,9 @@ class MultiProviderSubscriptionIntelligence:
                 recommendations=["Error generating analytics"],
             )
 
-    async def predict_quota_exhaustion(self, provider_id: str) -> Optional[datetime]:
+    async def predict_quota_exhaustion(
+        self, provider_id: str
+    ) -> Optional[datetime]:
         """Predict when a provider's quota will be exhausted"""
         if provider_id not in self.provider_quotas:
             return None
@@ -370,7 +383,9 @@ class MultiProviderSubscriptionIntelligence:
 
         return exhaustion_time
 
-    async def suggest_provider_switch(self, current_provider_id: str) -> Optional[str]:
+    async def suggest_provider_switch(
+        self, current_provider_id: str
+    ) -> Optional[str]:
         """Suggest an alternative provider if current one is suboptimal"""
         if current_provider_id not in self.provider_quotas:
             return None
@@ -378,7 +393,10 @@ class MultiProviderSubscriptionIntelligence:
         current_quota = self.provider_quotas[current_provider_id]
 
         # Switch if current provider is in critical or exhausted state
-        if current_quota.status in [QuotaStatus.CRITICAL, QuotaStatus.EXHAUSTED]:
+        if current_quota.status in [
+            QuotaStatus.CRITICAL,
+            QuotaStatus.EXHAUSTED,
+        ]:
             available_providers = await self._get_available_providers(
                 exclude_providers=[current_provider_id]
             )
@@ -397,11 +415,16 @@ class MultiProviderSubscriptionIntelligence:
         now = datetime.now(timezone.utc)
 
         # Only update if enough time has passed
-        if now - self.last_quota_check < timedelta(seconds=self.quota_check_interval):
+        if now - self.last_quota_check < timedelta(
+            seconds=self.quota_check_interval
+        ):
             return
 
         try:
-            for provider_id, provider in self.provider_registry.providers.items():
+            for (
+                provider_id,
+                provider,
+            ) in self.provider_registry.providers.items():
                 await self._update_provider_quota(provider_id, provider)
 
             self.last_quota_check = now
@@ -418,7 +441,9 @@ class MultiProviderSubscriptionIntelligence:
             health = await provider.get_health_status()
 
             # Extract quota information from health metrics
-            daily_limit = health.metrics.get("daily_quota", 1000)  # Default quota
+            daily_limit = health.metrics.get(
+                "daily_quota", 1000
+            )  # Default quota
             current_usage = health.metrics.get("quota_used", 0)
 
             # Calculate reset time (assume daily reset at midnight UTC)
@@ -426,7 +451,9 @@ class MultiProviderSubscriptionIntelligence:
             reset_time = datetime.combine(tomorrow, datetime.min.time())
 
             # Determine status
-            usage_pct = (current_usage / daily_limit) * 100 if daily_limit > 0 else 0
+            usage_pct = (
+                (current_usage / daily_limit) * 100 if daily_limit > 0 else 0
+            )
             if usage_pct >= 100:
                 status = QuotaStatus.EXHAUSTED
             elif usage_pct >= 95:
@@ -438,7 +465,9 @@ class MultiProviderSubscriptionIntelligence:
 
             # Estimate remaining hours at current usage rate
             remaining_requests = daily_limit - current_usage
-            usage_rate = self._calculate_recent_usage_rate(provider_id, hours=1)
+            usage_rate = self._calculate_recent_usage_rate(
+                provider_id, hours=1
+            )
             estimated_hours = (
                 remaining_requests / usage_rate if usage_rate > 0 else 24.0
             )
@@ -544,7 +573,10 @@ class MultiProviderSubscriptionIntelligence:
             cost_estimate = provider.estimate_cost(mock_task)
 
             # Check cost constraint
-            if max_cost_usd and float(cost_estimate.total_cost_usd) > max_cost_usd:
+            if (
+                max_cost_usd
+                and float(cost_estimate.total_cost_usd) > max_cost_usd
+            ):
                 return 0.0
 
             # Calculate score components
@@ -559,7 +591,9 @@ class MultiProviderSubscriptionIntelligence:
             )  # Higher success rate = higher score
 
             # Average response time score
-            recent_times = self._response_times[provider_id][-10:]  # Last 10 requests
+            recent_times = self._response_times[provider_id][
+                -10:
+            ]  # Last 10 requests
             if recent_times:
                 avg_time = sum(recent_times) / len(recent_times)
                 time_score = max(
@@ -584,7 +618,9 @@ class MultiProviderSubscriptionIntelligence:
             )
             return 0.0
 
-    def _calculate_recent_usage_rate(self, provider_id: str, hours: float) -> float:
+    def _calculate_recent_usage_rate(
+        self, provider_id: str, hours: float
+    ) -> float:
         """Calculate usage rate (requests per hour) for recent period"""
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
 

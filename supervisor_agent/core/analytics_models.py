@@ -10,7 +10,16 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
-from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.sql import func
 
 from supervisor_agent.db.database import Base
@@ -199,7 +208,9 @@ class Insight(BaseModel):
     value: Union[float, int, str]
     threshold: Optional[Union[float, int]] = None
     recommendation: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 # SQLAlchemy Database Models

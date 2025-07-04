@@ -64,7 +64,8 @@ class TokenBucketRateLimiter:
                     "error": "burst_limit_exceeded",
                     "burst_limit": self.burst_limit,
                     "burst_window": self.burst_window,
-                    "retry_after": self.burst_window - (now - entry.burst_window_start),
+                    "retry_after": self.burst_window
+                    - (now - entry.burst_window_start),
                 }
 
             # Check rate limit
@@ -73,7 +74,8 @@ class TokenBucketRateLimiter:
                     "error": "rate_limit_exceeded",
                     "rate_limit": self.requests_per_minute,
                     "window_duration": self.window_duration,
-                    "retry_after": self.window_duration - (now - entry.window_start),
+                    "retry_after": self.window_duration
+                    - (now - entry.window_start),
                 }
 
             # Allow request

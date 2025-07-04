@@ -125,7 +125,9 @@ class WorkflowMemoryManager:
     def __init__(self):
         self._pattern_cache = {}
 
-    async def get_successful_patterns(self, domain: str) -> List[Dict[str, Any]]:
+    async def get_successful_patterns(
+        self, domain: str
+    ) -> List[Dict[str, Any]]:
         """Get successful workflow patterns for a domain"""
         # TODO: Implement retrieval from long-term memory
         return []
@@ -139,7 +141,9 @@ class WorkflowMemoryManager:
 class ClaudeAgentWrapper:
     """Wrapper for Claude CLI integration using existing provider system"""
 
-    def __init__(self, provider_coordinator=None, api_key: Optional[str] = None):
+    def __init__(
+        self, provider_coordinator=None, api_key: Optional[str] = None
+    ):
         self.provider_coordinator = provider_coordinator
         self.api_key = api_key
         self.logger = structured_logger.bind(component="claude_agent_wrapper")
@@ -152,7 +156,9 @@ class ClaudeAgentWrapper:
         if self.provider_coordinator:
             try:
                 # Use existing provider system for Claude CLI integration
-                from supervisor_agent.core.provider_coordinator import ExecutionContext
+                from supervisor_agent.core.provider_coordinator import (
+                    ExecutionContext,
+                )
                 from supervisor_agent.db.models import Task, TaskType
 
                 # Create task for provider execution
@@ -177,8 +183,10 @@ class ClaudeAgentWrapper:
                 )
 
                 # Execute using provider coordinator
-                result = await self.provider_coordinator.execute_task_with_provider(
-                    provider_task, context
+                result = (
+                    await self.provider_coordinator.execute_task_with_provider(
+                        provider_task, context
+                    )
                 )
 
                 return {
@@ -246,7 +254,10 @@ class ClaudeAgentWrapper:
                             "security_scan",
                             "performance_test",
                         ],
-                        "risk_factors": ["complexity_creep", "resource_constraints"],
+                        "risk_factors": [
+                            "complexity_creep",
+                            "resource_constraints",
+                        ],
                     }
                 ),
                 "confidence": 0.85,
@@ -259,7 +270,11 @@ class ClaudeAgentWrapper:
                         "domain": "software_development",
                         "complexity": "moderate",
                         "estimated_duration_hours": 8.0,
-                        "required_skills": ["Python", "API Development", "Testing"],
+                        "required_skills": [
+                            "Python",
+                            "API Development",
+                            "Testing",
+                        ],
                         "dependencies": ["database", "authentication_service"],
                         "constraints": {
                             "performance": "sub_200ms",
@@ -289,7 +304,10 @@ class ClaudeAgentWrapper:
                             "performance_improvement": 0.3,
                             "resource_efficiency": 0.25,
                         },
-                        "risk_assessment": {"probability": "low", "impact": "minimal"},
+                        "risk_assessment": {
+                            "probability": "low",
+                            "impact": "minimal",
+                        },
                         "urgency": "medium",
                     }
                 ),
@@ -324,7 +342,8 @@ class AIWorkflowSynthesizer:
         self.provider_coordinator = provider_coordinator
         self.workflow_memory = WorkflowMemoryManager()
         self.logger = structured_logger.bind(
-            tenant_id=tenant_context.tenant_id, component="workflow_synthesizer"
+            tenant_id=tenant_context.tenant_id,
+            component="workflow_synthesizer",
         )
 
     async def synthesize_optimal_workflow(
@@ -338,7 +357,9 @@ class AIWorkflowSynthesizer:
 
         try:
             # Build comprehensive context for Claude
-            synthesis_context = await self._build_synthesis_context(requirements)
+            synthesis_context = await self._build_synthesis_context(
+                requirements
+            )
 
             # Generate workflow using Claude CLI
             workflow_result = await self._generate_workflow_with_claude(
@@ -351,7 +372,9 @@ class AIWorkflowSynthesizer:
             )
 
             # Enhance with dynamic capabilities
-            await self._enhance_workflow_with_intelligence(workflow_def, requirements)
+            await self._enhance_workflow_with_intelligence(
+                workflow_def, requirements
+            )
 
             self.logger.info(
                 "Workflow synthesis completed",
@@ -370,7 +393,9 @@ class AIWorkflowSynthesizer:
     ) -> "WorkflowAdaptation":
         """Adapt running workflow based on real-time performance"""
 
-        self.logger.info("Starting workflow adaptation", execution_id=execution_id)
+        self.logger.info(
+            "Starting workflow adaptation", execution_id=execution_id
+        )
 
         try:
             # Analyze current execution state
@@ -406,7 +431,9 @@ class AIWorkflowSynthesizer:
 
         self.logger.info("Starting requirement analysis")
 
-        analysis_prompt = self._build_requirement_analysis_prompt(description, context)
+        analysis_prompt = self._build_requirement_analysis_prompt(
+            description, context
+        )
 
         # Use Claude to analyze requirements
         analysis_result = await self.claude_agent.execute_task(
@@ -418,11 +445,15 @@ class AIWorkflowSynthesizer:
 
         return RequirementAnalysis(
             description=description,
-            domain=DomainType(analysis_data.get("domain", "software_development")),
+            domain=DomainType(
+                analysis_data.get("domain", "software_development")
+            ),
             complexity=RequirementComplexity(
                 analysis_data.get("complexity", "moderate")
             ),
-            estimated_duration_hours=analysis_data.get("estimated_duration_hours", 8.0),
+            estimated_duration_hours=analysis_data.get(
+                "estimated_duration_hours", 8.0
+            ),
             required_skills=analysis_data.get("required_skills", []),
             dependencies=analysis_data.get("dependencies", []),
             constraints=analysis_data.get("constraints", {}),
@@ -435,8 +466,10 @@ class AIWorkflowSynthesizer:
         """Build comprehensive context for workflow synthesis"""
 
         # Get successful patterns from memory
-        successful_patterns = await self.workflow_memory.get_successful_patterns(
-            requirements.domain.value
+        successful_patterns = (
+            await self.workflow_memory.get_successful_patterns(
+                requirements.domain.value
+            )
         )
 
         # Get available tools (TODO: integrate with MCP manager)
@@ -493,7 +526,9 @@ class AIWorkflowSynthesizer:
         )
 
     async def _parse_and_validate_workflow(
-        self, workflow_result: Dict[str, Any], requirements: RequirementAnalysis
+        self,
+        workflow_result: Dict[str, Any],
+        requirements: RequirementAnalysis,
     ) -> EnhancedWorkflowDefinition:
         """Parse and validate the Claude-generated workflow"""
 
@@ -525,7 +560,9 @@ class AIWorkflowSynthesizer:
             name=workflow_data.get(
                 "name", f"Generated Workflow - {requirements.domain.value}"
             ),
-            description=workflow_data.get("description", requirements.description),
+            description=workflow_data.get(
+                "description", requirements.description
+            ),
             tasks=tasks,
             version="1.0",
         )
@@ -540,13 +577,13 @@ class AIWorkflowSynthesizer:
         """Enhance workflow with dynamic templates and intelligence"""
 
         # Add dynamic task templates
-        workflow_def.dynamic_task_templates = await self._generate_dynamic_templates(
-            requirements
+        workflow_def.dynamic_task_templates = (
+            await self._generate_dynamic_templates(requirements)
         )
 
         # Add conditional branching logic
-        workflow_def.conditional_branches = await self._generate_smart_branches(
-            requirements
+        workflow_def.conditional_branches = (
+            await self._generate_smart_branches(requirements)
         )
 
         # Add optimization hints
@@ -557,7 +594,9 @@ class AIWorkflowSynthesizer:
             "resource_optimization": await self._suggest_resource_optimizations(
                 workflow_def
             ),
-            "bottleneck_predictions": await self._predict_bottlenecks(workflow_def),
+            "bottleneck_predictions": await self._predict_bottlenecks(
+                workflow_def
+            ),
         }
 
         # Add risk mitigation strategies
@@ -580,7 +619,11 @@ class AIWorkflowSynthesizer:
                 "template_type": "conditional",
                 "conditions": {
                     "complexity_high": {
-                        "tasks": ["deep_analysis", "peer_review", "security_scan"],
+                        "tasks": [
+                            "deep_analysis",
+                            "peer_review",
+                            "security_scan",
+                        ],
                         "timeout_multiplier": 2.0,
                     },
                     "complexity_low": {
@@ -619,12 +662,24 @@ class AIWorkflowSynthesizer:
             },
             "complexity_branch": {
                 "condition": "task_complexity > expected",
-                "actions": ["break_down_task", "add_expertise", "extend_timeline"],
-                "triggers": ["timeout", "multiple_failures", "resource_exhaustion"],
+                "actions": [
+                    "break_down_task",
+                    "add_expertise",
+                    "extend_timeline",
+                ],
+                "triggers": [
+                    "timeout",
+                    "multiple_failures",
+                    "resource_exhaustion",
+                ],
             },
             "approval_branch": {
                 "condition": "requires_human_approval",
-                "actions": ["route_to_approver", "parallel_continue", "checkpoint"],
+                "actions": [
+                    "route_to_approver",
+                    "parallel_continue",
+                    "checkpoint",
+                ],
                 "approval_matrix": self.tenant_context.approval_policies,
             },
         }
@@ -694,7 +749,11 @@ class AIWorkflowSynthesizer:
                 "task_failure": {
                     "probability": "medium",
                     "impact": "high",
-                    "mitigation": ["retry_logic", "fallback_tasks", "alert_escalation"],
+                    "mitigation": [
+                        "retry_logic",
+                        "fallback_tasks",
+                        "alert_escalation",
+                    ],
                 },
                 "resource_exhaustion": {
                     "probability": "low",
@@ -710,7 +769,10 @@ class AIWorkflowSynthesizer:
                 "insufficient_review": {
                     "probability": "medium",
                     "impact": "medium",
-                    "mitigation": ["mandatory_peer_review", "automated_quality_gates"],
+                    "mitigation": [
+                        "mandatory_peer_review",
+                        "automated_quality_gates",
+                    ],
                 }
             },
         }
@@ -759,8 +821,18 @@ class AIWorkflowSynthesizer:
     async def _get_domain_tools(self, domain: DomainType) -> List[str]:
         """Get domain-specific tools"""
         domain_tools = {
-            DomainType.SOFTWARE_DEVELOPMENT: ["git", "docker", "pytest", "eslint"],
-            DomainType.SECURITY_AUDIT: ["bandit", "semgrep", "nmap", "ssl_test"],
+            DomainType.SOFTWARE_DEVELOPMENT: [
+                "git",
+                "docker",
+                "pytest",
+                "eslint",
+            ],
+            DomainType.SECURITY_AUDIT: [
+                "bandit",
+                "semgrep",
+                "nmap",
+                "ssl_test",
+            ],
             DomainType.PERFORMANCE_OPTIMIZATION: [
                 "profiler",
                 "load_tester",
@@ -769,7 +841,9 @@ class AIWorkflowSynthesizer:
         }
         return domain_tools.get(domain, [])
 
-    async def _get_domain_standards(self, domain: DomainType) -> Dict[str, Any]:
+    async def _get_domain_standards(
+        self, domain: DomainType
+    ) -> Dict[str, Any]:
         """Get domain-specific quality standards"""
         standards = {
             DomainType.SOFTWARE_DEVELOPMENT: {
@@ -837,11 +911,15 @@ class AIWorkflowSynthesizer:
         return {
             "execution_id": execution_id,
             "current_state": current_state,
-            "performance_analysis": await self._analyze_performance(current_state),
+            "performance_analysis": await self._analyze_performance(
+                current_state
+            ),
             "bottleneck_detection": await self._detect_runtime_bottlenecks(
                 current_state
             ),
-            "resource_utilization": await self._analyze_resource_usage(current_state),
+            "resource_utilization": await self._analyze_resource_usage(
+                current_state
+            ),
         }
 
     async def _get_adaptation_recommendations(
@@ -876,7 +954,9 @@ class AIWorkflowSynthesizer:
             shared_memory=context,
         )
 
-    async def _analyze_performance(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def _analyze_performance(
+        self, state: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Analyze current performance metrics"""
         # TODO: Implement performance analysis
         return {"status": "analysis_pending"}
@@ -888,7 +968,9 @@ class AIWorkflowSynthesizer:
         # TODO: Implement bottleneck detection
         return []
 
-    async def _analyze_resource_usage(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def _analyze_resource_usage(
+        self, state: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Analyze current resource usage"""
         # TODO: Implement resource usage analysis
         return {"status": "analysis_pending"}
@@ -947,4 +1029,6 @@ async def create_workflow_synthesizer(
     claude_agent = ClaudeAgentWrapper(
         provider_coordinator=provider_coordinator, api_key=claude_api_key
     )
-    return AIWorkflowSynthesizer(claude_agent, tenant_context, provider_coordinator)
+    return AIWorkflowSynthesizer(
+        claude_agent, tenant_context, provider_coordinator
+    )

@@ -41,7 +41,9 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_providers_id"), "providers", ["id"], unique=False)
-    op.create_index(op.f("ix_providers_type"), "providers", ["type"], unique=False)
+    op.create_index(
+        op.f("ix_providers_type"), "providers", ["type"], unique=False
+    )
 
     # Create provider_metrics table
     op.create_table(
@@ -64,7 +66,10 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_provider_metrics_id"), "provider_metrics", ["id"], unique=False
+        op.f("ix_provider_metrics_id"),
+        "provider_metrics",
+        ["id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_provider_metrics_provider_id"),
@@ -75,7 +80,9 @@ def upgrade():
 
     # Add provider_id to tasks table using batch mode for SQLite
     with op.batch_alter_table("tasks") as batch_op:
-        batch_op.add_column(sa.Column("provider_id", sa.String(), nullable=True))
+        batch_op.add_column(
+            sa.Column("provider_id", sa.String(), nullable=True)
+        )
         batch_op.create_foreign_key(
             "fk_tasks_provider", "providers", ["provider_id"], ["id"]
         )

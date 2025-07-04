@@ -23,8 +23,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from supervisor_agent.analysis.scc_analyzer import AnalysisResult as SCCResult
 from supervisor_agent.analysis.scc_analyzer import SCCAnalyzer
-from supervisor_agent.analysis.semgrep_analyzer import AnalysisResult as SemgrepResult
-from supervisor_agent.analysis.semgrep_analyzer import SemgrepAnalyzer
+from supervisor_agent.analysis.semgrep_analyzer import (
+    AnalysisResult as SemgrepResult,
+)
+from supervisor_agent.analysis.semgrep_analyzer import (
+    SemgrepAnalyzer,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -123,7 +127,9 @@ class StaticAnalysisPipeline:
         try:
             repo_path = Path(repo_path).resolve()
             if not repo_path.exists():
-                raise ValueError(f"Repository path does not exist: {repo_path}")
+                raise ValueError(
+                    f"Repository path does not exist: {repo_path}"
+                )
 
             logger.info(f"Starting static analysis pipeline for {repo_path}")
 
@@ -132,8 +138,12 @@ class StaticAnalysisPipeline:
                     repo_path, include_file_details, semgrep_timeout
                 )
             else:
-                scc_result = self._run_scc_analysis(repo_path, include_file_details)
-                semgrep_result = self._run_semgrep_analysis(repo_path, semgrep_timeout)
+                scc_result = self._run_scc_analysis(
+                    repo_path, include_file_details
+                )
+                semgrep_result = self._run_semgrep_analysis(
+                    repo_path, semgrep_timeout
+                )
 
             # Generate unified insights
             unified_insights = self._generate_unified_insights(
@@ -141,7 +151,9 @@ class StaticAnalysisPipeline:
             )
 
             # Calculate pipeline metrics
-            total_execution_time = (datetime.now() - start_time).total_seconds()
+            total_execution_time = (
+                datetime.now() - start_time
+            ).total_seconds()
             pipeline_metrics = PipelineMetrics(
                 total_execution_time=total_execution_time,
                 scc_execution_time=scc_result.execution_time_seconds,
@@ -202,7 +214,9 @@ class StaticAnalysisPipeline:
             logger.info(f"Analyzing {len(file_paths)} files with pipeline")
 
             if enable_parallel:
-                with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                with ThreadPoolExecutor(
+                    max_workers=self.max_workers
+                ) as executor:
                     # Submit both analyses
                     scc_future = executor.submit(
                         self.scc_analyzer.analyze_files, file_paths, base_path
@@ -218,7 +232,9 @@ class StaticAnalysisPipeline:
                     scc_result = scc_future.result()
                     semgrep_result = semgrep_future.result()
             else:
-                scc_result = self.scc_analyzer.analyze_files(file_paths, base_path)
+                scc_result = self.scc_analyzer.analyze_files(
+                    file_paths, base_path
+                )
                 semgrep_result = self.semgrep_analyzer.analyze_files(
                     file_paths, None, base_path
                 )
@@ -229,7 +245,9 @@ class StaticAnalysisPipeline:
             )
 
             # Calculate metrics
-            total_execution_time = (datetime.now() - start_time).total_seconds()
+            total_execution_time = (
+                datetime.now() - start_time
+            ).total_seconds()
             pipeline_metrics = PipelineMetrics(
                 total_execution_time=total_execution_time,
                 scc_execution_time=scc_result.execution_time_seconds,
@@ -291,7 +309,9 @@ class StaticAnalysisPipeline:
                         raise
 
                 if scc_result is None or semgrep_result is None:
-                    raise RuntimeError("One or more analyses failed to complete")
+                    raise RuntimeError(
+                        "One or more analyses failed to complete"
+                    )
 
                 return scc_result, semgrep_result
 
@@ -311,7 +331,9 @@ class StaticAnalysisPipeline:
             logger.error(f"SCC analysis failed: {e}")
             raise
 
-    def _run_semgrep_analysis(self, repo_path: Path, timeout: int) -> SemgrepResult:
+    def _run_semgrep_analysis(
+        self, repo_path: Path, timeout: int
+    ) -> SemgrepResult:
         """Run Semgrep analysis."""
         try:
             return self.semgrep_analyzer.analyze_repository(
@@ -337,10 +359,14 @@ class StaticAnalysisPipeline:
                 scc_result, scc_insights
             )
             security_score = semgrep_insights.get("security_score", 100)
-            maintainability_score = scc_insights.get("maintainability_score", 50)
+            maintainability_score = scc_insights.get(
+                "maintainability_score", 50
+            )
 
             # Identify technical debt indicators
-            technical_debt = self._identify_technical_debt(scc_result, semgrep_result)
+            technical_debt = self._identify_technical_debt(
+                scc_result, semgrep_result
+            )
 
             # Generate priority recommendations
             recommendations = self._generate_priority_recommendations(
@@ -416,7 +442,9 @@ class StaticAnalysisPipeline:
         try:
             # Large files
             if scc_result.file_details:
-                large_files = [f for f in scc_result.file_details if f.lines > 500]
+                large_files = [
+                    f for f in scc_result.file_details if f.lines > 500
+                ]
                 if large_files:
                     debt_indicators.append(
                         f"{len(large_files)} files exceed 500 lines (largest: "
@@ -426,7 +454,8 @@ class StaticAnalysisPipeline:
             # High complexity
             if scc_result.total_metrics.files > 0:
                 avg_complexity = (
-                    scc_result.total_metrics.complexity / scc_result.total_metrics.files
+                    scc_result.total_metrics.complexity
+                    / scc_result.total_metrics.files
                 )
                 if avg_complexity > 15:
                     debt_indicators.append(
@@ -436,7 +465,8 @@ class StaticAnalysisPipeline:
             # Low comment ratio
             if scc_result.total_metrics.lines > 0:
                 comment_ratio = (
-                    scc_result.total_metrics.comments / scc_result.total_metrics.lines
+                    scc_result.total_metrics.comments
+                    / scc_result.total_metrics.lines
                 )
                 if comment_ratio < 0.05:
                     debt_indicators.append(
@@ -446,12 +476,18 @@ class StaticAnalysisPipeline:
             # Security debt
             critical_security = semgrep_result.summary["by_severity"]["ERROR"]
             if critical_security > 0:
-                debt_indicators.append(f"{critical_security} critical security issues")
+                debt_indicators.append(
+                    f"{critical_security} critical security issues"
+                )
 
             # Code quality debt from Semgrep
-            quality_issues = semgrep_result.summary["by_category"].get("correctness", 0)
+            quality_issues = semgrep_result.summary["by_category"].get(
+                "correctness", 0
+            )
             if quality_issues > 10:
-                debt_indicators.append(f"{quality_issues} code correctness issues")
+                debt_indicators.append(
+                    f"{quality_issues} code correctness issues"
+                )
 
             return debt_indicators[:5]  # Limit to top 5 indicators
 
@@ -482,7 +518,9 @@ class StaticAnalysisPipeline:
                         "effort": "MEDIUM",
                         "action_items": [
                             f"Review and fix: {issue['rule_id']}"
-                            for issue in semgrep_insights.get("critical_issues", [])[:3]
+                            for issue in semgrep_insights.get(
+                                "critical_issues", []
+                            )[:3]
                         ],
                     }
                 )
@@ -498,12 +536,16 @@ class StaticAnalysisPipeline:
                         "description": f"Maintainability score: {code_quality_score}/100",
                         "impact": "MEDIUM",
                         "effort": "HIGH",
-                        "action_items": scc_insights.get("recommendations", [])[:3],
+                        "action_items": scc_insights.get(
+                            "recommendations", []
+                        )[:3],
                     }
                 )
 
             # Performance recommendations from Semgrep
-            perf_issues = semgrep_result.summary["by_category"].get("performance", 0)
+            perf_issues = semgrep_result.summary["by_category"].get(
+                "performance", 0
+            )
             if perf_issues > 0:
                 recommendations.append(
                     {
@@ -522,7 +564,8 @@ class StaticAnalysisPipeline:
             # Documentation recommendations
             if scc_result.total_metrics.lines > 0:
                 comment_ratio = (
-                    scc_result.total_metrics.comments / scc_result.total_metrics.lines
+                    scc_result.total_metrics.comments
+                    / scc_result.total_metrics.lines
                 )
                 if comment_ratio < 0.1:
                     recommendations.append(
@@ -567,12 +610,18 @@ class StaticAnalysisPipeline:
                     "dominant_language": scc_insights.get("dominant_language"),
                 },
                 "security_context": {
-                    "vulnerability_count": semgrep_result.summary["total_findings"],
-                    "critical_vulnerabilities": semgrep_result.summary["by_severity"][
-                        "ERROR"
+                    "vulnerability_count": semgrep_result.summary[
+                        "total_findings"
                     ],
-                    "security_score": semgrep_insights.get("security_score", 100),
-                    "risk_level": semgrep_insights.get("risk_assessment", "LOW"),
+                    "critical_vulnerabilities": semgrep_result.summary[
+                        "by_severity"
+                    ]["ERROR"],
+                    "security_score": semgrep_insights.get(
+                        "security_score", 100
+                    ),
+                    "risk_level": semgrep_insights.get(
+                        "risk_assessment", "LOW"
+                    ),
                     "top_vulnerability_types": list(
                         semgrep_result.summary["by_category"].keys()
                     )[:3],
@@ -597,11 +646,15 @@ class StaticAnalysisPipeline:
                 "project_characteristics": {
                     "is_web_project": any(
                         lang in ["TypeScript", "JavaScript", "Svelte"]
-                        for lang in scc_result.repository_summary["primary_languages"]
+                        for lang in scc_result.repository_summary[
+                            "primary_languages"
+                        ]
                     ),
                     "is_python_project": "Python"
                     in scc_result.repository_summary["primary_languages"],
-                    "language_diversity": scc_insights.get("language_diversity", 1),
+                    "language_diversity": scc_insights.get(
+                        "language_diversity", 1
+                    ),
                     "estimated_project_age": "unknown",  # Could be enhanced with git analysis
                     "estimated_team_size": min(
                         max(1, scc_result.total_metrics.files // 100), 20
@@ -621,7 +674,9 @@ class StaticAnalysisPipeline:
                         ]
                     ),
                     "technical_debt_level": len(
-                        self._identify_technical_debt(scc_result, semgrep_result)
+                        self._identify_technical_debt(
+                            scc_result, semgrep_result
+                        )
                     ),
                     "refactoring_candidates": (
                         len(
@@ -714,7 +769,9 @@ class StaticAnalysisPipeline:
                 "pipeline_metrics": asdict(pipeline_result.pipeline_metrics),
                 "unified_insights": asdict(pipeline_result.unified_insights),
                 "scc_summary": {
-                    "total_metrics": asdict(pipeline_result.scc_result.total_metrics),
+                    "total_metrics": asdict(
+                        pipeline_result.scc_result.total_metrics
+                    ),
                     "language_breakdown": [
                         asdict(lang)
                         for lang in pipeline_result.scc_result.language_breakdown
@@ -733,7 +790,9 @@ class StaticAnalysisPipeline:
 
     def export_sarif(self, pipeline_result: PipelineResult) -> str:
         """Export Semgrep results as SARIF for CI/CD integration."""
-        return self.semgrep_analyzer.export_sarif(pipeline_result.semgrep_result)
+        return self.semgrep_analyzer.export_sarif(
+            pipeline_result.semgrep_result
+        )
 
 
 # Convenience functions for integration
@@ -749,7 +808,9 @@ def quick_repository_analysis(repo_path: str) -> Dict[str, Any]:
         "total_files": result.scc_result.total_metrics.files,
         "total_findings": result.semgrep_result.summary["total_findings"],
         "execution_time": result.pipeline_metrics.total_execution_time,
-        "top_recommendations": result.unified_insights.priority_recommendations[:3],
+        "top_recommendations": result.unified_insights.priority_recommendations[
+            :3
+        ],
     }
 
 

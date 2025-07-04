@@ -149,7 +149,10 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_metrics_id"), "metrics", ["id"], unique=False)
     op.create_index(
-        op.f("ix_metrics_metric_type"), "metrics", ["metric_type"], unique=False
+        op.f("ix_metrics_metric_type"),
+        "metrics",
+        ["metric_type"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_metrics_timestamp"), "metrics", ["timestamp"], unique=False
