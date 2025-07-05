@@ -48,7 +48,9 @@ class MetricsCollectorInterface(ABC):
         pass
 
     @abstractmethod
-    async def collect_workflow_metrics(self, workflow_id: str) -> WorkflowMetrics:
+    async def collect_workflow_metrics(
+        self, workflow_id: str
+    ) -> WorkflowMetrics:
         """Collect workflow execution metrics"""
         pass
 
@@ -85,7 +87,9 @@ class MetricsCollector(MetricsCollectorInterface):
             queue_time_ms = 0
 
             if task.updated_at and task.created_at:
-                total_time = (task.updated_at - task.created_at).total_seconds() * 1000
+                total_time = (
+                    task.updated_at - task.created_at
+                ).total_seconds() * 1000
                 # Estimate queue time vs execution time based on status
                 if task.status == TaskStatus.COMPLETED:
                     execution_time_ms = int(
@@ -106,7 +110,9 @@ class MetricsCollector(MetricsCollectorInterface):
                     .order_by(CostTrackingEntry.timestamp.desc())
                     .first()
                 )
-                cost_usd = cost_entry.estimated_cost_usd if cost_entry else None
+                cost_usd = (
+                    cost_entry.estimated_cost_usd if cost_entry else None
+                )
             except Exception:
                 # If cost tracking table doesn't exist or import fails, continue without cost data
                 cost_usd = None
@@ -119,7 +125,9 @@ class MetricsCollector(MetricsCollectorInterface):
                 queue_time_ms=queue_time_ms,
                 memory_usage_mb=None,  # Would need process-level monitoring
                 cpu_usage_percent=None,  # Would need process-level monitoring
-                error_message=str(task.error_message) if task.error_message else None,
+                error_message=(
+                    str(task.error_message) if task.error_message else None
+                ),
                 cost_usd=str(cost_usd) if cost_usd else None,
             )
         finally:
@@ -129,7 +137,10 @@ class MetricsCollector(MetricsCollectorInterface):
         """Collect current system performance metrics"""
         # Check cache first
         now = time.time()
-        if self._system_stats_cache.get("timestamp", 0) + self._cache_timeout > now:
+        if (
+            self._system_stats_cache.get("timestamp", 0) + self._cache_timeout
+            > now
+        ):
             cached_data = self._system_stats_cache.get("data")
             if cached_data and isinstance(cached_data, SystemMetrics):
                 return cached_data
@@ -144,12 +155,18 @@ class MetricsCollector(MetricsCollectorInterface):
             # Get task queue stats
             active_tasks = (
                 session.query(Task)
-                .filter(Task.status.in_([TaskStatus.IN_PROGRESS, TaskStatus.QUEUED]))
+                .filter(
+                    Task.status.in_(
+                        [TaskStatus.IN_PROGRESS, TaskStatus.QUEUED]
+                    )
+                )
                 .count()
             )
 
             queue_depth = (
-                session.query(Task).filter(Task.status == TaskStatus.QUEUED).count()
+                session.query(Task)
+                .filter(Task.status == TaskStatus.QUEUED)
+                .count()
             )
 
             # Calculate average response time (last 100 completed tasks)
@@ -174,7 +191,9 @@ class MetricsCollector(MetricsCollectorInterface):
                     response_times.append(response_time)
 
             avg_response_time = (
-                sum(response_times) / len(response_times) if response_times else 0
+                sum(response_times) / len(response_times)
+                if response_times
+                else 0
             )
 
             metrics = SystemMetrics(
@@ -245,7 +264,9 @@ class MetricsCollector(MetricsCollectorInterface):
         finally:
             session.close()
 
-    async def collect_workflow_metrics(self, workflow_id: str) -> WorkflowMetrics:
+    async def collect_workflow_metrics(
+        self, workflow_id: str
+    ) -> WorkflowMetrics:
         """Collect workflow execution metrics"""
         session = self.session_factory()
         try:
@@ -423,7 +444,10 @@ class MetricsCollector(MetricsCollectorInterface):
                 await self.store_metric(
                     MetricType.COST_TRACKING,
                     float(metrics.cost_usd),
-                    labels={"task_id": str(task_id), "task_type": metrics.task_type},
+                    labels={
+                        "task_id": str(task_id),
+                        "task_type": metrics.task_type,
+                    },
                     metadata={"unit": "usd"},
                 )
 
@@ -434,7 +458,9 @@ class MetricsCollector(MetricsCollectorInterface):
 class BackgroundMetricsCollector:
     """Background service for continuous metrics collection"""
 
-    def __init__(self, collector: MetricsCollector, interval_seconds: int = 60):
+    def __init__(
+        self, collector: MetricsCollector, interval_seconds: int = 60
+    ):
         self.collector = collector
         self.interval_seconds = interval_seconds
         self._running = False

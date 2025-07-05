@@ -68,7 +68,7 @@ class ExecutionPlan:
     original_task_id: Optional[str] = None
     dependency_graph: Optional[Any] = None
     provider_assignments: Optional[Dict[str, Any]] = None
-    execution_strategy: Optional['DistributionStrategy'] = None
+    execution_strategy: Optional["DistributionStrategy"] = None
     estimated_total_time: Optional[float] = None
     estimated_cost: Optional[float] = None
     resource_allocation: Optional[Dict[str, Any]] = None

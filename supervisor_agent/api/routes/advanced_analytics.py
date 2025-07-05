@@ -33,7 +33,10 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from supervisor_agent.auth.dependencies import get_current_user, require_permissions
+from supervisor_agent.auth.dependencies import (
+    get_current_user,
+    require_permissions,
+)
 from supervisor_agent.auth.models import User
 from supervisor_agent.core.advanced_analytics_engine import (
     AlertSeverity,
@@ -117,7 +120,9 @@ class AnalyticsWebSocketManager:
                 prefs = self.subscriber_preferences.get(connection, {})
 
                 # Filter metrics based on preferences
-                filtered_data = self._filter_metrics_by_preferences(metrics_data, prefs)
+                filtered_data = self._filter_metrics_by_preferences(
+                    metrics_data, prefs
+                )
 
                 if filtered_data:
                     filtered_message = {**message, "data": filtered_data}
@@ -174,7 +179,9 @@ async def analytics_websocket_endpoint(websocket: WebSocket):
         while True:
             # Wait for client messages (preferences updates, etc.)
             try:
-                data = await asyncio.wait_for(websocket.receive_text(), timeout=1.0)
+                data = await asyncio.wait_for(
+                    websocket.receive_text(), timeout=1.0
+                )
                 message = json.loads(data)
 
                 # Handle preference updates
@@ -239,11 +246,15 @@ async def get_real_time_metrics(
 
                 # Generate predictions for key metrics
                 for metric_name, value in metrics.items():
-                    if isinstance(value, (int, float)) and metric_name != "timestamp":
+                    if (
+                        isinstance(value, (int, float))
+                        and metric_name != "timestamp"
+                    ):
                         # Create a simple time series for prediction
                         # In real implementation, this would use historical data
                         ts = TimeSeries(
-                            metric_name=metric_name, metric_type=MetricType.GAUGE
+                            metric_name=metric_name,
+                            metric_type=MetricType.GAUGE,
                         )
                         ts.add_point(datetime.now(timezone.utc), float(value))
 
@@ -252,7 +263,9 @@ async def get_real_time_metrics(
                             past_time = datetime.now(timezone.utc) - timedelta(
                                 minutes=i
                             )
-                            past_value = float(value) * (1 + (i * 0.01))  # Simple trend
+                            past_value = float(value) * (
+                                1 + (i * 0.01)
+                            )  # Simple trend
                             ts.add_point(past_time, past_value)
 
                         pred_list = predictor.predict(
@@ -287,10 +300,14 @@ async def get_real_time_metrics(
                 # Check for anomalies in current metrics
                 # This would typically use historical data for comparison
                 for metric_name, value in metrics.items():
-                    if isinstance(value, (int, float)) and metric_name != "timestamp":
+                    if (
+                        isinstance(value, (int, float))
+                        and metric_name != "timestamp"
+                    ):
                         # Create time series with some sample data for anomaly detection
                         ts = TimeSeries(
-                            metric_name=metric_name, metric_type=MetricType.GAUGE
+                            metric_name=metric_name,
+                            metric_type=MetricType.GAUGE,
                         )
 
                         # Add current and some historical data points
@@ -300,7 +317,9 @@ async def get_real_time_metrics(
                                 minutes=i
                             )
                             # Generate sample historical data with some variation
-                            base_value = float(value) * (1 + ((i % 5) * 0.1 - 0.2))
+                            base_value = float(value) * (
+                                1 + ((i % 5) * 0.1 - 0.2)
+                            )
                             ts.add_point(past_time, base_value)
 
                         detected_anomalies = detector.detect_anomalies(ts)
@@ -330,7 +349,10 @@ async def get_real_time_metrics(
 
                 if critical_anomalies:
                     await ws_manager.broadcast_anomaly(
-                        {"scope": scope, "critical_anomalies": critical_anomalies}
+                        {
+                            "scope": scope,
+                            "critical_anomalies": critical_anomalies,
+                        }
                     )
 
             except Exception as e:
@@ -344,12 +366,16 @@ async def get_real_time_metrics(
 
     except Exception as e:
         logger.error(f"Failed to get real-time metrics: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve metrics")
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve metrics"
+        )
 
 
 @router.get("/dashboard/data")
 async def get_dashboard_data(
-    time_range: str = Query("24h", description="Time range: 1h, 6h, 24h, 7d, 30d"),
+    time_range: str = Query(
+        "24h", description="Time range: 1h, 6h, 24h, 7d, 30d"
+    ),
     metric_types: List[str] = Query(
         ["system", "tasks"], description="Metric types to include"
     ),
@@ -433,7 +459,9 @@ async def get_dashboard_data(
 
     except Exception as e:
         logger.error(f"Failed to get dashboard data: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve dashboard data")
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve dashboard data"
+        )
 
 
 @router.get("/insights")
@@ -493,7 +521,9 @@ async def get_analytics_insights(
 
     except Exception as e:
         logger.error(f"Failed to generate insights: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to generate insights")
+        raise HTTPException(
+            status_code=500, detail="Failed to generate insights"
+        )
 
 
 @router.get("/export")
@@ -522,13 +552,19 @@ async def export_analytics_data(
 
         # Collect metrics
         if "system" in metric_types:
-            export_data["metrics"]["system"] = await collector.collect_system_metrics()
+            export_data["metrics"][
+                "system"
+            ] = await collector.collect_system_metrics()
 
         if "tasks" in metric_types:
-            export_data["metrics"]["tasks"] = await collector.collect_task_metrics()
+            export_data["metrics"][
+                "tasks"
+            ] = await collector.collect_task_metrics()
 
         if "users" in metric_types:
-            export_data["metrics"]["users"] = await collector.collect_user_metrics()
+            export_data["metrics"][
+                "users"
+            ] = await collector.collect_user_metrics()
 
         # Generate export based on format
         if format == ExportFormat.JSON:
@@ -560,7 +596,11 @@ async def _generate_trend_analysis(
     # This would typically use historical data from database
     # For now, return mock trend data
     return {
-        "cpu_usage": {"trend": "increasing", "rate_of_change": 2.3, "confidence": 0.85},
+        "cpu_usage": {
+            "trend": "increasing",
+            "rate_of_change": 2.3,
+            "confidence": 0.85,
+        },
         "task_completion_rate": {
             "trend": "stable",
             "rate_of_change": 0.1,
@@ -582,19 +622,27 @@ async def _generate_period_comparisons(
     return {
         "vs_previous_period": {
             "cpu_usage": {"change_percent": 15.3, "direction": "increase"},
-            "task_completion_rate": {"change_percent": -2.1, "direction": "decrease"},
+            "task_completion_rate": {
+                "change_percent": -2.1,
+                "direction": "decrease",
+            },
             "memory_usage": {"change_percent": 8.7, "direction": "increase"},
         },
         "vs_same_period_last_week": {
             "cpu_usage": {"change_percent": -5.2, "direction": "decrease"},
-            "task_completion_rate": {"change_percent": 12.4, "direction": "increase"},
+            "task_completion_rate": {
+                "change_percent": 12.4,
+                "direction": "increase",
+            },
             "memory_usage": {"change_percent": 3.1, "direction": "increase"},
         },
     }
 
 
 async def _generate_performance_insights(
-    system_metrics: Dict[str, Any], task_metrics: Dict[str, Any], min_confidence: float
+    system_metrics: Dict[str, Any],
+    task_metrics: Dict[str, Any],
+    min_confidence: float,
 ) -> List[Dict[str, Any]]:
     """Generate performance-related insights"""
     insights = []
@@ -639,11 +687,17 @@ async def _generate_performance_insights(
             }
         )
 
-    return [insight for insight in insights if insight["confidence"] >= min_confidence]
+    return [
+        insight
+        for insight in insights
+        if insight["confidence"] >= min_confidence
+    ]
 
 
 async def _generate_efficiency_insights(
-    task_metrics: Dict[str, Any], user_metrics: Dict[str, Any], min_confidence: float
+    task_metrics: Dict[str, Any],
+    user_metrics: Dict[str, Any],
+    min_confidence: float,
 ) -> List[Dict[str, Any]]:
     """Generate efficiency-related insights"""
     insights = []
@@ -668,11 +722,17 @@ async def _generate_efficiency_insights(
             }
         )
 
-    return [insight for insight in insights if insight["confidence"] >= min_confidence]
+    return [
+        insight
+        for insight in insights
+        if insight["confidence"] >= min_confidence
+    ]
 
 
 async def _generate_anomaly_insights(
-    system_metrics: Dict[str, Any], task_metrics: Dict[str, Any], min_confidence: float
+    system_metrics: Dict[str, Any],
+    task_metrics: Dict[str, Any],
+    min_confidence: float,
 ) -> List[Dict[str, Any]]:
     """Generate anomaly-related insights"""
     insights = []
@@ -697,7 +757,11 @@ async def _generate_anomaly_insights(
             }
         )
 
-    return [insight for insight in insights if insight["confidence"] >= min_confidence]
+    return [
+        insight
+        for insight in insights
+        if insight["confidence"] >= min_confidence
+    ]
 
 
 def _export_as_csv(data: Dict[str, Any]) -> StreamingResponse:
@@ -732,7 +796,9 @@ def _export_as_csv(data: Dict[str, Any]) -> StreamingResponse:
     return StreamingResponse(
         io.BytesIO(output.getvalue().encode()),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=analytics_export.csv"},
+        headers={
+            "Content-Disposition": "attachment; filename=analytics_export.csv"
+        },
     )
 
 
@@ -774,14 +840,17 @@ def _export_as_excel(data: Dict[str, Any]) -> StreamingResponse:
                                 "metric": metric_name,
                                 "value": value,
                                 "timestamp": metrics.get(
-                                    "timestamp", data["export_metadata"]["exported_at"]
+                                    "timestamp",
+                                    data["export_metadata"]["exported_at"],
                                 ),
                             }
                         )
 
                 if rows:
                     df = pd.DataFrame(rows)
-                    sheet_name = category.capitalize()[:31]  # Excel sheet name limit
+                    sheet_name = category.capitalize()[
+                        :31
+                    ]  # Excel sheet name limit
                     df.to_excel(writer, sheet_name=sheet_name, index=False)
 
         output.seek(0)
@@ -795,7 +864,9 @@ def _export_as_excel(data: Dict[str, Any]) -> StreamingResponse:
         )
 
     except ImportError:
-        logger.warning("pandas or openpyxl not available, falling back to CSV export")
+        logger.warning(
+            "pandas or openpyxl not available, falling back to CSV export"
+        )
         return _export_as_csv(data)
     except Exception as e:
         logger.error(f"Failed to create Excel export: {str(e)}")

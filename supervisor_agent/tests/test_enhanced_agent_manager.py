@@ -107,7 +107,9 @@ class TestTaskExecution:
     """Test task execution functionality"""
 
     @pytest.mark.asyncio
-    async def test_execute_task_legacy_only(self, enhanced_manager, sample_task):
+    async def test_execute_task_legacy_only(
+        self, enhanced_manager, sample_task
+    ):
         """Test task execution with legacy agents only"""
         shared_memory = {"context": "test"}
 
@@ -117,7 +119,9 @@ class TestTaskExecution:
 
         assert result["success"] is True
         assert "result" in result
-        enhanced_manager.legacy_manager.get_agent.assert_called_with("claude-agent-1")
+        enhanced_manager.legacy_manager.get_agent.assert_called_with(
+            "claude-agent-1"
+        )
 
     @pytest.mark.asyncio
     async def test_execute_task_with_multi_provider(
@@ -157,10 +161,15 @@ class TestTaskExecution:
             )
             mock_service.is_enabled.return_value = True
             mock_service.process_task = AsyncMock(
-                return_value={"success": True, "result": "Auto-selected multi-provider"}
+                return_value={
+                    "success": True,
+                    "result": "Auto-selected multi-provider",
+                }
             )
 
-            result = await enhanced_manager_with_providers.execute_task(sample_task)
+            result = await enhanced_manager_with_providers.execute_task(
+                sample_task
+            )
 
             assert result["success"] is True
             mock_service.get_provider_status.assert_called_once()
@@ -225,7 +234,9 @@ class TestAgentAvailability:
                 }
             )
 
-            result = await enhanced_manager_with_providers.get_available_agents()
+            result = (
+                await enhanced_manager_with_providers.get_available_agents()
+            )
 
             assert result["multi_provider_enabled"] is True
             assert len(result["providers"]) == 1
@@ -237,7 +248,9 @@ class TestProviderPreferences:
     """Test provider preference management"""
 
     @pytest.mark.asyncio
-    async def test_set_provider_preference(self, enhanced_manager_with_providers):
+    async def test_set_provider_preference(
+        self, enhanced_manager_with_providers
+    ):
         """Test setting provider preferences for a user"""
         preferences = {
             "preferred_providers": ["claude-primary"],
@@ -251,8 +264,10 @@ class TestProviderPreferences:
         )
 
         assert result is True
-        stored_prefs = await enhanced_manager_with_providers.get_provider_preference(
-            "user-123"
+        stored_prefs = (
+            await enhanced_manager_with_providers.get_provider_preference(
+                "user-123"
+            )
         )
         assert stored_prefs is not None
         assert stored_prefs["preferred_providers"] == ["claude-primary"]
@@ -281,7 +296,9 @@ class TestMigration:
             mock_service.initialize = AsyncMock()
             mock_service.register_provider = AsyncMock(return_value=True)
 
-            result = await enhanced_manager.migrate_to_multi_provider(dry_run=True)
+            result = await enhanced_manager.migrate_to_multi_provider(
+                dry_run=True
+            )
 
             assert result["dry_run"] is True
             assert "legacy_agents" in result
@@ -300,7 +317,9 @@ class TestMigration:
             mock_service.initialize = AsyncMock()
             mock_service.register_provider = AsyncMock(return_value=True)
 
-            result = await enhanced_manager.migrate_to_multi_provider(dry_run=False)
+            result = await enhanced_manager.migrate_to_multi_provider(
+                dry_run=False
+            )
 
             assert result["dry_run"] is False
             assert result["migration_completed"] is True
@@ -407,7 +426,10 @@ async def test_integration_workflow(mock_legacy_manager):
                 return_value={"healthy_providers": 1, "total_providers": 1}
             )
             mock_service.process_task = AsyncMock(
-                return_value={"success": True, "result": "Integration test success"}
+                return_value={
+                    "success": True,
+                    "result": "Integration test success",
+                }
             )
 
             # Create test task

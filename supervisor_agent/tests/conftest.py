@@ -43,7 +43,9 @@ def test_engine():
 @pytest.fixture
 def test_db(test_engine):
     """Create a test database session"""
-    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    TestSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_engine
+    )
     db = TestSessionLocal()
     try:
         # Test connection before yielding
@@ -59,7 +61,9 @@ def test_db(test_engine):
 @pytest.fixture
 def test_client(test_engine):
     """Create a test client with database dependency override"""
-    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    TestSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_engine
+    )
 
     def override_get_db():
         db = TestSessionLocal()

@@ -129,7 +129,9 @@ class DependencyManager:
             parallelization_potential=parallelization_potential,
         )
 
-    def resolve_execution_order(self, graph: DependencyGraph) -> ExecutionOrder:
+    def resolve_execution_order(
+        self, graph: DependencyGraph
+    ) -> ExecutionOrder:
         """
         Resolves the execution order of tasks from a dependency graph.
         This is a placeholder implementation (topological sort).

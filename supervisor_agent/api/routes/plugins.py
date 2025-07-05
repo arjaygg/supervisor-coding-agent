@@ -27,7 +27,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from supervisor_agent.auth.dependencies import get_current_user, require_permissions
+from supervisor_agent.auth.dependencies import (
+    get_current_user,
+    require_permissions,
+)
 from supervisor_agent.auth.models import User
 from supervisor_agent.db.database import get_db
 from supervisor_agent.plugins.plugin_interface import (
@@ -112,7 +115,9 @@ async def list_plugins(
     plugin_type: Optional[PluginType] = Query(
         None, description="Filter by plugin type"
     ),
-    status: Optional[PluginStatus] = Query(None, description="Filter by status"),
+    status: Optional[PluginStatus] = Query(
+        None, description="Filter by status"
+    ),
     current_user: User = Depends(require_permissions("plugins:read")),
     db: Session = Depends(get_db),
 ):
@@ -124,7 +129,10 @@ async def list_plugins(
         plugins = []
         for plugin_name, plugin_info in plugins_data.items():
             # Apply filters
-            if plugin_type and plugin_info["metadata"]["plugin_type"] != plugin_type:
+            if (
+                plugin_type
+                and plugin_info["metadata"]["plugin_type"] != plugin_type
+            ):
                 continue
             if status and plugin_info["status"] != status:
                 continue
@@ -143,7 +151,9 @@ async def list_plugins(
                     load_time=plugin_info.get("load_time"),
                     last_activity=plugin_info.get("last_activity"),
                     error_count=plugin_info.get("error_count", 0),
-                    performance_metrics=plugin_info.get("performance_metrics", {}),
+                    performance_metrics=plugin_info.get(
+                        "performance_metrics", {}
+                    ),
                 )
             )
 
@@ -151,7 +161,9 @@ async def list_plugins(
 
     except Exception as e:
         logger.error(f"Failed to list plugins: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve plugins")
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve plugins"
+        )
 
 
 @router.get("/{plugin_name}", response_model=PluginInfo)
@@ -228,7 +240,9 @@ async def activate_plugin(
         raise
     except Exception as e:
         logger.error(f"Failed to activate plugin {plugin_name}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to activate plugin")
+        raise HTTPException(
+            status_code=500, detail="Failed to activate plugin"
+        )
 
 
 @router.post("/{plugin_name}/deactivate")
@@ -262,7 +276,9 @@ async def deactivate_plugin(
         raise
     except Exception as e:
         logger.error(f"Failed to deactivate plugin {plugin_name}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to deactivate plugin")
+        raise HTTPException(
+            status_code=500, detail="Failed to deactivate plugin"
+        )
 
 
 @router.delete("/{plugin_name}")
@@ -330,8 +346,12 @@ async def check_plugin_health(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to check health for plugin {plugin_name}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to check plugin health")
+        logger.error(
+            f"Failed to check health for plugin {plugin_name}: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to check plugin health"
+        )
 
 
 @router.get("/health/all")
@@ -355,13 +375,17 @@ async def check_all_plugins_health(
         return {
             "checked_at": datetime.now(timezone.utc).isoformat(),
             "total_plugins": len(results),
-            "healthy_plugins": sum(1 for r in results.values() if r["healthy"]),
+            "healthy_plugins": sum(
+                1 for r in results.values() if r["healthy"]
+            ),
             "results": results,
         }
 
     except Exception as e:
         logger.error(f"Failed to check all plugins health: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to check plugins health")
+        raise HTTPException(
+            status_code=500, detail="Failed to check plugins health"
+        )
 
 
 @router.get("/{plugin_name}/configuration")
@@ -377,7 +401,8 @@ async def get_plugin_configuration(
         # Check if plugin exists
         if plugin_name not in manager.configurations:
             raise HTTPException(
-                status_code=404, detail=f"Configuration for {plugin_name} not found"
+                status_code=404,
+                detail=f"Configuration for {plugin_name} not found",
             )
 
         config = manager.configurations[plugin_name]
@@ -395,7 +420,9 @@ async def get_plugin_configuration(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get configuration for {plugin_name}: {str(e)}")
+        logger.error(
+            f"Failed to get configuration for {plugin_name}: {str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail="Failed to retrieve plugin configuration"
         )
@@ -447,7 +474,9 @@ async def update_plugin_configuration(
         return {"message": f"Configuration updated for plugin {plugin_name}"}
 
     except Exception as e:
-        logger.error(f"Failed to update configuration for {plugin_name}: {str(e)}")
+        logger.error(
+            f"Failed to update configuration for {plugin_name}: {str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail="Failed to update plugin configuration"
         )
@@ -497,7 +526,9 @@ async def publish_event(
 
 @router.get("/events/history")
 async def get_event_history(
-    event_type: Optional[EventType] = Query(None, description="Filter by event type"),
+    event_type: Optional[EventType] = Query(
+        None, description="Filter by event type"
+    ),
     limit: int = Query(
         100, ge=1, le=1000, description="Maximum number of events to return"
     ),
@@ -528,7 +559,9 @@ async def get_event_history(
 
     except Exception as e:
         logger.error(f"Failed to get event history: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve event history")
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve event history"
+        )
 
 
 @router.post("/notifications/send")
@@ -542,7 +575,10 @@ async def send_notification(
         manager = get_plugin_manager()
 
         # Get notification plugin
-        if notification_request.plugin_name not in manager.notification_plugins:
+        if (
+            notification_request.plugin_name
+            not in manager.notification_plugins
+        ):
             raise HTTPException(
                 status_code=404,
                 detail=f"Notification plugin {notification_request.plugin_name} not found or inactive",
@@ -570,14 +606,17 @@ async def send_notification(
             }
         else:
             raise HTTPException(
-                status_code=400, detail=f"Failed to send notification: {result.error}"
+                status_code=400,
+                detail=f"Failed to send notification: {result.error}",
             )
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to send notification: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to send notification")
+        raise HTTPException(
+            status_code=500, detail="Failed to send notification"
+        )
 
 
 @router.get("/metrics")
@@ -597,7 +636,9 @@ async def get_plugin_metrics(
 
     except Exception as e:
         logger.error(f"Failed to get plugin metrics: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve plugin metrics")
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve plugin metrics"
+        )
 
 
 @router.get("/types/{plugin_type}")
@@ -622,16 +663,22 @@ async def get_plugins_by_type(
                         name=plugin_info["metadata"]["name"],
                         version=plugin_info["metadata"]["version"],
                         description=plugin_info["metadata"]["description"],
-                        author=plugin_info["metadata"].get("author", "Unknown"),
+                        author=plugin_info["metadata"].get(
+                            "author", "Unknown"
+                        ),
                         plugin_type=plugin_info["metadata"]["plugin_type"],
                         status=plugin_info["status"],
                         dependencies=plugin_info["metadata"]["dependencies"],
-                        permissions=plugin_info["metadata"].get("permissions", []),
+                        permissions=plugin_info["metadata"].get(
+                            "permissions", []
+                        ),
                         tags=plugin_info["metadata"].get("tags", []),
                         load_time=plugin_info.get("load_time"),
                         last_activity=plugin_info.get("last_activity"),
                         error_count=plugin_info.get("error_count", 0),
-                        performance_metrics=plugin_info.get("performance_metrics", {}),
+                        performance_metrics=plugin_info.get(
+                            "performance_metrics", {}
+                        ),
                     )
                 )
 
@@ -666,4 +713,6 @@ async def discover_plugins(
 
     except Exception as e:
         logger.error(f"Failed to discover plugins: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to discover plugins")
+        raise HTTPException(
+            status_code=500, detail="Failed to discover plugins"
+        )

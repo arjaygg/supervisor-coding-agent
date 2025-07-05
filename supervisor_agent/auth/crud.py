@@ -57,7 +57,9 @@ class UserCRUD:
         )
 
     @staticmethod
-    def get_user_by_username_or_email(db: Session, identifier: str) -> Optional[User]:
+    def get_user_by_username_or_email(
+        db: Session, identifier: str
+    ) -> Optional[User]:
         return (
             db.query(User)
             .options(joinedload(User.roles).joinedload(Role.permissions))
@@ -67,7 +69,10 @@ class UserCRUD:
 
     @staticmethod
     def get_users(
-        db: Session, skip: int = 0, limit: int = 100, is_active: Optional[bool] = None
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+        is_active: Optional[bool] = None,
     ) -> List[User]:
         query = db.query(User).options(
             joinedload(User.roles).joinedload(Role.permissions)
@@ -197,7 +202,9 @@ class RoleCRUD:
         # Add permissions if specified
         if role.permissions:
             permissions = (
-                db.query(Permission).filter(Permission.name.in_(role.permissions)).all()
+                db.query(Permission)
+                .filter(Permission.name.in_(role.permissions))
+                .all()
             )
             db_role.permissions = permissions
 
@@ -219,7 +226,9 @@ class RoleCRUD:
         if "permissions" in update_data:
             permission_names = update_data.pop("permissions")
             permissions = (
-                db.query(Permission).filter(Permission.name.in_(permission_names)).all()
+                db.query(Permission)
+                .filter(Permission.name.in_(permission_names))
+                .all()
             )
             db_role.permissions = permissions
 
@@ -244,8 +253,12 @@ class RoleCRUD:
 
 class PermissionCRUD:
     @staticmethod
-    def get_permission(db: Session, permission_id: str) -> Optional[Permission]:
-        return db.query(Permission).filter(Permission.id == permission_id).first()
+    def get_permission(
+        db: Session, permission_id: str
+    ) -> Optional[Permission]:
+        return (
+            db.query(Permission).filter(Permission.id == permission_id).first()
+        )
 
     @staticmethod
     def get_permission_by_name(db: Session, name: str) -> Optional[Permission]:
@@ -258,7 +271,9 @@ class PermissionCRUD:
         return db.query(Permission).offset(skip).limit(limit).all()
 
     @staticmethod
-    def create_permission(db: Session, permission: PermissionCreate) -> Permission:
+    def create_permission(
+        db: Session, permission: PermissionCreate
+    ) -> Permission:
         db_permission = Permission(
             name=permission.name,
             resource=permission.resource,
@@ -311,7 +326,9 @@ class SessionCRUD:
     def get_session_by_jti(db: Session, jti: str) -> Optional[UserSession]:
         return (
             db.query(UserSession)
-            .filter(UserSession.token_jti == jti, UserSession.is_active.is_(True))
+            .filter(
+                UserSession.token_jti == jti, UserSession.is_active.is_(True)
+            )
             .first()
         )
 
@@ -343,7 +360,9 @@ class SessionCRUD:
         """Deactivate all sessions for a user"""
         count = (
             db.query(UserSession)
-            .filter(UserSession.user_id == user_id, UserSession.is_active.is_(True))
+            .filter(
+                UserSession.user_id == user_id, UserSession.is_active.is_(True)
+            )
             .update({"is_active": False})
         )
 
@@ -354,7 +373,9 @@ class SessionCRUD:
     def cleanup_expired_sessions(db: Session) -> int:
         """Remove expired sessions"""
         now = datetime.now(timezone.utc)
-        count = db.query(UserSession).filter(UserSession.expires_at < now).delete()
+        count = (
+            db.query(UserSession).filter(UserSession.expires_at < now).delete()
+        )
 
         db.commit()
         return count
@@ -446,7 +467,10 @@ def initialize_default_permissions(db: Session):
             PermissionCRUD.create_permission(
                 db,
                 PermissionCreate(
-                    name=name, resource=resource, action=action, description=description
+                    name=name,
+                    resource=resource,
+                    action=action,
+                    description=description,
                 ),
             )
 
@@ -524,7 +548,9 @@ def initialize_default_roles(db: Session):
         if not RoleCRUD.get_role_by_name(db, name):
             role = RoleCRUD.create_role(
                 db,
-                RoleCreate(name=name, description=description, permissions=permissions),
+                RoleCreate(
+                    name=name, description=description, permissions=permissions
+                ),
             )
             role.is_system_role = is_system
             db.commit()

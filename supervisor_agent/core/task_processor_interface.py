@@ -38,7 +38,9 @@ class SyncTaskProcessor:
         from supervisor_agent.utils.logger import get_logger
 
         logger = get_logger(__name__)
-        logger.info(f"Processing task {task_id} synchronously (development mode)")
+        logger.info(
+            f"Processing task {task_id} synchronously (development mode)"
+        )
 
         # Process in background to avoid blocking the API response
         asyncio.create_task(self._process_task_background(task_id))
@@ -75,7 +77,9 @@ class SyncTaskProcessor:
                     return
 
                 # Update task status to in progress
-                update_data = schemas.TaskUpdate(status=models.TaskStatus.IN_PROGRESS)
+                update_data = schemas.TaskUpdate(
+                    status=models.TaskStatus.IN_PROGRESS
+                )
                 crud.TaskCRUD.update_task(db, task_id, update_data)
                 db.commit()
 
@@ -98,14 +102,18 @@ class SyncTaskProcessor:
                 # Execute the task using Claude agent
                 claude_agent = agent_manager.get_agent(agent.id)
                 if not claude_agent:
-                    logger.error(f"Agent {agent.id} not found in agent manager")
+                    logger.error(
+                        f"Agent {agent.id} not found in agent manager"
+                    )
                     return
 
                 # Get shared memory context
                 memory_context = shared_memory.get_context_for_task(task.id)
 
                 # Execute task
-                result = await claude_agent.execute_task(task, memory_context, db)
+                result = await claude_agent.execute_task(
+                    task, memory_context, db
+                )
 
                 if result["success"]:
                     # Update task as completed
@@ -138,7 +146,9 @@ class SyncTaskProcessor:
                 db.close()
 
         except Exception as e:
-            logger.error(f"Failed to process task {task_id} in sync mode: {str(e)}")
+            logger.error(
+                f"Failed to process task {task_id} in sync mode: {str(e)}"
+            )
 
             # Update task status to failed
             try:

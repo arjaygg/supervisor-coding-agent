@@ -14,7 +14,8 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = Field(
-        default="sqlite:///./supervisor_agent.db", description="Database connection URL"
+        default="sqlite:///./supervisor_agent.db",
+        description="Database connection URL",
     )
 
     # Redis
@@ -27,7 +28,8 @@ class Settings(BaseSettings):
         default="redis://localhost:6379/0", description="Celery broker URL"
     )
     celery_result_backend: str = Field(
-        default="redis://localhost:6379/0", description="Celery result backend URL"
+        default="redis://localhost:6379/0",
+        description="Celery result backend URL",
     )
 
     # Claude Configuration
@@ -110,7 +112,8 @@ class Settings(BaseSettings):
         description="Default load balancing strategy: round_robin, least_loaded, fastest_response, priority_based, capability_based",
     )
     provider_health_check_interval: int = Field(
-        default=60, description="Health check interval for providers in seconds"
+        default=60,
+        description="Health check interval for providers in seconds",
     )
     provider_failure_threshold: int = Field(
         default=3,
@@ -125,7 +128,11 @@ class Settings(BaseSettings):
     def claude_api_keys_list(self) -> List[str]:
         if not self.claude_api_keys:
             return []
-        return [key.strip() for key in self.claude_api_keys.split(",") if key.strip()]
+        return [
+            key.strip()
+            for key in self.claude_api_keys.split(",")
+            if key.strip()
+        ]
 
     @property
     def providers_config_dict(self) -> Dict[str, Any]:
@@ -268,15 +275,23 @@ class Settings(BaseSettings):
                     "priority_based",
                     "capability_based",
                 ]
-                if self.default_load_balancing_strategy not in valid_strategies:
+                if (
+                    self.default_load_balancing_strategy
+                    not in valid_strategies
+                ):
                     warnings.append(
                         f"Invalid load balancing strategy: {self.default_load_balancing_strategy}"
                     )
 
             except Exception as e:
-                warnings.append(f"Provider configuration validation failed: {str(e)}")
+                warnings.append(
+                    f"Provider configuration validation failed: {str(e)}"
+                )
 
-        if "localhost" in self.database_url and "sqlite" not in self.database_url:
+        if (
+            "localhost" in self.database_url
+            and "sqlite" not in self.database_url
+        ):
             warnings.append(
                 "Using localhost database - ensure PostgreSQL/MySQL is running"
             )
@@ -327,7 +342,10 @@ class Settings(BaseSettings):
                 )
             except Exception:
                 info.update(
-                    {"multi_provider_enabled": True, "provider_config_error": True}
+                    {
+                        "multi_provider_enabled": True,
+                        "provider_config_error": True,
+                    }
                 )
         else:
             info.update(

@@ -41,7 +41,8 @@ async def get_analytics_summary():
         return summary
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get analytics summary: {str(e)}"
+            status_code=500,
+            detail=f"Failed to get analytics summary: {str(e)}",
         )
 
 
@@ -52,7 +53,9 @@ async def query_metrics(query: AnalyticsQuery):
         result = await analytics_engine.process_metrics(query)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Query execution failed: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"Query execution failed: {str(e)}"
+        )
 
 
 @router.get("/insights", response_model=List[Insight])
@@ -86,7 +89,8 @@ async def get_trend_prediction(
         return prediction
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to generate trend prediction: {str(e)}"
+            status_code=500,
+            detail=f"Failed to generate trend prediction: {str(e)}",
         )
 
 
@@ -107,7 +111,9 @@ async def get_recent_metrics(
         if metric_type:
             query = query.filter(MetricEntry.metric_type == metric_type.value)
 
-        metrics = query.order_by(MetricEntry.timestamp.desc()).limit(limit).all()
+        metrics = (
+            query.order_by(MetricEntry.timestamp.desc()).limit(limit).all()
+        )
         return metrics
     except Exception as e:
         raise HTTPException(
@@ -116,7 +122,9 @@ async def get_recent_metrics(
 
 
 @router.post("/collect/task/{task_id}")
-async def collect_task_metrics(task_id: int, background_tasks: BackgroundTasks):
+async def collect_task_metrics(
+    task_id: int, background_tasks: BackgroundTasks
+):
     """Trigger collection of metrics for a specific task"""
     try:
         background_tasks.add_task(
@@ -125,7 +133,8 @@ async def collect_task_metrics(task_id: int, background_tasks: BackgroundTasks):
         return {"message": f"Metrics collection triggered for task {task_id}"}
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to trigger metrics collection: {str(e)}"
+            status_code=500,
+            detail=f"Failed to trigger metrics collection: {str(e)}",
         )
 
 
@@ -133,7 +142,9 @@ async def collect_task_metrics(task_id: int, background_tasks: BackgroundTasks):
 async def collect_system_metrics(background_tasks: BackgroundTasks):
     """Trigger collection of system metrics"""
     try:
-        background_tasks.add_task(metrics_collector.collect_and_store_system_metrics)
+        background_tasks.add_task(
+            metrics_collector.collect_and_store_system_metrics
+        )
         return {"message": "System metrics collection triggered"}
     except Exception as e:
         raise HTTPException(
@@ -178,14 +189,18 @@ async def get_provider_dashboard():
         )
 
     try:
-        from supervisor_agent.core.multi_provider_service import multi_provider_service
+        from supervisor_agent.core.multi_provider_service import (
+            multi_provider_service,
+        )
 
         # Get provider status and analytics
         provider_status = await multi_provider_service.get_provider_status()
         analytics = await multi_provider_service.get_analytics()
 
         # Get system health information
-        from supervisor_agent.core.enhanced_agent_manager import enhanced_agent_manager
+        from supervisor_agent.core.enhanced_agent_manager import (
+            enhanced_agent_manager,
+        )
 
         system_health = await enhanced_agent_manager.get_system_health()
 
@@ -193,11 +208,17 @@ async def get_provider_dashboard():
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "overview": {
                 "total_providers": provider_status.get("total_providers", 0),
-                "healthy_providers": provider_status.get("healthy_providers", 0),
-                "unhealthy_providers": provider_status.get("unhealthy_providers", 0),
+                "healthy_providers": provider_status.get(
+                    "healthy_providers", 0
+                ),
+                "unhealthy_providers": provider_status.get(
+                    "unhealthy_providers", 0
+                ),
                 "total_tasks_today": analytics.get("total_tasks_today", 0),
                 "total_cost_today": analytics.get("total_cost_today", 0.0),
-                "average_response_time": analytics.get("average_response_time", 0.0),
+                "average_response_time": analytics.get(
+                    "average_response_time", 0.0
+                ),
                 "success_rate": analytics.get("success_rate", 0.0),
             },
             "providers": provider_status.get("providers", {}),
@@ -212,14 +233,17 @@ async def get_provider_dashboard():
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get provider dashboard data: {str(e)}"
+            status_code=500,
+            detail=f"Failed to get provider dashboard data: {str(e)}",
         )
 
 
 @router.get("/providers/{provider_id}/metrics")
 async def get_provider_metrics(
     provider_id: str,
-    time_range: TimeRange = Query(TimeRange.DAY, description="Time range for metrics"),
+    time_range: TimeRange = Query(
+        TimeRange.DAY, description="Time range for metrics"
+    ),
     db: Session = Depends(get_db),
 ):
     """Get detailed metrics for a specific provider"""
@@ -229,11 +253,13 @@ async def get_provider_metrics(
         )
 
     try:
-        from supervisor_agent.core.multi_provider_service import multi_provider_service
+        from supervisor_agent.core.multi_provider_service import (
+            multi_provider_service,
+        )
 
         # Get provider-specific metrics
-        provider_analytics = await multi_provider_service.get_provider_analytics(
-            provider_id
+        provider_analytics = (
+            await multi_provider_service.get_provider_analytics(provider_id)
         )
 
         # Get database metrics for this provider
@@ -251,7 +277,9 @@ async def get_provider_metrics(
                     "average_response_time", 0.0
                 ),
                 "total_requests": provider_analytics.get("total_requests", 0),
-                "failed_requests": provider_analytics.get("failed_requests", 0),
+                "failed_requests": provider_analytics.get(
+                    "failed_requests", 0
+                ),
                 "cost_today": provider_analytics.get("cost_today", 0.0),
                 "tokens_used": provider_analytics.get("tokens_used", 0),
             },
@@ -285,9 +313,15 @@ async def get_cost_optimization_recommendations():
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "recommendations": recommendations,
-            "potential_savings": recommendations.get("potential_monthly_savings", 0.0),
-            "optimization_opportunities": recommendations.get("opportunities", []),
-            "provider_efficiency": recommendations.get("provider_efficiency", {}),
+            "potential_savings": recommendations.get(
+                "potential_monthly_savings", 0.0
+            ),
+            "optimization_opportunities": recommendations.get(
+                "opportunities", []
+            ),
+            "provider_efficiency": recommendations.get(
+                "provider_efficiency", {}
+            ),
             "usage_patterns": recommendations.get("usage_patterns", {}),
         }
 
@@ -311,7 +345,9 @@ async def get_provider_performance_comparison(
         )
 
     try:
-        from supervisor_agent.core.multi_provider_service import multi_provider_service
+        from supervisor_agent.core.multi_provider_service import (
+            multi_provider_service,
+        )
 
         analytics = await multi_provider_service.get_analytics()
         provider_status = await multi_provider_service.get_provider_status()
@@ -320,8 +356,10 @@ async def get_provider_performance_comparison(
         comparison_data = {}
 
         for provider_id, provider_info in providers.items():
-            provider_analytics = await multi_provider_service.get_provider_analytics(
-                provider_id
+            provider_analytics = (
+                await multi_provider_service.get_provider_analytics(
+                    provider_id
+                )
             )
 
             comparison_data[provider_id] = {
@@ -332,16 +370,23 @@ async def get_provider_performance_comparison(
                 "average_response_time": provider_analytics.get(
                     "average_response_time", 0.0
                 ),
-                "cost_per_request": provider_analytics.get("cost_per_request", 0.0),
+                "cost_per_request": provider_analytics.get(
+                    "cost_per_request", 0.0
+                ),
                 "total_requests": provider_analytics.get("total_requests", 0),
-                "uptime_percentage": provider_analytics.get("uptime_percentage", 0.0),
-                "quota_utilization": provider_analytics.get("quota_utilization", 0.0),
+                "uptime_percentage": provider_analytics.get(
+                    "uptime_percentage", 0.0
+                ),
+                "quota_utilization": provider_analytics.get(
+                    "quota_utilization", 0.0
+                ),
             }
 
         # Calculate rankings
         rankings = {
             "fastest": sorted(
-                comparison_data.items(), key=lambda x: x[1]["average_response_time"]
+                comparison_data.items(),
+                key=lambda x: x[1]["average_response_time"],
             ),
             "most_reliable": sorted(
                 comparison_data.items(),

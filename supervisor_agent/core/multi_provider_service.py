@@ -69,10 +69,12 @@ class MultiProviderService:
             )
 
             # Initialize subscription intelligence
-            self.subscription_intelligence = MultiProviderSubscriptionIntelligence(
-                provider_registry=self.provider_registry,
-                cache_ttl=300,  # 5 minutes
-                quota_check_interval=60,  # 1 minute
+            self.subscription_intelligence = (
+                MultiProviderSubscriptionIntelligence(
+                    provider_registry=self.provider_registry,
+                    cache_ttl=300,  # 5 minutes
+                    quota_check_interval=60,  # 1 minute
+                )
             )
 
             # Initialize provider coordinator
@@ -100,7 +102,9 @@ class MultiProviderService:
             logger.info("Multi-Provider Service initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize Multi-Provider Service: {str(e)}")
+            logger.error(
+                f"Failed to initialize Multi-Provider Service: {str(e)}"
+            )
             raise
 
     async def process_task(
@@ -184,7 +188,10 @@ class MultiProviderService:
 
         try:
             # Get provider registry status
-            for provider_id, provider in self.provider_registry.providers.items():
+            for (
+                provider_id,
+                provider,
+            ) in self.provider_registry.providers.items():
                 health = await provider.get_health_status()
                 capabilities = provider.get_capabilities()
 
@@ -204,7 +211,9 @@ class MultiProviderService:
             status["total_providers"] = len(self.provider_registry.providers)
 
             # Get quota status
-            quota_status = await self.subscription_intelligence.get_quota_status()
+            quota_status = (
+                await self.subscription_intelligence.get_quota_status()
+            )
             status["quota_status"] = {
                 provider_id: {
                     "daily_limit": info.daily_limit,
@@ -281,8 +290,12 @@ class MultiProviderService:
                 logger.error(f"Unknown provider type: {provider_type}")
                 return False
 
-            await self.provider_registry.register_provider(provider_id, provider)
-            logger.info(f"Registered provider {provider_id} of type {provider_type}")
+            await self.provider_registry.register_provider(
+                provider_id, provider
+            )
+            logger.info(
+                f"Registered provider {provider_id} of type {provider_type}"
+            )
             return True
 
         except Exception as e:
@@ -300,7 +313,9 @@ class MultiProviderService:
             return True
 
         except Exception as e:
-            logger.error(f"Error unregistering provider {provider_id}: {str(e)}")
+            logger.error(
+                f"Error unregistering provider {provider_id}: {str(e)}"
+            )
             return False
 
     def is_enabled(self) -> bool:
@@ -330,7 +345,9 @@ class MultiProviderService:
                     provider_id, provider_type, provider_config
                 )
                 if not success:
-                    logger.warning(f"Failed to register provider {provider_id}")
+                    logger.warning(
+                        f"Failed to register provider {provider_id}"
+                    )
 
         except Exception as e:
             logger.error(f"Error registering providers from config: {str(e)}")
@@ -350,7 +367,9 @@ class MultiProviderService:
                         "rate_limit_per_day": 1000,
                         "priority": i + 1,
                     }
-                    await self.register_provider(provider_id, "claude_cli", config)
+                    await self.register_provider(
+                        provider_id, "claude_cli", config
+                    )
 
             # Always register local mock provider for testing
             mock_config = {
@@ -358,9 +377,13 @@ class MultiProviderService:
                 "failure_rate": 0.01,
                 "response_delay_seconds": 1.0,
             }
-            await self.register_provider("local-mock", "local_mock", mock_config)
+            await self.register_provider(
+                "local-mock", "local_mock", mock_config
+            )
 
-            logger.info("Registered legacy providers for backward compatibility")
+            logger.info(
+                "Registered legacy providers for backward compatibility"
+            )
 
         except Exception as e:
             logger.error(f"Error registering legacy providers: {str(e)}")

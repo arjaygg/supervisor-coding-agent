@@ -32,20 +32,28 @@ class TaskCRUD:
 
     @staticmethod
     def get_tasks(
-        db: Session, skip: int = 0, limit: int = 100, status: Optional[str] = None
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+        status: Optional[str] = None,
     ) -> List[models.Task]:
         query = db.query(models.Task)
         if status:
             query = query.filter(models.Task.status == status)
         return (
-            query.order_by(desc(models.Task.created_at)).offset(skip).limit(limit).all()
+            query.order_by(desc(models.Task.created_at))
+            .offset(skip)
+            .limit(limit)
+            .all()
         )
 
     @staticmethod
     def update_task(
         db: Session, task_id: int, task_update: schemas.TaskUpdate
     ) -> Optional[models.Task]:
-        db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+        db_task = (
+            db.query(models.Task).filter(models.Task.id == task_id).first()
+        )
         if db_task:
             update_data = task_update.dict(exclude_unset=True)
             for field, value in update_data.items():
@@ -73,7 +81,8 @@ class TaskCRUD:
             db.query(models.Task)
             .filter(
                 and_(
-                    models.Task.type == task_type, models.Task.created_at >= cutoff_time
+                    models.Task.type == task_type,
+                    models.Task.created_at >= cutoff_time,
                 )
             )
             .all()
@@ -92,7 +101,9 @@ class TaskSessionCRUD:
         return db_session
 
     @staticmethod
-    def get_task_sessions(db: Session, task_id: int) -> List[models.TaskSession]:
+    def get_task_sessions(
+        db: Session, task_id: int
+    ) -> List[models.TaskSession]:
         return (
             db.query(models.TaskSession)
             .filter(models.TaskSession.task_id == task_id)
@@ -112,17 +123,23 @@ class AgentCRUD:
 
     @staticmethod
     def get_agent(db: Session, agent_id: str) -> Optional[models.Agent]:
-        return db.query(models.Agent).filter(models.Agent.id == agent_id).first()
+        return (
+            db.query(models.Agent).filter(models.Agent.id == agent_id).first()
+        )
 
     @staticmethod
     def get_active_agents(db: Session) -> List[models.Agent]:
-        return db.query(models.Agent).filter(models.Agent.is_active == True).all()
+        return (
+            db.query(models.Agent).filter(models.Agent.is_active == True).all()
+        )
 
     @staticmethod
     def update_agent(
         db: Session, agent_id: str, agent_update: schemas.AgentUpdate
     ) -> Optional[models.Agent]:
-        db_agent = db.query(models.Agent).filter(models.Agent.id == agent_id).first()
+        db_agent = (
+            db.query(models.Agent).filter(models.Agent.id == agent_id).first()
+        )
         if db_agent:
             update_data = agent_update.dict(exclude_unset=True)
             for field, value in update_data.items():
@@ -149,7 +166,9 @@ class AgentCRUD:
 
 class AuditLogCRUD:
     @staticmethod
-    def create_log(db: Session, log: schemas.AuditLogCreate) -> models.AuditLog:
+    def create_log(
+        db: Session, log: schemas.AuditLogCreate
+    ) -> models.AuditLog:
         db_log = models.AuditLog(**log.model_dump())
         db.add(db_log)
         db.commit()
@@ -158,7 +177,10 @@ class AuditLogCRUD:
 
     @staticmethod
     def get_logs(
-        db: Session, skip: int = 0, limit: int = 100, event_type: Optional[str] = None
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+        event_type: Optional[str] = None,
     ) -> List[models.AuditLog]:
         query = db.query(models.AuditLog)
         if event_type:
@@ -211,9 +233,13 @@ class CostTrackingCRUD:
         query = db.query(models.CostTrackingEntry)
 
         if start_date:
-            query = query.filter(models.CostTrackingEntry.timestamp >= start_date)
+            query = query.filter(
+                models.CostTrackingEntry.timestamp >= start_date
+            )
         if end_date:
-            query = query.filter(models.CostTrackingEntry.timestamp <= end_date)
+            query = query.filter(
+                models.CostTrackingEntry.timestamp <= end_date
+            )
 
         entries = query.all()
 
@@ -235,7 +261,9 @@ class CostTrackingCRUD:
         total_requests = len(entries)
 
         # Calculate averages
-        avg_cost_per_request = total_cost / total_requests if total_requests > 0 else 0
+        avg_cost_per_request = (
+            total_cost / total_requests if total_requests > 0 else 0
+        )
         avg_tokens_per_request = (
             total_tokens / total_requests if total_requests > 0 else 0
         )
@@ -244,7 +272,9 @@ class CostTrackingCRUD:
         cost_by_agent = {}
         for entry in entries:
             agent_cost = cost_by_agent.get(entry.agent_id, 0)
-            cost_by_agent[entry.agent_id] = agent_cost + float(entry.estimated_cost_usd)
+            cost_by_agent[entry.agent_id] = agent_cost + float(
+                entry.estimated_cost_usd
+            )
 
         # Convert to strings for precision
         cost_by_agent = {k: f"{v:.4f}" for k, v in cost_by_agent.items()}
@@ -270,7 +300,9 @@ class CostTrackingCRUD:
                 cost_entry.estimated_cost_usd
             )
 
-        cost_by_task_type = {k: f"{v:.4f}" for k, v in cost_by_task_type.items()}
+        cost_by_task_type = {
+            k: f"{v:.4f}" for k, v in cost_by_task_type.items()
+        }
 
         # Daily breakdown (last 30 days)
         from sqlalchemy import Float, func
@@ -329,11 +361,16 @@ class UsageMetricsCRUD:
 
     @staticmethod
     def get_metrics(
-        db: Session, metric_type: Optional[str] = None, skip: int = 0, limit: int = 100
+        db: Session,
+        metric_type: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 100,
     ) -> List[models.UsageMetrics]:
         query = db.query(models.UsageMetrics)
         if metric_type:
-            query = query.filter(models.UsageMetrics.metric_type == metric_type)
+            query = query.filter(
+                models.UsageMetrics.metric_type == metric_type
+            )
         return (
             query.order_by(desc(models.UsageMetrics.timestamp))
             .offset(skip)
@@ -343,7 +380,10 @@ class UsageMetricsCRUD:
 
     @staticmethod
     def upsert_metric(
-        db: Session, metric_type: str, metric_key: str, update_data: Dict[str, Any]
+        db: Session,
+        metric_type: str,
+        metric_key: str,
+        update_data: Dict[str, Any],
     ) -> models.UsageMetrics:
         """Update existing metric or create new one"""
         existing = (
@@ -374,7 +414,9 @@ class UsageMetricsCRUD:
 class ChatThreadCRUD:
     @staticmethod
     def create_thread(
-        db: Session, thread: schemas.ChatThreadCreate, user_id: Optional[str] = None
+        db: Session,
+        thread: schemas.ChatThreadCreate,
+        user_id: Optional[str] = None,
     ) -> models.ChatThread:
         db_thread = models.ChatThread(
             title=thread.title,
@@ -401,7 +443,9 @@ class ChatThreadCRUD:
         return db_thread
 
     @staticmethod
-    def get_thread(db: Session, thread_id: UUID) -> Optional[models.ChatThread]:
+    def get_thread(
+        db: Session, thread_id: UUID
+    ) -> Optional[models.ChatThread]:
         return (
             db.query(models.ChatThread)
             .filter(models.ChatThread.id == thread_id)
@@ -477,10 +521,13 @@ class ChatThreadCRUD:
                 func.count(models.ChatNotification.id.distinct())
                 .filter(models.ChatNotification.is_read == False)
                 .label("unread_count"),
-                func.max(models.ChatMessage.created_at).label("last_message_at"),
+                func.max(models.ChatMessage.created_at).label(
+                    "last_message_at"
+                ),
             )
             .outerjoin(
-                models.ChatMessage, models.ChatThread.id == models.ChatMessage.thread_id
+                models.ChatMessage,
+                models.ChatThread.id == models.ChatMessage.thread_id,
             )
             .outerjoin(
                 models.ChatNotification,
@@ -540,16 +587,18 @@ class ChatMessageCRUD:
         db.add(db_message)
 
         # Update thread's updated_at timestamp
-        db.query(models.ChatThread).filter(models.ChatThread.id == thread_id).update(
-            {"updated_at": datetime.now(timezone.utc)}
-        )
+        db.query(models.ChatThread).filter(
+            models.ChatThread.id == thread_id
+        ).update({"updated_at": datetime.now(timezone.utc)})
 
         db.commit()
         db.refresh(db_message)
         return db_message
 
     @staticmethod
-    def get_message(db: Session, message_id: UUID) -> Optional[models.ChatMessage]:
+    def get_message(
+        db: Session, message_id: UUID
+    ) -> Optional[models.ChatMessage]:
         return (
             db.query(models.ChatMessage)
             .filter(models.ChatMessage.id == message_id)
@@ -653,7 +702,9 @@ class ChatNotificationCRUD:
         query = db.query(models.ChatNotification)
 
         if thread_id:
-            query = query.filter(models.ChatNotification.thread_id == thread_id)
+            query = query.filter(
+                models.ChatNotification.thread_id == thread_id
+            )
         if unread_only:
             query = query.filter(models.ChatNotification.is_read == False)
 
@@ -697,13 +748,17 @@ class ChatNotificationCRUD:
             models.ChatNotification.is_read == False
         )
         if thread_id:
-            query = query.filter(models.ChatNotification.thread_id == thread_id)
+            query = query.filter(
+                models.ChatNotification.thread_id == thread_id
+            )
         return query.count()
 
 
 class ProviderCRUD:
     @staticmethod
-    def create_provider(db: Session, provider_data: Dict[str, Any]) -> models.Provider:
+    def create_provider(
+        db: Session, provider_data: Dict[str, Any]
+    ) -> models.Provider:
         """Create a new provider."""
         db_provider = models.Provider(**provider_data)
         db.add(db_provider)
@@ -712,10 +767,14 @@ class ProviderCRUD:
         return db_provider
 
     @staticmethod
-    def get_provider(db: Session, provider_id: str) -> Optional[models.Provider]:
+    def get_provider(
+        db: Session, provider_id: str
+    ) -> Optional[models.Provider]:
         """Get a provider by ID."""
         return (
-            db.query(models.Provider).filter(models.Provider.id == provider_id).first()
+            db.query(models.Provider)
+            .filter(models.Provider.id == provider_id)
+            .first()
         )
 
     @staticmethod
@@ -739,7 +798,8 @@ class ProviderCRUD:
 
         return (
             query.order_by(
-                models.Provider.priority.asc(), models.Provider.created_at.desc()
+                models.Provider.priority.asc(),
+                models.Provider.created_at.desc(),
             )
             .offset(skip)
             .limit(limit)
@@ -775,7 +835,9 @@ class ProviderCRUD:
     ) -> Optional[models.Provider]:
         """Update a provider."""
         db_provider = (
-            db.query(models.Provider).filter(models.Provider.id == provider_id).first()
+            db.query(models.Provider)
+            .filter(models.Provider.id == provider_id)
+            .first()
         )
         if db_provider:
             for field, value in update_data.items():
@@ -791,7 +853,9 @@ class ProviderCRUD:
     ) -> Optional[models.Provider]:
         """Update provider health status."""
         db_provider = (
-            db.query(models.Provider).filter(models.Provider.id == provider_id).first()
+            db.query(models.Provider)
+            .filter(models.Provider.id == provider_id)
+            .first()
         )
         if db_provider:
             db_provider.health_status = health_data
@@ -804,7 +868,9 @@ class ProviderCRUD:
     def delete_provider(db: Session, provider_id: str) -> bool:
         """Delete a provider and all associated usage records."""
         db_provider = (
-            db.query(models.Provider).filter(models.Provider.id == provider_id).first()
+            db.query(models.Provider)
+            .filter(models.Provider.id == provider_id)
+            .first()
         )
         if db_provider:
             db.delete(db_provider)
@@ -823,10 +889,12 @@ class ProviderCRUD:
         usage_stats = (
             db.query(
                 func.count(models.ProviderUsage.id).label("total_requests"),
-                func.sum(models.ProviderUsage.tokens_used).label("total_tokens"),
-                func.sum(func.cast(models.ProviderUsage.cost_usd, db.Integer)).label(
-                    "total_cost"
+                func.sum(models.ProviderUsage.tokens_used).label(
+                    "total_tokens"
                 ),
+                func.sum(
+                    func.cast(models.ProviderUsage.cost_usd, db.Integer)
+                ).label("total_cost"),
                 func.avg(models.ProviderUsage.execution_time_ms).label(
                     "avg_response_time"
                 ),
@@ -856,7 +924,9 @@ class ProviderCRUD:
             "success_rate": round(success_rate, 2),
             "total_tokens": usage_stats.total_tokens or 0,
             "total_cost_usd": f"{float(usage_stats.total_cost or 0):.4f}",
-            "avg_response_time_ms": round(float(usage_stats.avg_response_time or 0), 2),
+            "avg_response_time_ms": round(
+                float(usage_stats.avg_response_time or 0), 2
+            ),
             "period_days": days,
         }
 
@@ -887,7 +957,9 @@ class ProviderUsageCRUD:
         query = db.query(models.ProviderUsage)
 
         if provider_id:
-            query = query.filter(models.ProviderUsage.provider_id == provider_id)
+            query = query.filter(
+                models.ProviderUsage.provider_id == provider_id
+            )
         if task_id:
             query = query.filter(models.ProviderUsage.task_id == task_id)
         if start_date:
@@ -914,9 +986,9 @@ class ProviderUsageCRUD:
                 func.date(models.ProviderUsage.timestamp).label("date"),
                 func.count(models.ProviderUsage.id).label("requests"),
                 func.sum(models.ProviderUsage.tokens_used).label("tokens"),
-                func.sum(func.cast(models.ProviderUsage.cost_usd, db.Float)).label(
-                    "cost"
-                ),
+                func.sum(
+                    func.cast(models.ProviderUsage.cost_usd, db.Float)
+                ).label("cost"),
                 func.count(models.ProviderUsage.id)
                 .filter(models.ProviderUsage.success == True)
                 .label("successful"),
@@ -933,7 +1005,9 @@ class ProviderUsageCRUD:
         results = []
         for stat in daily_stats:
             success_rate = (
-                (stat.successful / stat.requests * 100) if stat.requests > 0 else 0
+                (stat.successful / stat.requests * 100)
+                if stat.requests > 0
+                else 0
             )
             results.append(
                 {
@@ -959,7 +1033,9 @@ class ProviderUsageCRUD:
             models.ProviderUsage.provider_id,
             func.count(models.ProviderUsage.id).label("requests"),
             func.sum(models.ProviderUsage.tokens_used).label("tokens"),
-            func.sum(func.cast(models.ProviderUsage.cost_usd, db.Float)).label("cost"),
+            func.sum(func.cast(models.ProviderUsage.cost_usd, db.Float)).label(
+                "cost"
+            ),
             func.count(models.ProviderUsage.id)
             .filter(models.ProviderUsage.success == True)
             .label("successful"),
@@ -1000,7 +1076,9 @@ class ProviderUsageCRUD:
             total_successful += successful
 
         overall_success_rate = (
-            (total_successful / total_requests * 100) if total_requests > 0 else 0
+            (total_successful / total_requests * 100)
+            if total_requests > 0
+            else 0
         )
 
         return {

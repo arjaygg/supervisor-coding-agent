@@ -17,7 +17,9 @@ logger = get_logger(__name__)
 class NotificationManager:
     def __init__(self):
         self.slack_client = None
-        self.email_enabled = bool(settings.email_smtp_host and settings.email_username)
+        self.email_enabled = bool(
+            settings.email_smtp_host and settings.email_username
+        )
         self.slack_enabled = bool(settings.slack_bot_token)
 
         if self.slack_enabled:
@@ -37,7 +39,11 @@ class NotificationManager:
         )
 
     async def send_task_failure_alert(
-        self, task_id: int, task_type: str, error_message: str, retry_count: int
+        self,
+        task_id: int,
+        task_type: str,
+        error_message: str,
+        retry_count: int,
     ):
         message = self._format_task_failure_message(
             task_id, task_type, error_message, retry_count
@@ -79,10 +85,14 @@ The agent is now ready to process new tasks.
         """.strip()
 
         await self._send_notification(
-            subject=f"🔄 Agent {agent_id} Recovered", message=message, priority="low"
+            subject=f"🔄 Agent {agent_id} Recovered",
+            message=message,
+            priority="low",
         )
 
-    def _format_quota_exhausted_message(self, quota_status: Dict[str, Any]) -> str:
+    def _format_quota_exhausted_message(
+        self, quota_status: Dict[str, Any]
+    ) -> str:
         message = f"""
 🚨 **ALERT: All Claude Agents Have Hit Their Quota Limits**
 
@@ -106,7 +116,11 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
         return message
 
     def _format_task_failure_message(
-        self, task_id: int, task_type: str, error_message: str, retry_count: int
+        self,
+        task_id: int,
+        task_type: str,
+        error_message: str,
+        retry_count: int,
     ) -> str:
         return f"""
 ❌ **Task Failure Alert**
@@ -126,7 +140,9 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
 **Timestamp:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}
         """.strip()
 
-    def _format_batch_completion_message(self, batch_summary: Dict[str, Any]) -> str:
+    def _format_batch_completion_message(
+        self, batch_summary: Dict[str, Any]
+    ) -> str:
         return f"""
 ✅ **Batch Processing Completed**
 
@@ -147,7 +163,9 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
 **Timestamp:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}
         """.strip()
 
-    def _format_health_alert_message(self, health_status: Dict[str, Any]) -> str:
+    def _format_health_alert_message(
+        self, health_status: Dict[str, Any]
+    ) -> str:
         return f"""
 ⚠️ **System Health Alert**
 
@@ -183,7 +201,9 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
             tasks.append(self._send_slack_notification(message, priority))
 
         if self.email_enabled:
-            tasks.append(self._send_email_notification(subject, message, priority))
+            tasks.append(
+                self._send_email_notification(subject, message, priority)
+            )
 
         if not tasks:
             logger.warning("No notification channels configured")
@@ -198,7 +218,9 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
         for i, result in enumerate(results):
             channel = "Slack" if i == 0 and self.slack_enabled else "Email"
             if isinstance(result, Exception):
-                logger.error(f"Failed to send {channel} notification: {str(result)}")
+                logger.error(
+                    f"Failed to send {channel} notification: {str(result)}"
+                )
             else:
                 logger.info(f"Successfully sent {channel} notification")
 
@@ -213,7 +235,9 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
 
         try:
             response = self.slack_client.chat_postMessage(
-                channel=settings.slack_channel, text=formatted_message, parse="mrkdwn"
+                channel=settings.slack_channel,
+                text=formatted_message,
+                parse="mrkdwn",
             )
 
             if not response["ok"]:
@@ -224,7 +248,9 @@ All {quota_status.get('total_agents', 0)} agents are currently at their quota li
         except SlackApiError as e:
             raise Exception(f"Slack API error: {e.response['error']}")
 
-    async def _send_email_notification(self, subject: str, message: str, priority: str):
+    async def _send_email_notification(
+        self, subject: str, message: str, priority: str
+    ):
         try:
             # Create message
             msg = MIMEMultipart()

@@ -38,7 +38,8 @@ class IntelligentTaskSplitter:
         )
         conjunction_count = len(
             re.findall(
-                r"\b(and|then|after|followed by|subsequently)\b", content.lower()
+                r"\b(and|then|after|followed by|subsequently)\b",
+                content.lower(),
             )
         )
 
@@ -111,7 +112,9 @@ class IntelligentTaskSplitter:
         if complexity == TaskComplexity.SIMPLE or steps <= 2:
             return SplittingStrategy.DEFAULT
         else:
-            return SplittingStrategy.DEFAULT  # For now, only DEFAULT is implemented
+            return (
+                SplittingStrategy.DEFAULT
+            )  # For now, only DEFAULT is implemented
 
     def analyze_task_complexity(self, task) -> ComplexityAnalysis:
         """
@@ -124,7 +127,8 @@ class IntelligentTaskSplitter:
         requires_splitting = complexity_score > 1.0
 
         return ComplexityAnalysis(
-            complexity_score=complexity_score, requires_splitting=requires_splitting
+            complexity_score=complexity_score,
+            requires_splitting=requires_splitting,
         )
 
     def generate_subtask_graph(self, task: Task) -> SubtaskGraph:

@@ -13,7 +13,10 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from supervisor_agent.core.dag_resolver import DAGResolver, ValidationResult
-from supervisor_agent.core.workflow_engine import WorkflowEngine, WorkflowExecutor
+from supervisor_agent.core.workflow_engine import (
+    WorkflowEngine,
+    WorkflowExecutor,
+)
 from supervisor_agent.core.workflow_models import (
     WorkflowContext,
     WorkflowDefinition,
@@ -66,12 +69,18 @@ class TestWorkflowEngine:
                 },
             ],
             dependencies=[
-                {"task_id": "task2", "depends_on": "task1", "condition": "SUCCESS"}
+                {
+                    "task_id": "task2",
+                    "depends_on": "task1",
+                    "condition": "SUCCESS",
+                }
             ],
         )
 
     @pytest.mark.asyncio
-    async def test_create_workflow_success(self, workflow_engine, simple_workflow_def):
+    async def test_create_workflow_success(
+        self, workflow_engine, simple_workflow_def
+    ):
         """Test successful workflow creation"""
 
         with patch(
@@ -99,8 +108,8 @@ class TestWorkflowEngine:
         """Test workflow creation with invalid DAG"""
 
         # Mock invalid DAG validation
-        workflow_engine.dag_resolver.validate_dag.return_value = ValidationResult(
-            False, "Circular dependency detected"
+        workflow_engine.dag_resolver.validate_dag.return_value = (
+            ValidationResult(False, "Circular dependency detected")
         )
 
         with pytest.raises(ValueError, match="Invalid workflow definition"):
@@ -161,7 +170,9 @@ class TestWorkflowEngine:
         ) as mock_session:
             mock_db = Mock()
             mock_session.return_value.__enter__.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = None
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                None
+            )
 
             with pytest.raises(ValueError, match="Workflow not found"):
                 await workflow_engine.execute_workflow("non-existent-id")
@@ -208,7 +219,10 @@ class TestWorkflowExecutor:
         resolver = Mock(spec=DAGResolver)
 
         # Mock execution plan
-        from supervisor_agent.core.workflow_models import ExecutionPlan, TaskDefinition
+        from supervisor_agent.core.workflow_models import (
+            ExecutionPlan,
+            TaskDefinition,
+        )
 
         execution_plan = ExecutionPlan(
             execution_order=[["task1"], ["task2"]],
@@ -239,7 +253,8 @@ class TestWorkflowExecutor:
     ):
         """Create workflow executor"""
         context = WorkflowContext(
-            workflow_execution_id="test-execution-id", variables={"test": "data"}
+            workflow_execution_id="test-execution-id",
+            variables={"test": "data"},
         )
 
         return WorkflowExecutor(
@@ -263,7 +278,12 @@ class TestWorkflowExecutor:
                     "type": "CODE_ANALYSIS",
                     "config": {},
                 },
-                {"id": "task2", "name": "Task 2", "type": "PR_REVIEW", "config": {}},
+                {
+                    "id": "task2",
+                    "name": "Task 2",
+                    "type": "PR_REVIEW",
+                    "config": {},
+                },
             ],
             dependencies=[],
         )
@@ -273,7 +293,9 @@ class TestWorkflowExecutor:
         """Test successful workflow execution"""
 
         with patch.object(
-            workflow_executor, "_update_execution_status", new_callable=AsyncMock
+            workflow_executor,
+            "_update_execution_status",
+            new_callable=AsyncMock,
         ):
             with patch.object(
                 workflow_executor, "_execute_plan", new_callable=AsyncMock
@@ -295,7 +317,9 @@ class TestWorkflowExecutor:
         """Test workflow execution with failed tasks"""
 
         with patch.object(
-            workflow_executor, "_update_execution_status", new_callable=AsyncMock
+            workflow_executor,
+            "_update_execution_status",
+            new_callable=AsyncMock,
         ):
             with patch.object(
                 workflow_executor, "_execute_plan", new_callable=AsyncMock
@@ -318,7 +342,9 @@ class TestWorkflowExecutor:
         workflow_executor._cancelled = True
 
         with patch.object(
-            workflow_executor, "_update_execution_status", new_callable=AsyncMock
+            workflow_executor,
+            "_update_execution_status",
+            new_callable=AsyncMock,
         ):
             with patch.object(
                 workflow_executor, "_execute_plan", new_callable=AsyncMock
@@ -328,7 +354,9 @@ class TestWorkflowExecutor:
 
                 # Verify result
                 assert result.status == WorkflowStatus.CANCELLED
-                assert result.error_message == "Workflow execution was cancelled"
+                assert (
+                    result.error_message == "Workflow execution was cancelled"
+                )
 
     @pytest.mark.asyncio
     async def test_execute_task_success(self, workflow_executor):
@@ -371,7 +399,9 @@ class TestWorkflowExecutor:
                             "result": {"output": "test"},
                         }
 
-                        result = await workflow_executor._execute_task(task_def)
+                        result = await workflow_executor._execute_task(
+                            task_def
+                        )
 
                         # Verify result
                         assert result["status"] == "COMPLETED"
@@ -385,10 +415,15 @@ class TestWorkflowExecutor:
         # Add mock active tasks
         mock_task1 = Mock()
         mock_task2 = Mock()
-        workflow_executor._active_tasks = {"task1": mock_task1, "task2": mock_task2}
+        workflow_executor._active_tasks = {
+            "task1": mock_task1,
+            "task2": mock_task2,
+        }
 
         with patch.object(
-            workflow_executor, "_update_execution_status", new_callable=AsyncMock
+            workflow_executor,
+            "_update_execution_status",
+            new_callable=AsyncMock,
         ):
             await workflow_executor.cancel()
 
@@ -401,15 +436,19 @@ class TestWorkflowExecutor:
         """Test task type mapping"""
 
         # Test standard mappings
-        assert workflow_executor._map_task_type("PR_REVIEW") == TaskType.PR_REVIEW
         assert (
-            workflow_executor._map_task_type("CODE_ANALYSIS") == TaskType.CODE_ANALYSIS
+            workflow_executor._map_task_type("PR_REVIEW") == TaskType.PR_REVIEW
+        )
+        assert (
+            workflow_executor._map_task_type("CODE_ANALYSIS")
+            == TaskType.CODE_ANALYSIS
         )
         assert workflow_executor._map_task_type("BUG_FIX") == TaskType.BUG_FIX
 
         # Test unknown type (should default to CODE_ANALYSIS)
         assert (
-            workflow_executor._map_task_type("UNKNOWN_TYPE") == TaskType.CODE_ANALYSIS
+            workflow_executor._map_task_type("UNKNOWN_TYPE")
+            == TaskType.CODE_ANALYSIS
         )
 
     def test_has_failed_tasks(self, workflow_executor):

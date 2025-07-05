@@ -125,7 +125,9 @@ class CapabilityMatcher(ABC):
     async def match_capabilities(
         self,
         task_characteristics: Dict[str, Any],
-        available_capabilities: Dict[AgentSpecialty, List[SpecializationCapability]],
+        available_capabilities: Dict[
+            AgentSpecialty, List[SpecializationCapability]
+        ],
     ) -> List[Tuple[AgentSpecialty, float]]:
         """Match task characteristics to agent capabilities"""
         pass
@@ -136,7 +138,10 @@ class PerformancePredictor(ABC):
 
     @abstractmethod
     async def predict_performance(
-        self, specialty: AgentSpecialty, task: Task, historical_data: Dict[str, Any]
+        self,
+        specialty: AgentSpecialty,
+        task: Task,
+        historical_data: Dict[str, Any],
     ) -> Dict[str, float]:
         """Predict performance metrics for specialty-task combination"""
         pass
@@ -180,7 +185,10 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
         if task.type in [TaskType.FEATURE_DEVELOPMENT, TaskType.SYSTEM_DESIGN]:
             complexity_indicators += 2
 
-        if "complex" in str(config).lower() or "advanced" in str(config).lower():
+        if (
+            "complex" in str(config).lower()
+            or "advanced" in str(config).lower()
+        ):
             complexity_indicators += 1
 
         if complexity_indicators <= 1:
@@ -236,7 +244,13 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
         constraints = {}
 
         # Extract common constraint patterns
-        constraint_keys = ["timeout", "budget", "resources", "deadline", "quality"]
+        constraint_keys = [
+            "timeout",
+            "budget",
+            "resources",
+            "deadline",
+            "quality",
+        ]
         for key in constraint_keys:
             if key in config:
                 constraints[key] = config[key]
@@ -263,7 +277,11 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
 
         # Adjust based on complexity
         complexity = self._estimate_complexity(task)
-        complexity_multipliers = {"simple": 0.7, "moderate": 1.0, "complex": 1.8}
+        complexity_multipliers = {
+            "simple": 0.7,
+            "moderate": 1.0,
+            "complex": 1.8,
+        }
 
         return base_effort * complexity_multipliers.get(complexity, 1.0)
 
@@ -277,7 +295,9 @@ class DefaultCapabilityMatcher(CapabilityMatcher):
     async def match_capabilities(
         self,
         task_characteristics: Dict[str, Any],
-        available_capabilities: Dict[AgentSpecialty, List[SpecializationCapability]],
+        available_capabilities: Dict[
+            AgentSpecialty, List[SpecializationCapability]
+        ],
     ) -> List[Tuple[AgentSpecialty, float]]:
         """Match task characteristics to agent capabilities"""
         matches = []
@@ -291,7 +311,11 @@ class DefaultCapabilityMatcher(CapabilityMatcher):
 
             for capability in capabilities:
                 score = self._calculate_capability_match(
-                    capability, task_type, domain, complexity, task_characteristics
+                    capability,
+                    task_type,
+                    domain,
+                    complexity,
+                    task_characteristics,
                 )
                 best_match_score = max(best_match_score, score)
 
@@ -358,7 +382,10 @@ class DefaultPerformancePredictor(PerformancePredictor):
         self.logger = structured_logger.bind(component="performance_predictor")
 
     async def predict_performance(
-        self, specialty: AgentSpecialty, task: Task, historical_data: Dict[str, Any]
+        self,
+        specialty: AgentSpecialty,
+        task: Task,
+        historical_data: Dict[str, Any],
     ) -> Dict[str, float]:
         """Predict performance metrics for specialty-task combination"""
 
@@ -368,9 +395,13 @@ class DefaultPerformancePredictor(PerformancePredictor):
         # Base predictions with reasonable defaults
         predictions = {
             "success_rate": specialty_history.get("avg_success_rate", 0.85),
-            "avg_execution_time": specialty_history.get("avg_execution_time", 300.0),
+            "avg_execution_time": specialty_history.get(
+                "avg_execution_time", 300.0
+            ),
             "quality_score": specialty_history.get("avg_quality_score", 0.8),
-            "cost_efficiency": specialty_history.get("avg_cost_efficiency", 0.75),
+            "cost_efficiency": specialty_history.get(
+                "avg_cost_efficiency", 0.75
+            ),
             "confidence": specialty_history.get("prediction_confidence", 0.6),
         }
 
@@ -402,7 +433,9 @@ class DefaultSpecializationStrategy:
     """Default strategy for calculating specialization scores"""
 
     def __init__(self):
-        self.logger = structured_logger.bind(component="specialization_strategy")
+        self.logger = structured_logger.bind(
+            component="specialization_strategy"
+        )
 
     async def calculate_specialization_score(
         self,
@@ -476,7 +509,9 @@ class DefaultSpecializationStrategy:
         )
 
         confidence = min(
-            (capability_match + provider_availability + historical_performance) / 3, 1.0
+            (capability_match + provider_availability + historical_performance)
+            / 3,
+            1.0,
         )
 
         return SpecializationScore(
@@ -507,8 +542,12 @@ class DefaultSpecializationStrategy:
         best_match = 0.0
         for capability in capabilities:
             try:
-                task_capability = TaskCapability(task.type.value) if task.type else None
-                if task_capability and capability.matches_task(task_capability):
+                task_capability = (
+                    TaskCapability(task.type.value) if task.type else None
+                )
+                if task_capability and capability.matches_task(
+                    task_capability
+                ):
                     match_score = capability.proficiency_score
                     best_match = max(best_match, match_score)
             except (ValueError, AttributeError):
@@ -538,7 +577,9 @@ class DefaultSpecializationStrategy:
                         total_availability += availability
                         provider_count += 1
 
-        return total_availability / provider_count if provider_count > 0 else 0.0
+        return (
+            total_availability / provider_count if provider_count > 0 else 0.0
+        )
 
     async def _calculate_historical_performance(
         self, specialty: AgentSpecialty, task: Task
@@ -563,7 +604,9 @@ class DefaultSpecializationStrategy:
         return performance_defaults.get(specialty, 0.7)
 
     async def _calculate_context_match(
-        self, capabilities: List[SpecializationCapability], context: ExecutionContext
+        self,
+        capabilities: List[SpecializationCapability],
+        context: ExecutionContext,
     ) -> float:
         """Calculate how well the context matches capability requirements"""
         if not capabilities:
@@ -654,7 +697,9 @@ class DefaultSpecializationStrategy:
 
         # Use performance metrics from best capability
         best_capability = max(capabilities, key=lambda c: c.proficiency_score)
-        base_time = best_capability.performance_metrics.get("avg_execution_time", 300.0)
+        base_time = best_capability.performance_metrics.get(
+            "avg_execution_time", 300.0
+        )
 
         # Adjust based on proficiency (higher proficiency = faster execution)
         efficiency_factor = best_capability.proficiency_score
@@ -686,7 +731,9 @@ class AgentSpecializationEngine:
         specialization_strategy: Optional[SpecializationStrategy] = None,
     ):
         self.task_analyzer = task_analyzer or DefaultTaskAnalyzer()
-        self.capability_matcher = capability_matcher or DefaultCapabilityMatcher()
+        self.capability_matcher = (
+            capability_matcher or DefaultCapabilityMatcher()
+        )
         self.performance_predictor = (
             performance_predictor or DefaultPerformancePredictor()
         )
@@ -694,7 +741,9 @@ class AgentSpecializationEngine:
             specialization_strategy or DefaultSpecializationStrategy()
         )
 
-        self.logger = structured_logger.bind(component="agent_specialization_engine")
+        self.logger = structured_logger.bind(
+            component="agent_specialization_engine"
+        )
 
         # Initialize agent capabilities
         self.agent_capabilities = self._initialize_agent_capabilities()
@@ -732,20 +781,20 @@ class AgentSpecializationEngine:
             )
 
             # Match capabilities
-            capability_matches = await self.capability_matcher.match_capabilities(
-                task_characteristics, self.agent_capabilities
+            capability_matches = (
+                await self.capability_matcher.match_capabilities(
+                    task_characteristics, self.agent_capabilities
+                )
             )
 
             if not capability_matches:
                 # Return general developer as fallback
-                return (
-                    await self.specialization_strategy.calculate_specialization_score(
-                        AgentSpecialty.GENERAL_DEVELOPER,
-                        task,
-                        context,
-                        self.agent_capabilities,
-                        provider_status,
-                    )
+                return await self.specialization_strategy.calculate_specialization_score(
+                    AgentSpecialty.GENERAL_DEVELOPER,
+                    task,
+                    context,
+                    self.agent_capabilities,
+                    provider_status,
                 )
 
             # Calculate specialization scores for top matches
@@ -753,17 +802,18 @@ class AgentSpecializationEngine:
             for specialty, capability_match in capability_matches[
                 :5
             ]:  # Top 5 candidates
-                score = (
-                    await self.specialization_strategy.calculate_specialization_score(
-                        specialty,
-                        task,
-                        context,
-                        self.agent_capabilities,
-                        provider_status,
-                    )
+                score = await self.specialization_strategy.calculate_specialization_score(
+                    specialty,
+                    task,
+                    context,
+                    self.agent_capabilities,
+                    provider_status,
                 )
 
-                if best_score is None or score.overall_score > best_score.overall_score:
+                if (
+                    best_score is None
+                    or score.overall_score > best_score.overall_score
+                ):
                     best_score = score
 
             self.logger.info(
@@ -778,7 +828,9 @@ class AgentSpecializationEngine:
 
         except Exception as e:
             self.logger.error(
-                "Agent specialization selection failed", task_id=task.id, error=str(e)
+                "Agent specialization selection failed",
+                task_id=task.id,
+                error=str(e),
             )
 
             # Return fallback general developer
@@ -807,7 +859,11 @@ class AgentSpecializationEngine:
         scores = []
         for specialty in AgentSpecialty:
             score = await self.specialization_strategy.calculate_specialization_score(
-                specialty, task, context, self.agent_capabilities, provider_status
+                specialty,
+                task,
+                context,
+                self.agent_capabilities,
+                provider_status,
             )
             scores.append(score)
 
@@ -817,7 +873,9 @@ class AgentSpecializationEngine:
         return scores
 
     async def update_agent_capabilities(
-        self, specialty: AgentSpecialty, capabilities: List[SpecializationCapability]
+        self,
+        specialty: AgentSpecialty,
+        capabilities: List[SpecializationCapability],
     ):
         """Update capabilities for a specific agent specialty"""
         self.agent_capabilities[specialty] = capabilities
@@ -899,7 +957,10 @@ class AgentSpecializationEngine:
                 SpecializationCapability(
                     name="Bug Detection",
                     proficiency_score=0.85,
-                    task_types=[TaskCapability.BUG_FIX, TaskCapability.CODE_ANALYSIS],
+                    task_types=[
+                        TaskCapability.BUG_FIX,
+                        TaskCapability.CODE_ANALYSIS,
+                    ],
                     provider_preferences=[ProviderType.CLAUDE_CLI],
                     context_requirements={"domain": "debugging"},
                     performance_metrics={
@@ -947,7 +1008,10 @@ class AgentSpecializationEngine:
                 SpecializationCapability(
                     name="Test Development",
                     proficiency_score=0.85,
-                    task_types=[TaskCapability.TESTING, TaskCapability.CODE_ANALYSIS],
+                    task_types=[
+                        TaskCapability.TESTING,
+                        TaskCapability.CODE_ANALYSIS,
+                    ],
                     provider_preferences=[ProviderType.CLAUDE_CLI],
                     context_requirements={"domain": "testing"},
                     performance_metrics={
