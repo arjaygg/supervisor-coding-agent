@@ -173,8 +173,8 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
         return characteristics
 
     def _estimate_complexity(self, task: Task) -> str:
-        """Estimate task complexity based on config and description"""
-        config = task.config or {}
+        """Estimate task complexity based on payload and description"""
+        config = task.payload or {}
 
         # Simple heuristics for complexity estimation
         complexity_indicators = 0
@@ -182,7 +182,7 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
         if len(str(config)) > 500:
             complexity_indicators += 1
 
-        if task.type in [TaskType.FEATURE_DEVELOPMENT, TaskType.SYSTEM_DESIGN]:
+        if task.type in [TaskType.FEATURE, TaskType.SECURITY_AUDIT]:
             complexity_indicators += 2
 
         if (
@@ -200,7 +200,7 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
 
     def _identify_domain(self, task: Task) -> str:
         """Identify the domain of the task"""
-        config = task.config or {}
+        config = task.payload or {}
         task_str = str(config).lower()
 
         domain_keywords = {
@@ -223,7 +223,7 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
 
     def _extract_requirements(self, task: Task) -> List[str]:
         """Extract requirements from task configuration"""
-        config = task.config or {}
+        config = task.payload or {}
         requirements = []
 
         # Extract common requirement patterns
@@ -240,7 +240,7 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
 
     def _extract_constraints(self, task: Task) -> Dict[str, Any]:
         """Extract constraints from task configuration"""
-        config = task.config or {}
+        config = task.payload or {}
         constraints = {}
 
         # Extract common constraint patterns
@@ -259,18 +259,18 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
 
     def _estimate_effort(self, task: Task) -> float:
         """Estimate effort required for task (in hours)"""
-        config = task.config or {}
+        config = task.payload or {}
 
         # Base effort by task type
         base_efforts = {
             TaskType.CODE_ANALYSIS: 2.0,
             TaskType.BUG_FIX: 3.0,
-            TaskType.CODE_REVIEW: 1.5,
-            TaskType.FEATURE_DEVELOPMENT: 8.0,
-            TaskType.REFACTORING: 4.0,
+            TaskType.PR_REVIEW: 1.5,
+            TaskType.FEATURE: 8.0,
+            TaskType.REFACTOR: 4.0,
             TaskType.TESTING: 3.0,
             TaskType.DOCUMENTATION: 2.0,
-            TaskType.SYSTEM_DESIGN: 6.0,
+            TaskType.SECURITY_AUDIT: 6.0,
         }
 
         base_effort = base_efforts.get(task.type, 4.0)
