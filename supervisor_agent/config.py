@@ -3,7 +3,7 @@ import os
 import secrets
 from typing import Any, Dict, List, Optional
 
-from pydantic import Field, validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
