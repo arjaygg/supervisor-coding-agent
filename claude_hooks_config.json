@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/claude_hook_pr_monitor.py --file='{file_path}' --tool='Edit' --action='file_edited'"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/claude_hook_pr_monitor.py --file='{file_path}' --tool='Write' --action='file_written'"
+          }
+        ]
+      },
+      {
+        "matcher": "MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/claude_hook_pr_monitor.py --file='{file_path}' --tool='MultiEdit' --action='file_multi_edited'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/claude_hook_pr_monitor.py --session-complete"
+          }
+        ]
+      }
+    ]
+  }
+}

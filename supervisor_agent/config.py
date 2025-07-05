@@ -34,6 +34,9 @@ class Settings(BaseSettings):
 
     # Claude Configuration
     claude_cli_path: str = Field(default="claude")
+    claude_prefer_pro_auth: bool = Field(
+        default=True, description="Prefer Claude Code CLI Pro subscription over API keys"
+    )
     claude_api_keys: str = Field(
         default="", description="Comma-separated list of Claude API keys"
     )

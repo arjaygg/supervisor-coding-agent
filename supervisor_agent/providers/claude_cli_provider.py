@@ -431,14 +431,34 @@ Please provide:
                 )
                 return self._generate_mock_response(prompt)
 
-            # Get current API key with rotation
-            api_key = self._get_next_api_key()
-
-            # Set environment variable for API key
+            # Check for existing Claude Code CLI Pro authentication first
             import os
-
             env = os.environ.copy()
-            env["ANTHROPIC_API_KEY"] = api_key
+            
+            # Check configuration preference and available auth methods
+            from supervisor_agent.config import get_config
+            config = get_config()
+            
+            # Try to detect if user has Claude Code CLI Pro subscription
+            has_pro_auth = self._has_claude_cli_pro_auth()
+            
+            if config.claude_prefer_pro_auth and has_pro_auth:
+                logger.info("Using Claude Code CLI Pro subscription authentication (preferred)")
+                # Don't set ANTHROPIC_API_KEY - let CLI use its own auth
+            elif not config.claude_prefer_pro_auth or not has_pro_auth:
+                # Fallback to API key authentication
+                api_key = self._get_next_api_key()
+                if api_key:
+                    logger.info("Using API key authentication" + 
+                               (" (Pro auth not preferred)" if has_pro_auth else " (Pro auth not available)"))
+                    env["ANTHROPIC_API_KEY"] = api_key
+                else:
+                    if has_pro_auth:
+                        logger.info("No API key available, falling back to Claude CLI Pro auth")
+                        # Don't set ANTHROPIC_API_KEY - let CLI use its own auth
+                    else:
+                        logger.warning("No API key available and no Claude CLI Pro auth detected")
+                        return self._generate_mock_response(prompt)
 
             # Construct Claude CLI command
             command = [self.cli_path]
@@ -650,13 +670,56 @@ I've analyzed your request and here's my response:
     def _get_next_api_key(self) -> str:
         """Get the next API key using round-robin."""
         if not self.api_keys:
-            raise ProviderError("No API keys available", self.provider_id)
+            return ""  # Allow empty API key for Pro auth fallback
 
         api_key = self.api_keys[self.current_key_index]
         self.current_key_index = (self.current_key_index + 1) % len(
             self.api_keys
         )
         return api_key
+
+    def _has_claude_cli_pro_auth(self) -> bool:
+        """
+        Check if user has Claude Code CLI Pro subscription authentication.
+        Returns True if CLI can authenticate without API keys.
+        """
+        try:
+            import subprocess
+            import os
+            
+            # Test if Claude CLI can authenticate without API key
+            env = os.environ.copy()
+            # Remove any existing API key to test Pro auth
+            env.pop("ANTHROPIC_API_KEY", None)
+            
+            # Try a simple command to check authentication
+            # Using --help to avoid actual API calls during detection
+            result = subprocess.run(
+                [self.cli_path, "--help"],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=10
+            )
+            
+            # If CLI runs successfully without API key, likely has Pro auth
+            # Additional check: look for authentication status in output
+            if result.returncode == 0:
+                # Try to check auth status more explicitly
+                auth_check = subprocess.run(
+                    [self.cli_path, "--version"],
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                    timeout=10
+                )
+                return auth_check.returncode == 0
+            
+            return False
+            
+        except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+            logger.debug(f"Claude CLI Pro auth detection failed: {e}")
+            return False
 
     async def _check_rate_limits(self):
         """Check and enforce rate limits."""

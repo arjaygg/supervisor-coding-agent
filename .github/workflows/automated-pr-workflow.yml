@@ -1,9 +1,13 @@
 name: 🤖 Automated PR Workflow
 
 on:
+  # Event-driven triggers (cost-efficient)
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  # Optional: Light monitoring during work hours only
   schedule:
-    # Run every 10 minutes
-    - cron: '*/10 * * * *'
+    # Run only every 4 hours during weekdays (business hours)
+    - cron: '0 */4 * * 1-5'
   workflow_dispatch:
     inputs:
       pr_number:
@@ -47,11 +51,12 @@ jobs:
           script: |
             const specificPr = '${{ github.event.inputs.pr_number }}';
             const forceReprocess = '${{ github.event.inputs.force_reprocess }}' === 'true';
+            const eventName = '${{ github.event_name }}';
             
             let prs;
             
             if (specificPr) {
-              // Process specific PR
+              // Process specific PR (workflow_dispatch)
               const { data: pr } = await github.rest.pulls.get({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -63,8 +68,19 @@ jobs:
               } else {
                 prs = [];
               }
+            } else if (eventName === 'pull_request') {
+              // Process the triggering PR (event-driven)
+              const pr = context.payload.pull_request;
+              
+              // Skip draft PRs unless they're being marked ready
+              if (pr.draft && context.payload.action !== 'ready_for_review') {
+                console.log('Skipping draft PR');
+                prs = [];
+              } else {
+                prs = [pr];
+              }
             } else {
-              // Get all open PRs
+              // Scheduled run - get all open PRs
               const { data: allPrs } = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -78,7 +94,7 @@ jobs:
                 // Skip draft PRs
                 if (pr.draft) return false;
                 
-                // Skip very recent PRs (less than 10 minutes old)
+                // Skip very recent PRs (less than 10 minutes old) unless forced
                 const createdAt = new Date(pr.created_at);
                 const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
                 if (createdAt > tenMinutesAgo && !forceReprocess) return false;
@@ -248,25 +264,133 @@ jobs:
           echo "  Test Coverage: ${COVERAGE}%"
           echo "  Overall Status: $([ "$REVIEW_PASSED" = "true" ] && echo "✅ PASSED" || echo "❌ FAILED")"
 
+      # Auto-fix code issues if review failed
+      - name: 🔧 Auto-fix code issues
+        id: auto-fix
+        if: steps.code-review.outputs.REVIEW_PASSED == 'false' && steps.check-processed.outputs.should_process == 'true'
+        run: |
+          echo "🔧 Attempting to auto-fix code issues..."
+          
+          # Configure git for bot commits
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Track what we fix
+          FIXES_APPLIED=false
+          
+          # Fix formatting issues
+          echo "Fixing code formatting..."
+          black supervisor_agent/ || true
+          isort supervisor_agent/ || true
+          
+          # Check if any files were modified
+          if ! git diff --quiet; then
+            echo "✅ Code formatting fixes applied"
+            FIXES_APPLIED=true
+          else
+            echo "ℹ️ No formatting fixes needed"
+          fi
+          
+          # If fixes were applied, commit and push them
+          if [ "$FIXES_APPLIED" = "true" ]; then
+            echo "📝 Committing auto-fixes..."
+            git add -A
+            git commit -m "fix: automated code quality improvements for PR #${{ matrix.pr.number }}
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+            
+            # Push the fixes
+            git push origin ${{ matrix.pr.head_ref }}
+            echo "✅ Auto-fixes committed and pushed"
+            echo "FIXES_APPLIED=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No auto-fixes applied"
+            echo "FIXES_APPLIED=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Re-run code review if fixes were applied
+      - name: 🔄 Re-run code review after fixes
+        id: code-review-rerun
+        if: steps.auto-fix.outputs.FIXES_APPLIED == 'true'
+        run: |
+          echo "🔄 Re-running code review after auto-fixes..."
+          
+          # Re-run static analysis
+          REVIEW_PASSED=true
+          CRITICAL_ISSUES=0
+          WARNINGS=0
+          
+          # Flake8
+          if ! flake8 supervisor_agent/ --format=json --output-file=review-results/flake8-rerun.json; then
+            echo "❌ Flake8 issues still present"
+            CRITICAL_ISSUES=$((CRITICAL_ISSUES + 1))
+            REVIEW_PASSED=false
+          fi
+          
+          # Black formatting check
+          if ! black --check --diff supervisor_agent/; then
+            echo "❌ Black formatting issues still present"
+            WARNINGS=$((WARNINGS + 1))
+          fi
+          
+          # isort check
+          if ! isort --check-only --diff supervisor_agent/; then
+            echo "❌ isort import sorting issues still present"
+            WARNINGS=$((WARNINGS + 1))
+          fi
+          
+          echo "REVIEW_PASSED_RERUN=$REVIEW_PASSED" >> $GITHUB_OUTPUT
+          echo "CRITICAL_ISSUES_RERUN=$CRITICAL_ISSUES" >> $GITHUB_OUTPUT
+          echo "WARNINGS_RERUN=$WARNINGS" >> $GITHUB_OUTPUT
+          
+          echo "🔄 Re-run Review Summary:"
+          echo "  Critical Issues: $CRITICAL_ISSUES"
+          echo "  Warnings: $WARNINGS"
+          echo "  Overall Status: $([ "$REVIEW_PASSED" = "true" ] && echo "✅ PASSED" || echo "❌ FAILED")"
+
       - name: Post code review results
         if: steps.check-processed.outputs.should_process == 'true'
         uses: actions/github-script@v7
         with:
           script: |
             const prNumber = ${{ matrix.pr.number }};
-            const reviewPassed = '${{ steps.code-review.outputs.REVIEW_PASSED }}' === 'true';
-            const criticalIssues = '${{ steps.code-review.outputs.CRITICAL_ISSUES }}';
-            const warnings = '${{ steps.code-review.outputs.WARNINGS }}';
+            const fixesApplied = '${{ steps.auto-fix.outputs.FIXES_APPLIED }}' === 'true';
+            
+            // Use rerun results if fixes were applied, otherwise use original results
+            const reviewPassed = fixesApplied ? 
+              '${{ steps.code-review-rerun.outputs.REVIEW_PASSED_RERUN }}' === 'true' :
+              '${{ steps.code-review.outputs.REVIEW_PASSED }}' === 'true';
+            
+            const criticalIssues = fixesApplied ? 
+              '${{ steps.code-review-rerun.outputs.CRITICAL_ISSUES_RERUN }}' :
+              '${{ steps.code-review.outputs.CRITICAL_ISSUES }}';
+            
+            const warnings = fixesApplied ?
+              '${{ steps.code-review-rerun.outputs.WARNINGS_RERUN }}' :
+              '${{ steps.code-review.outputs.WARNINGS }}';
+            
             const securityIssues = '${{ steps.code-review.outputs.SECURITY_ISSUES }}';
             const coverage = '${{ steps.code-review.outputs.COVERAGE }}';
             
             const status = reviewPassed ? '✅ APPROVED' : '❌ CHANGES REQUIRED';
             
+            let autoFixSection = '';
+            if (fixesApplied) {
+              autoFixSection = `### 🔧 Auto-Fix Applied
+- **Formatting fixes**: ✅ Automatically applied and committed
+- **Black formatting**: ✅ Fixed
+- **Import sorting**: ✅ Fixed
+
+`;
+            }
+            
             const comment = `## 🤖 Automated Code Review Results
 
 **Status**: ${status}
 
-### Summary
+${autoFixSection}### Summary
 - **Critical Issues**: ${criticalIssues}
 - **Warnings**: ${warnings}
 - **Security Issues**: ${securityIssues}
@@ -280,7 +404,12 @@ jobs:
 
 ${reviewPassed ? 
   '### ✅ Ready for Deployment\nThis PR passes all automated checks and is ready for deployment.' :
-  '### ❌ Action Required\nPlease address the critical issues before proceeding with deployment.'
+  '### ❌ Action Required\nPlease address the remaining critical issues before proceeding with deployment.'
+}
+
+${fixesApplied ? 
+  '*Auto-fixes were applied and committed automatically. The review was re-run with the fixes.*' :
+  '*No auto-fixes were needed or applied.*'
 }
 
 *Generated by automated workflow at ${new Date().toISOString()}*`;
@@ -292,10 +421,10 @@ ${reviewPassed ?
               body: comment
             });
 
-      # Step 2: Deploy if review passed
+      # Step 2: Deploy if review passed (use rerun results if fixes were applied)
       - name: 2️⃣ Deploy to staging
         id: deploy
-        if: steps.check-processed.outputs.should_process == 'true' && steps.code-review.outputs.REVIEW_PASSED == 'true'
+        if: steps.check-processed.outputs.should_process == 'true' && ((steps.auto-fix.outputs.FIXES_APPLIED == 'true' && steps.code-review-rerun.outputs.REVIEW_PASSED_RERUN == 'true') || (steps.auto-fix.outputs.FIXES_APPLIED != 'true' && steps.code-review.outputs.REVIEW_PASSED == 'true'))
         run: |
           echo "🚀 Deploying PR #${{ matrix.pr.number }} to staging..."
           
