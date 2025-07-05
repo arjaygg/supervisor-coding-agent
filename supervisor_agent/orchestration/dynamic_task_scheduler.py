@@ -99,7 +99,9 @@ class ScheduledTask:
     dependencies: List[str] = field(default_factory=list)
     parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     scheduled_at: Optional[datetime] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
@@ -118,7 +120,9 @@ class AgentCapacity:
     current_tasks: int
     available_resources: Dict[ResourceType, float]
     performance_metrics: Dict[str, float] = field(default_factory=dict)
-    last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_updated: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 @dataclass
@@ -143,7 +147,9 @@ class DynamicTaskScheduler:
         self.claude_agent = claude_agent
 
         # Task scheduling
-        self.task_queue: List[Tuple[float, ScheduledTask]] = []  # Priority queue
+        self.task_queue: List[Tuple[float, ScheduledTask]] = (
+            []
+        )  # Priority queue
         self.running_tasks: Dict[str, ScheduledTask] = {}
         self.completed_tasks: Dict[str, ScheduledTask] = {}
         self.failed_tasks: Dict[str, ScheduledTask] = {}
@@ -186,7 +192,9 @@ class DynamicTaskScheduler:
         self._monitoring_task = None
         self._running = False
 
-        self.logger = structured_logger.bind(component="dynamic_task_scheduler")
+        self.logger = structured_logger.bind(
+            component="dynamic_task_scheduler"
+        )
 
     async def start(self):
         """Start the dynamic task scheduler."""
@@ -197,7 +205,9 @@ class DynamicTaskScheduler:
         self._running = True
 
         # Start background optimization and monitoring
-        self._optimization_task = asyncio.create_task(self._optimization_loop())
+        self._optimization_task = asyncio.create_task(
+            self._optimization_loop()
+        )
         self._monitoring_task = asyncio.create_task(self._monitoring_loop())
 
         self.logger.info("Dynamic task scheduler started")
@@ -225,7 +235,9 @@ class DynamicTaskScheduler:
             # Validate task
             validation_result = await self._validate_task(task)
             if not validation_result["valid"]:
-                raise ValueError(f"Invalid task: {validation_result['errors']}")
+                raise ValueError(
+                    f"Invalid task: {validation_result['errors']}"
+                )
 
             # AI-powered priority optimization
             optimized_priority = await self._optimize_task_priority(task)
@@ -322,7 +334,9 @@ class DynamicTaskScheduler:
                 "recommendations": [],
             }
 
-    async def _optimize_task_priority(self, task: ScheduledTask) -> TaskPriority:
+    async def _optimize_task_priority(
+        self, task: ScheduledTask
+    ) -> TaskPriority:
         """Use AI to optimize task priority based on context."""
 
         priority_optimization_prompt = f"""
@@ -374,8 +388,13 @@ class DynamicTaskScheduler:
         """
 
         result = await self.claude_agent.execute_task(
-            {"type": "priority_optimization", "prompt": priority_optimization_prompt},
-            shared_memory={"scheduling_context": self._get_scheduling_context()},
+            {
+                "type": "priority_optimization",
+                "prompt": priority_optimization_prompt,
+            },
+            shared_memory={
+                "scheduling_context": self._get_scheduling_context()
+            },
         )
 
         try:
@@ -385,7 +404,9 @@ class DynamicTaskScheduler:
             )
             return TaskPriority(priority_value)
         except (json.JSONDecodeError, KeyError, ValueError):
-            return task.priority  # Return original priority if optimization fails
+            return (
+                task.priority
+            )  # Return original priority if optimization fails
 
     async def _calculate_scheduling_score(self, task: ScheduledTask) -> float:
         """Calculate scheduling score for priority queue ordering."""
@@ -414,7 +435,10 @@ class DynamicTaskScheduler:
 
         # Combine factors (lower score = higher priority)
         final_score = (
-            priority_score + urgency_factor - resource_efficiency - dependency_factor
+            priority_score
+            + urgency_factor
+            - resource_efficiency
+            - dependency_factor
         )
 
         return final_score
@@ -532,17 +556,23 @@ class DynamicTaskScheduler:
             )
 
             # Start execution (placeholder - in real implementation would delegate to agent)
-            asyncio.create_task(self._simulate_task_execution(task, allocation))
+            asyncio.create_task(
+                self._simulate_task_execution(task, allocation)
+            )
 
         except Exception as e:
             self.logger.error(
-                "Task execution failed to start", task_id=task.task_id, error=str(e)
+                "Task execution failed to start",
+                task_id=task.task_id,
+                error=str(e),
             )
 
             # Move to failed tasks
             self.failed_tasks[task.task_id] = task
 
-    async def _allocate_resources(self, task: ScheduledTask) -> ResourceAllocation:
+    async def _allocate_resources(
+        self, task: ScheduledTask
+    ) -> ResourceAllocation:
         """Allocate resources for task execution."""
 
         allocations = {}
@@ -605,7 +635,9 @@ class DynamicTaskScheduler:
             self.logger.info(
                 "Task execution completed",
                 task_id=task.task_id,
-                duration_seconds=(task.completed_at - task.started_at).total_seconds(),
+                duration_seconds=(
+                    task.completed_at - task.started_at
+                ).total_seconds(),
             )
 
         except Exception as e:
@@ -676,7 +708,9 @@ class DynamicTaskScheduler:
 
         if optimization.get("reorder_required", False):
             # Re-prioritize queue based on optimization
-            await self._reorder_task_queue(optimization.get("new_priorities", {}))
+            await self._reorder_task_queue(
+                optimization.get("new_priorities", {})
+            )
 
     def _get_scheduling_context(self) -> SchedulingContext:
         """Get current scheduling context for optimization."""
@@ -687,7 +721,11 @@ class DynamicTaskScheduler:
             agent_capacities=self.agent_capacities,
             performance_history=self._get_performance_history(),
             system_constraints=self._get_system_constraints(),
-            optimization_goals=["throughput", "latency", "resource_efficiency"],
+            optimization_goals=[
+                "throughput",
+                "latency",
+                "resource_efficiency",
+            ],
         )
 
     async def _reorder_task_queue(self, new_priorities: Dict[str, float]):
@@ -741,8 +779,8 @@ class DynamicTaskScheduler:
 
         current_time = datetime.now(timezone.utc)
         total_wait_time = sum(
-            (current_time - task.created_at).total_seconds() / 60  # minutes
-            for _, task in self.task_queue
+            (current_time - task.created_at).total_seconds() / 60
+            for _, task in self.task_queue  # minutes
         )
 
         return total_wait_time / len(self.task_queue)
@@ -758,7 +796,9 @@ class DynamicTaskScheduler:
     def _get_performance_history(self) -> Dict[str, List[float]]:
         """Get performance history for optimization."""
         return {
-            "throughput": list(self.resource_usage_history[ResourceType.CPU])[-10:],
+            "throughput": list(self.resource_usage_history[ResourceType.CPU])[
+                -10:
+            ],
             "latency": [],  # Would be populated with actual latency data
             "success_rate": [],  # Would be populated with task success rates
         }
@@ -768,7 +808,8 @@ class DynamicTaskScheduler:
         return {
             "max_queue_size": self.max_queue_size,
             "max_concurrent_tasks": sum(
-                cap.max_concurrent_tasks for cap in self.agent_capacities.values()
+                cap.max_concurrent_tasks
+                for cap in self.agent_capacities.values()
             ),
             "resource_limits": dict(self.resource_pool),
             "scheduling_strategy": self.scheduling_strategy.value,
@@ -809,7 +850,9 @@ class DynamicTaskScheduler:
             "average_wait_time_minutes": self._calculate_average_wait_time(),
         }
 
-    async def update_agent_capacity(self, agent_id: str, capacity: AgentCapacity):
+    async def update_agent_capacity(
+        self, agent_id: str, capacity: AgentCapacity
+    ):
         """Update agent capacity information."""
 
         self.agent_capacities[agent_id] = capacity
@@ -861,7 +904,9 @@ class SchedulingOptimizer:
         self.claude_agent = claude_agent
 
     async def optimize_schedule(
-        self, task_queue: List[Tuple[float, ScheduledTask]], context: SchedulingContext
+        self,
+        task_queue: List[Tuple[float, ScheduledTask]],
+        context: SchedulingContext,
     ) -> Dict[str, Any]:
         """Optimize task scheduling order using AI analysis."""
 
@@ -950,7 +995,9 @@ class AdaptiveSchedulingController:
 
         return False
 
-    def get_recommended_strategy(self, metrics: Dict[str, Any]) -> SchedulingStrategy:
+    def get_recommended_strategy(
+        self, metrics: Dict[str, Any]
+    ) -> SchedulingStrategy:
         """Get recommended scheduling strategy based on current metrics."""
 
         system_load = metrics.get("system_load", {})
@@ -988,7 +1035,11 @@ class LoadPredictor:
 
         predicted_load = max(0.0, min(1.0, average_load + trend))
 
-        return {"predicted_load": predicted_load, "confidence": 0.7, "trend": trend}
+        return {
+            "predicted_load": predicted_load,
+            "confidence": 0.7,
+            "trend": trend,
+        }
 
 
 # Factory function for easy integration

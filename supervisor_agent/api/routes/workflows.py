@@ -10,10 +10,12 @@ REST API endpoints for workflow orchestration including:
 Follows FastAPI patterns and integrates with existing API structure.
 """
 
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from supervisor_agent.core.dag_resolver import DAGResolver
@@ -35,6 +37,8 @@ workflow_scheduler = WorkflowScheduler(workflow_engine)
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
+
+from typing import Union
 
 # Pydantic models for request/response
 from pydantic import BaseModel, Field

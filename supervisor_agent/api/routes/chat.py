@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from supervisor_agent.api.websocket import notify_chat_update
-from supervisor_agent.db import crud, schemas
+from supervisor_agent.db import crud, models, schemas
 from supervisor_agent.db.database import get_db
 from supervisor_agent.db.enums import ChatThreadStatus, MessageRole
 from supervisor_agent.utils.logger import get_logger

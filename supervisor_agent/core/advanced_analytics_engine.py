@@ -22,24 +22,31 @@ SOLID Principles:
 - Dependency Inversion: Abstract analytics processing
 """
 
+import asyncio
+import json
 import statistics
 from abc import ABC, abstractmethod
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import pandas as pd
 
 from supervisor_agent.auth.models import User
 from supervisor_agent.core.analytics_models import (
+    AnalyticsResult,
+    Insight,
     SystemMetrics,
     TaskMetrics,
+    TimeRange,
+    TrendPrediction,
     UserMetrics,
 )
 from supervisor_agent.db.database import SessionLocal
-from supervisor_agent.db.models import Task
+from supervisor_agent.db.models import Task, TaskSession
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)

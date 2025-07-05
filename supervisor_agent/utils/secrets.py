@@ -9,12 +9,15 @@ Provides a unified interface for managing secrets across different environments:
 Follows security best practices with encryption and access logging.
 """
 
+import base64
+import json
+import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 try:
     from google.api_core import exceptions as gcp_exceptions

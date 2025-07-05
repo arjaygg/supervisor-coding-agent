@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 
 from supervisor_agent.auth.jwt_handler import jwt_handler
@@ -9,8 +9,11 @@ from supervisor_agent.auth.models import (
     APIKey,
     Permission,
     Role,
+    SecurityAuditLog,
     User,
     UserSession,
+    role_permissions,
+    user_roles,
 )
 from supervisor_agent.auth.schemas import (
     APIKeyCreate,

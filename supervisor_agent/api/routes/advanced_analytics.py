@@ -32,9 +32,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from supervisor_agent.auth.dependencies import (
-    require_permissions,
-)
+from supervisor_agent.auth.dependencies import require_permissions
 from supervisor_agent.auth.models import User
 from supervisor_agent.core.advanced_analytics_engine import (
     MetricsCollector,

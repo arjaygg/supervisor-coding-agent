@@ -1,9 +1,5 @@
 # supervisor_agent/orchestration/task_distribution_engine.py
 from typing import Dict, List
-import structlog
-from enum import Enum
-from dataclasses import dataclass, field
-from typing import Any, Optional
 
 from supervisor_agent.models.providers import Provider
 
@@ -31,12 +27,6 @@ from supervisor_agent.orchestration.multi_provider_coordinator import (
 from supervisor_agent.orchestration.task_splitter import (
     IntelligentTaskSplitter,
 )
-from supervisor_agent.providers.base_provider import (
-    ProviderType,
-    TaskCapability,
-)
-
-logger = structlog.get_logger(__name__)
 
 
 class TaskDistributionEngine:
@@ -52,7 +42,6 @@ class TaskDistributionEngine:
         )
         self.task_splitter = task_splitter or IntelligentTaskSplitter()
         self.dependency_manager = dependency_manager or DependencyManager()
-        self.logger = logger.bind(component="task_distribution_engine")
 
         # Storage for execution plans and distributions
         self._execution_plans = {}
@@ -98,7 +87,6 @@ class TaskDistributionEngine:
         dependency_graph = self.dependency_manager.build_dependency_graph(
             [task_split_to_task(ts) for ts in task_splits]
         )
-
 
         # 3. Optimize distribution strategy (placeholder)
         optimized_strategy = await self.optimize_distribution_strategy(

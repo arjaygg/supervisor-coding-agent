@@ -23,10 +23,12 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from supervisor_agent.auth.dependencies import (
+    get_current_user,
     require_permissions,
 )
 from supervisor_agent.auth.models import User
