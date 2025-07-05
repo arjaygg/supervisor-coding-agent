@@ -152,15 +152,13 @@ class TestSCCAnalyzer:
         """Test maintainability score calculation logic."""
         # High complexity, low comments scenario
         lang_breakdown = [
-            CodeMetrics("Python", 1, 100, 10, 5, 50, 2500)  # High complexity
-        ]
+            CodeMetrics("Python", 1, 100, 10, 5, 50, 2500)
+        ]  # High complexity
 
         total_metrics = CodeMetrics("Total", 1, 100, 10, 5, 50, 2500)
         file_details = [
-            FileMetrics(
-                "large_file.py", "Python", 600, 60, 30, 100, 15000
-            )  # Large file
-        ]
+            FileMetrics("large_file.py", "Python", 600, 60, 30, 100, 15000)
+        ]  # Large file
 
         result = SCCResult(
             total_metrics=total_metrics,

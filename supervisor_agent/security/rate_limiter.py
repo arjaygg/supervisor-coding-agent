@@ -240,16 +240,16 @@ class SecurityRateLimiter:
         expired_suspicious = [
             ip
             for ip, timestamp in self.suspicious_ips.items()
-            if now - timestamp > 3600  # 1 hour
-        ]
+            if now - timestamp > 3600
+        ]  # 1 hour
         for ip in expired_suspicious:
             del self.suspicious_ips[ip]
 
         expired_blocked = [
             ip
             for ip, timestamp in self.blocked_ips.items()
-            if now - timestamp > 3600  # 1 hour
-        ]
+            if now - timestamp > 3600
+        ]  # 1 hour
         for ip in expired_blocked:
             del self.blocked_ips[ip]
 

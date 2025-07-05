@@ -688,7 +688,10 @@ class TestAgentCollaborationEngine:
         # Simulate some collaboration history for trust scores
         collaboration_engine.collaboration_network.agent_relationships[
             "test_agent"
-        ] = {"expert_agent": 0.9, "junior_agent": 0.7}
+        ] = {
+            "expert_agent": 0.9,
+            "junior_agent": 0.7,
+        }
 
         task_context = {
             "required_skills": ["python", "code_review"],
