@@ -108,6 +108,10 @@ class PRMonitor:
             # Trigger workflow re-run
             self.trigger_workflow_rerun(pr_num)
             
+            # Wait for workflow to start, then post review
+            time.sleep(10)
+            self.check_for_auto_merge(pr)
+            
             # Mark as processed
             self.processed_prs.add(pr_num)
             
@@ -184,6 +188,135 @@ class PRMonitor:
             "--ref", f"refs/pull/{pr_num}/head"
         ])
     
+    def post_review_comment(self, pr_num: int, analysis_results: Dict):
+        """Post a comprehensive review comment on the PR"""
+        logger.info(f"Posting review comment for PR #{pr_num}")
+        
+        # Generate review summary
+        total_issues = analysis_results.get("total_issues", 0)
+        critical_issues = analysis_results.get("critical_issues", 0)
+        warnings = analysis_results.get("warnings", 0)
+        
+        if total_issues == 0:
+            review_body = f"""## ✅ Automated Code Review - PASSED
+
+**Status**: 🟢 **APPROVED** - All quality checks passed!
+
+### Summary
+- ✅ No critical issues found
+- ✅ Code formatting is correct
+- ✅ Security scans passed
+- ✅ All static analysis checks passed
+
+### Next Steps
+This PR is ready for merge! All automated quality gates have been satisfied.
+
+---
+*🤖 Automated review by PR Monitor*
+*Review completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"""
+            
+            # Submit as APPROVED review
+            review_result = self.run_command([
+                "gh", "pr", "review", str(pr_num), "--approve", "--body", review_body
+            ])
+            
+        else:
+            # Generate detailed issue breakdown
+            issue_details = []
+            
+            if critical_issues > 0:
+                issue_details.append(f"🔴 **{critical_issues} Critical Issues** - Must be fixed before merge")
+            if warnings > 0:
+                issue_details.append(f"⚠️ **{warnings} Warnings** - Should be addressed")
+                
+            review_body = f"""## 🔍 Automated Code Review - CHANGES REQUIRED
+
+**Status**: 🔴 **CHANGES REQUESTED** - Issues found that need attention
+
+### Summary
+- **Total Issues**: {total_issues}
+- **Critical Issues**: {critical_issues}
+- **Warnings**: {warnings}
+
+### Issues Found
+{chr(10).join(issue_details)}
+
+### Automated Fixes Applied
+✅ Code formatting (black, isort)
+✅ Import cleanup
+✅ Style consistency improvements
+
+### Required Actions
+{self.generate_action_items(analysis_results)}
+
+### Quality Gates Status
+{self.generate_quality_gates_status(pr_num)}
+
+---
+*🤖 Automated review by PR Monitor*
+*Review completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
+*Will automatically re-review when changes are pushed*"""
+            
+            # Submit as REQUEST_CHANGES review
+            review_result = self.run_command([
+                "gh", "pr", "review", str(pr_num), "--request-changes", "--body", review_body
+            ])
+            
+        if review_result["success"]:
+            logger.info(f"Successfully posted review comment for PR #{pr_num}")
+        else:
+            logger.warning(f"Failed to post review comment: {review_result['error']}")
+    
+    def generate_action_items(self, analysis_results: Dict) -> str:
+        """Generate specific action items based on analysis results"""
+        items = []
+        
+        if analysis_results.get("flake8_issues", 0) > 0:
+            items.append("- Fix remaining flake8 style issues")
+        if analysis_results.get("test_failures", 0) > 0:
+            items.append("- Fix failing unit tests")
+        if analysis_results.get("security_issues", 0) > 0:
+            items.append("- Address security vulnerabilities")
+        if analysis_results.get("type_errors", 0) > 0:
+            items.append("- Fix type annotation errors")
+            
+        return chr(10).join(items) if items else "- No specific actions required"
+    
+    def generate_quality_gates_status(self, pr_num: int) -> str:
+        """Generate quality gates status for the review"""
+        try:
+            result = self.run_command([
+                "gh", "pr", "view", str(pr_num), "--json", "statusCheckRollup"
+            ])
+            
+            if not result["success"]:
+                return "❓ Unable to fetch quality gates status"
+                
+            import json
+            data = json.loads(result["output"])
+            status_checks = data.get("statusCheckRollup", [])
+            
+            gates = []
+            for check in status_checks:
+                name = check.get("name", "Unknown")
+                conclusion = check.get("conclusion", "PENDING")
+                status = check.get("status", "UNKNOWN")
+                
+                if conclusion == "SUCCESS":
+                    gates.append(f"✅ {name}")
+                elif conclusion == "FAILURE":
+                    gates.append(f"❌ {name}")
+                elif status == "IN_PROGRESS":
+                    gates.append(f"🔄 {name} (running)")
+                else:
+                    gates.append(f"⏳ {name} (pending)")
+                    
+            return chr(10).join(gates) if gates else "No quality gates configured"
+            
+        except Exception as e:
+            logger.error(f"Error generating quality gates status: {e}")
+            return "❓ Error fetching quality gates status"
+
     def check_for_auto_merge(self, pr: Dict) -> bool:
         """Check if PR can be auto-merged"""
         pr_num = pr["number"]
@@ -193,14 +326,29 @@ class PRMonitor:
         required_checks = ["🔍 Static Analysis", "🧪 Unit Tests", "🔒 Security Checks"]
         
         passing_checks = set()
+        failing_checks = []
+        
         for check in status_checks:
-            if check.get("conclusion") == "SUCCESS":
-                passing_checks.add(check.get("name", ""))
+            name = check.get("name", "")
+            conclusion = check.get("conclusion", "")
+            
+            if conclusion == "SUCCESS":
+                passing_checks.add(name)
+            elif conclusion == "FAILURE":
+                failing_checks.append(name)
         
         all_passing = all(check in passing_checks for check in required_checks)
         
-        if all_passing:
+        if all_passing and len(failing_checks) == 0:
             logger.info(f"PR #{pr_num} ready for auto-merge")
+            
+            # Post final approval review
+            self.post_review_comment(pr_num, {"total_issues": 0})
+            
+            # Wait a moment for review to post
+            time.sleep(5)
+            
+            # Attempt merge
             merge_result = self.run_command([
                 "gh", "pr", "merge", str(pr_num), "--squash", "--auto"
             ])
@@ -210,6 +358,15 @@ class PRMonitor:
                 return True
             else:
                 logger.warning(f"Auto-merge failed: {merge_result['error']}")
+        else:
+            # Post review with issues found
+            analysis = {
+                "total_issues": len(failing_checks),
+                "critical_issues": len([c for c in failing_checks if "Static Analysis" in c or "Unit Tests" in c]),
+                "warnings": len([c for c in failing_checks if c not in ["Static Analysis", "Unit Tests"]]),
+                "failing_checks": failing_checks
+            }
+            self.post_review_comment(pr_num, analysis)
         
         return False
     
