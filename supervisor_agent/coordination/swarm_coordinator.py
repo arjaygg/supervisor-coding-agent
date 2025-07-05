@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import structlog
 from pydantic import BaseModel
 
-from supervisor_agent.db.workflow_models import WorkflowContext, WorkflowStatus
+# from supervisor_agent.db.workflow_models import WorkflowContext, WorkflowStatus
 from supervisor_agent.intelligence.workflow_synthesizer import (
     ClaudeAgentWrapper,
     EnhancedWorkflowDefinition,

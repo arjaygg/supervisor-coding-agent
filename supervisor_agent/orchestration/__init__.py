@@ -27,15 +27,15 @@ from .task_distribution_engine import (
 )
 from .advanced_workflow_engine import (
     AdvancedWorkflowEngine,
-    WorkflowStage,
     WorkflowExecution,
-    WorkflowOptimization,
+    WorkflowDefinition,
+    WorkflowTask,
 )
 from .dynamic_task_scheduler import (
     DynamicTaskScheduler,
-    TaskSchedule,
+    ScheduledTask,
     SchedulingStrategy,
-    SchedulingResult,
+    ResourceAllocation,
 )
 
 __all__ = [
@@ -54,11 +54,11 @@ __all__ = [
     "DistributionResult",
     "create_task_distribution_engine",
     "AdvancedWorkflowEngine",
-    "WorkflowStage",
     "WorkflowExecution",
-    "WorkflowOptimization",
+    "WorkflowDefinition",
+    "WorkflowTask",
     "DynamicTaskScheduler",
-    "TaskSchedule",
+    "ScheduledTask",
     "SchedulingStrategy",
-    "SchedulingResult",
+    "ResourceAllocation",
 ]
