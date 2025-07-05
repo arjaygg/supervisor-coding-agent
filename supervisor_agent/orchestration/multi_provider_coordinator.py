@@ -5,24 +5,24 @@ Coordinates execution across multiple AI providers with load balancing and failo
 
 import asyncio
 import logging
-from collections import defaultdict
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple, Any, Set
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
-
 import structlog
+from collections import defaultdict
 
-from supervisor_agent.core.multi_provider_service import MultiProviderService
-from supervisor_agent.orchestration.agent_specialization_engine import (
-    AgentSpecializationEngine,
-    AgentSpecialty,
-)
 from supervisor_agent.providers.base_provider import (
     AIProvider,
     ProviderType,
     TaskCapability,
 )
+from supervisor_agent.core.multi_provider_service import MultiProviderService
+from supervisor_agent.orchestration.agent_specialization_engine import (
+    AgentSpecializationEngine,
+    AgentSpecialty,
+)
+
 
 logger = structlog.get_logger(__name__)
 
@@ -192,9 +192,7 @@ class MultiProviderCoordinator:
         return capacity_map.get(provider_type, 50)
 
     async def coordinate_task(
-        self,
-        task: CoordinationTask,
-        strategy: Optional[CoordinationStrategy] = None,
+        self, task: CoordinationTask, strategy: Optional[CoordinationStrategy] = None
     ) -> ExecutionResult:
         """
         Coordinate execution of a task across providers.
@@ -286,9 +284,7 @@ class MultiProviderCoordinator:
             return [self._select_load_balanced(available_providers)]
 
         elif strategy == CoordinationStrategy.CAPABILITY_BASED:
-            return [
-                await self._select_capability_based(task, available_providers)
-            ]
+            return [await self._select_capability_based(task, available_providers)]
 
         elif strategy == CoordinationStrategy.COST_OPTIMIZED:
             return [self._select_cost_optimized(available_providers)]
@@ -318,9 +314,7 @@ class MultiProviderCoordinator:
                 continue
 
             # Check if provider supports task type
-            if not await self._supports_task_type(
-                provider_type, task.task_type
-            ):
+            if not await self._supports_task_type(provider_type, task.task_type):
                 continue
 
             available.append(provider_type)
@@ -333,18 +327,13 @@ class MultiProviderCoordinator:
 
         return available
 
-    async def _is_provider_available(
-        self, provider_type: ProviderType
-    ) -> bool:
+    async def _is_provider_available(self, provider_type: ProviderType) -> bool:
         """Check if a provider is available."""
         metrics = self.provider_metrics.get(provider_type)
         if not metrics:
             return False
 
-        return metrics.status in [
-            ProviderStatus.HEALTHY,
-            ProviderStatus.DEGRADED,
-        ]
+        return metrics.status in [ProviderStatus.HEALTHY, ProviderStatus.DEGRADED]
 
     async def _supports_task_type(
         self, provider_type: ProviderType, task_type: TaskCapability
@@ -354,9 +343,7 @@ class MultiProviderCoordinator:
         # In a real implementation, this would check provider capabilities
         return True
 
-    def _select_round_robin(
-        self, providers: List[ProviderType]
-    ) -> ProviderType:
+    def _select_round_robin(self, providers: List[ProviderType]) -> ProviderType:
         """Select provider using round-robin strategy."""
         if not providers:
             return ProviderType.LOCAL_MOCK
@@ -365,9 +352,7 @@ class MultiProviderCoordinator:
         self.round_robin_index += 1
         return provider
 
-    def _select_load_balanced(
-        self, providers: List[ProviderType]
-    ) -> ProviderType:
+    def _select_load_balanced(self, providers: List[ProviderType]) -> ProviderType:
         """Select provider with lowest load."""
         if not providers:
             return ProviderType.LOCAL_MOCK
@@ -416,9 +401,7 @@ class MultiProviderCoordinator:
 
         return best_provider
 
-    def _select_cost_optimized(
-        self, providers: List[ProviderType]
-    ) -> ProviderType:
+    def _select_cost_optimized(self, providers: List[ProviderType]) -> ProviderType:
         """Select provider with lowest cost."""
         if not providers:
             return ProviderType.LOCAL_MOCK
@@ -467,22 +450,16 @@ class MultiProviderCoordinator:
 
                 try:
                     # Execute task (mock implementation)
-                    result_data = await self._execute_on_provider(
-                        provider, task
-                    )
+                    result_data = await self._execute_on_provider(provider, task)
 
-                    execution_time = (
-                        datetime.now() - start_time
-                    ).total_seconds()
+                    execution_time = (datetime.now() - start_time).total_seconds()
 
                     return ExecutionResult(
                         task_id=task.task_id,
                         success=True,
                         provider_used=provider_type,
                         execution_time=execution_time,
-                        cost=self._calculate_cost(
-                            provider_type, execution_time
-                        ),
+                        cost=self._calculate_cost(provider_type, execution_time),
                         result_data=result_data,
                     )
 
@@ -523,9 +500,7 @@ class MultiProviderCoordinator:
         return ExecutionResult(
             task_id=task.task_id,
             success=False,
-            provider_used=(
-                providers[0] if providers else ProviderType.LOCAL_MOCK
-            ),
+            provider_used=providers[0] if providers else ProviderType.LOCAL_MOCK,
             execution_time=0.0,
             cost=0.0,
             error_message=f"All providers failed. Last error: {last_error}",
@@ -536,9 +511,7 @@ class MultiProviderCoordinator:
     ) -> ExecutionResult:
         """Execute task in parallel on multiple providers."""
         # Create tasks for parallel execution
-        tasks = [
-            self._execute_single(task, provider) for provider in providers
-        ]
+        tasks = [self._execute_single(task, provider) for provider in providers]
 
         # Wait for first successful result
         try:
@@ -559,9 +532,7 @@ class MultiProviderCoordinator:
             return ExecutionResult(
                 task_id=task.task_id,
                 success=False,
-                provider_used=(
-                    providers[0] if providers else ProviderType.LOCAL_MOCK
-                ),
+                provider_used=providers[0] if providers else ProviderType.LOCAL_MOCK,
                 execution_time=0.0,
                 cost=0.0,
                 error_message="Parallel execution failed",
@@ -571,9 +542,7 @@ class MultiProviderCoordinator:
             return ExecutionResult(
                 task_id=task.task_id,
                 success=False,
-                provider_used=(
-                    providers[0] if providers else ProviderType.LOCAL_MOCK
-                ),
+                provider_used=providers[0] if providers else ProviderType.LOCAL_MOCK,
                 execution_time=0.0,
                 cost=0.0,
                 error_message=f"Parallel execution error: {str(e)}",
@@ -659,9 +628,7 @@ class MultiProviderCoordinator:
     def get_coordination_stats(self) -> Dict[str, Any]:
         """Get coordination statistics."""
         total_executions = len(self.execution_history)
-        successful_executions = sum(
-            1 for r in self.execution_history if r.success
-        )
+        successful_executions = sum(1 for r in self.execution_history if r.success)
 
         provider_usage = defaultdict(int)
         for result in self.execution_history:
@@ -671,14 +638,11 @@ class MultiProviderCoordinator:
             "total_coordinated_tasks": total_executions,
             "successful_tasks": successful_executions,
             "success_rate": (
-                successful_executions / total_executions
-                if total_executions > 0
-                else 0
+                successful_executions / total_executions if total_executions > 0 else 0
             ),
             "provider_usage": dict(provider_usage),
             "average_execution_time": (
-                sum(r.execution_time for r in self.execution_history)
-                / total_executions
+                sum(r.execution_time for r in self.execution_history) / total_executions
                 if total_executions > 0
                 else 0
             ),

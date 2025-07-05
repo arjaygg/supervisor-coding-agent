@@ -25,6 +25,18 @@ from .task_distribution_engine import (
     TaskSplit,
     create_task_distribution_engine,
 )
+from .advanced_workflow_engine import (
+    AdvancedWorkflowEngine,
+    WorkflowStage,
+    WorkflowExecution,
+    WorkflowOptimization,
+)
+from .dynamic_task_scheduler import (
+    DynamicTaskScheduler,
+    TaskSchedule,
+    SchedulingStrategy,
+    SchedulingResult,
+)
 
 __all__ = [
     "AgentSpecializationEngine",
@@ -41,4 +53,12 @@ __all__ = [
     "TaskSplit",
     "DistributionResult",
     "create_task_distribution_engine",
+    "AdvancedWorkflowEngine",
+    "WorkflowStage",
+    "WorkflowExecution",
+    "WorkflowOptimization",
+    "DynamicTaskScheduler",
+    "TaskSchedule",
+    "SchedulingStrategy",
+    "SchedulingResult",
 ]
