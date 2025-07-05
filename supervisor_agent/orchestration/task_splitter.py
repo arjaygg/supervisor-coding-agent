@@ -133,24 +133,91 @@ class IntelligentTaskSplitter:
 
     def generate_subtask_graph(self, task: Task) -> SubtaskGraph:
         """
-        Generates a graph of subtasks from a complex task.
-        This is a placeholder implementation.
+        Generates a graph of subtasks from a complex task using intelligent analysis.
         """
-        # This would involve identifying logical sub-components of the task.
-        subtasks = [
-            TaskSplit(
-                task_id=f"{task.id}_part1",
-                parent_task_id=task.id,
-                config={"description": "Part 1"},
-            ),
-            TaskSplit(
-                task_id=f"{task.id}_part2",
-                parent_task_id=task.id,
-                config={"description": "Part 2"},
-            ),
-        ]
-        dependencies = [(subtasks[0].task_id, subtasks[1].task_id)]
+        content = self._extract_task_content(task)
+        estimated_steps = self._estimate_steps(content)
+        dependencies_found = self._identify_dependencies(content)
+        
+        # Analyze content for logical break points
+        subtasks = self._create_intelligent_subtasks(task, content, estimated_steps)
+        
+        # Build dependency relationships
+        dependencies = self._build_subtask_dependencies(subtasks, dependencies_found)
+        
         return SubtaskGraph(subtasks=subtasks, dependencies=dependencies)
+    
+    def _create_intelligent_subtasks(self, task: Task, content: str, estimated_steps: int) -> List[TaskSplit]:
+        """Create intelligent subtasks based on content analysis."""
+        subtasks = []
+        
+        # Split based on identified patterns
+        if "analyze" in content.lower() and "implement" in content.lower():
+            # Analysis + Implementation pattern
+            subtasks.extend([
+                TaskSplit(
+                    task_id=f"{task.id}_analysis",
+                    parent_task_id=task.id,
+                    config={"description": f"Analyze requirements for {content[:50]}..."}
+                ),
+                TaskSplit(
+                    task_id=f"{task.id}_implementation", 
+                    parent_task_id=task.id,
+                    config={"description": f"Implement solution for {content[:50]}..."}
+                )
+            ])
+        elif "setup" in content.lower() and "configure" in content.lower():
+            # Setup + Configuration pattern
+            subtasks.extend([
+                TaskSplit(
+                    task_id=f"{task.id}_setup",
+                    parent_task_id=task.id,
+                    config={"description": f"Setup environment for {content[:50]}..."}
+                ),
+                TaskSplit(
+                    task_id=f"{task.id}_configure",
+                    parent_task_id=task.id, 
+                    config={"description": f"Configure system for {content[:50]}..."}
+                )
+            ])
+        elif estimated_steps > 2:
+            # Generic multi-step splitting
+            for i in range(min(estimated_steps, 4)):  # Cap at 4 subtasks
+                subtasks.append(TaskSplit(
+                    task_id=f"{task.id}_step{i+1}",
+                    parent_task_id=task.id,
+                    config={"description": f"Step {i+1}: {content[:30]}..."}
+                ))
+        else:
+            # Single subtask for simple tasks
+            subtasks.append(TaskSplit(
+                task_id=f"{task.id}_main",
+                parent_task_id=task.id,
+                config=task.config if hasattr(task, 'config') else {"description": content}
+            ))
+        
+        return subtasks
+    
+    def _build_subtask_dependencies(self, subtasks: List[TaskSplit], dependencies_found: List[str]) -> List[tuple]:
+        """Build dependency relationships between subtasks."""
+        dependencies = []
+        
+        if len(subtasks) <= 1:
+            return dependencies
+        
+        # Create sequential dependencies for most patterns
+        for i in range(len(subtasks) - 1):
+            dependencies.append((subtasks[i].task_id, subtasks[i + 1].task_id))
+        
+        # Add special dependency patterns based on content analysis
+        for subtask in subtasks:
+            if "_analysis" in subtask.task_id:
+                # Analysis tasks should come before implementation
+                impl_tasks = [st for st in subtasks if "_implementation" in st.task_id or "_configure" in st.task_id]
+                for impl_task in impl_tasks:
+                    dependencies.append((subtask.task_id, impl_task.task_id))
+        
+        return dependencies
 
     def optimize_splitting_strategy(self, task: Task) -> SplittingStrategy:
         """

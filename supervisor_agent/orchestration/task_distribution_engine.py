@@ -128,21 +128,136 @@ class TaskDistributionEngine:
     ) -> DistributionStrategy:
         """
         Optimizes the distribution strategy based on the task and available providers.
-        This is a placeholder implementation.
+        Uses agent specialization and provider coordination for intelligent decisions.
         """
-        return DistributionStrategy.SEQUENTIAL  # Default strategy
+        # Analyze task complexity to determine optimal strategy
+        complexity_analysis = self.task_splitter.analyze_task_complexity(task)
+        
+        # Get agent specialization recommendations
+        try:
+            agent_recommendation = await self.agent_specialization_engine.select_optimal_agent(task)
+            specialization_capability = agent_recommendation.get('specialization', {}).get('capability_score', 0.5)
+        except Exception:
+            specialization_capability = 0.5
+        
+        # Evaluate provider availability and health
+        try:
+            provider_health = await self.multi_provider_coordinator.get_provider_health_summary()
+            healthy_providers = [p for p in provider_health.values() if p.get('status') == 'healthy']
+            provider_count = len(healthy_providers)
+        except Exception:
+            provider_count = 1
+        
+        # Determine optimal strategy based on analysis
+        if complexity_analysis.complexity_score <= 0.5:
+            # Simple tasks - use sequential for reliability
+            return DistributionStrategy.SEQUENTIAL
+        elif complexity_analysis.complexity_score <= 1.5 and provider_count >= 2:
+            # Moderate complexity with multiple providers - use load balanced
+            return DistributionStrategy.LOAD_BALANCED
+        elif complexity_analysis.requires_splitting and provider_count >= 3:
+            # Complex tasks with good provider availability - use parallel
+            return DistributionStrategy.PARALLEL
+        elif specialization_capability > 0.8:
+            # High specialization capability - use capability-based routing
+            return DistributionStrategy.CAPABILITY_BASED
+        else:
+            # Default fallback
+            return DistributionStrategy.SEQUENTIAL
 
     async def coordinate_parallel_execution(
         self, task_splits: List[TaskSplit]
     ) -> ExecutionPlan:
         """
-        Coordinates the parallel execution of task splits.
-        This is a placeholder implementation.
+        Coordinates the parallel execution of task splits with intelligent scheduling.
+        Creates execution plan based on dependencies and provider capabilities.
         """
-        steps = [f"Execute task {ts.task_id}" for ts in task_splits]
+        if not task_splits:
+            return ExecutionPlan(steps=[], estimated_time=0.0, cost_estimate=0.0)
+        
+        # Convert task splits to tasks for dependency analysis
+        tasks = [task_split_to_task(ts) for ts in task_splits]
+        
+        # Build dependency graph
+        dependency_graph = self.dependency_manager.build_dependency_graph(tasks)
+        execution_order = self.dependency_manager.resolve_execution_order(dependency_graph)
+        
+        # Create execution steps with proper ordering
+        steps = []
+        total_time = 0.0
+        total_cost = 0.0
+        
+        # Group tasks by execution level for parallel processing
+        execution_levels = self._calculate_execution_levels(tasks, dependency_graph)
+        
+        for level_idx, level_tasks in enumerate(execution_levels):
+            if len(level_tasks) == 1:
+                # Sequential execution
+                task_id = level_tasks[0]
+                steps.append(f"Execute task {task_id}")
+                total_time += 30.0  # Base execution time per task
+                total_cost += 0.05
+            else:
+                # Parallel execution
+                parallel_steps = [f"Execute task {task_id}" for task_id in level_tasks]
+                steps.append(f"Parallel execution: {', '.join(parallel_steps)}")
+                # Parallel tasks take max time, not sum
+                total_time += 30.0 
+                total_cost += 0.05 * len(level_tasks)
+        
+        # Add coordination overhead
+        if len(execution_levels) > 1:
+            total_time += 5.0 * len(execution_levels)  # Coordination overhead
+            total_cost += 0.01 * len(execution_levels)
+        
+        # Estimate based on parallelization potential
+        parallelization_factor = 1.0 - (dependency_graph.parallelization_potential * 0.3)
+        total_time *= parallelization_factor
+        
         return ExecutionPlan(
-            steps=steps, estimated_time=60.0, cost_estimate=10.0
+            steps=steps,
+            estimated_time=total_time,
+            cost_estimate=total_cost,
+            estimated_total_time=total_time,
+            estimated_cost=total_cost,
+            parallelization_factor=dependency_graph.parallelization_potential
         )
+    
+    def _calculate_execution_levels(self, tasks: List[Task], dependency_graph: DependencyGraph) -> List[List[str]]:
+        """Calculate execution levels for parallel processing based on dependencies."""
+        # Create adjacency list from dependency graph
+        dependencies = {}
+        for task in tasks:
+            dependencies[task.id] = []
+        
+        # Add dependencies from graph edges
+        for edge in dependency_graph.edges:
+            predecessor, successor = edge
+            if successor not in dependencies:
+                dependencies[successor] = []
+            dependencies[successor].append(predecessor)
+        
+        # Calculate levels using topological ordering
+        levels = []
+        remaining = set(task.id for task in tasks)
+        
+        while remaining:
+            # Find tasks with no unresolved dependencies
+            current_level = []
+            for task_id in list(remaining):
+                deps = dependencies.get(task_id, [])
+                if not deps or all(dep not in remaining for dep in deps):
+                    current_level.append(task_id)
+            
+            if not current_level:
+                # Handle circular dependencies by breaking the cycle
+                current_level = [list(remaining)[0]]
+            
+            levels.append(current_level)
+            for task_id in current_level:
+                remaining.remove(task_id)
+        
+        return levels
 
     def get_execution_plan(self, plan_id: str) -> ExecutionPlan:
         """Get execution plan by ID."""
