@@ -215,9 +215,9 @@ This PR is ready for merge! All automated quality gates have been satisfied.
 *🤖 Automated review by PR Monitor*
 *Review completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"""
             
-            # Submit as APPROVED review
+            # Submit as comment (can't approve own PR)
             review_result = self.run_command([
-                "gh", "pr", "review", str(pr_num), "--approve", "--body", review_body
+                "gh", "pr", "comment", str(pr_num), "--body", review_body
             ])
             
         else:
@@ -257,9 +257,9 @@ This PR is ready for merge! All automated quality gates have been satisfied.
 *Review completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
 *Will automatically re-review when changes are pushed*"""
             
-            # Submit as REQUEST_CHANGES review
+            # Submit as comment (can't request changes on own PR)
             review_result = self.run_command([
-                "gh", "pr", "review", str(pr_num), "--request-changes", "--body", review_body
+                "gh", "pr", "comment", str(pr_num), "--body", review_body
             ])
             
         if review_result["success"]:
