@@ -2,6 +2,10 @@
 """
 Automated PR Monitor and Review System
 Continuously monitors GitHub PRs and automates the review, deploy, test, merge workflow.
+
+⚠️  DEPRECATED: This script is replaced by the GitHub Actions workflow.
+    Use the event-driven GitHub Actions workflow instead for cost efficiency.
+    This script is preserved for reference but should not be used.
 """
 
 import asyncio
@@ -687,18 +691,14 @@ def main():
     """Main entry point."""
     print("🤖 Automated PR Monitor and Review System")
     print("=" * 50)
-    print("This system will continuously:")
-    print("1. Monitor for open GitHub PRs")
-    print("2. Conduct automated code reviews")
-    print("3. Deploy passing PRs")
-    print("4. Run post-deploy tests")
-    print("5. Merge successful PRs")
-    print("=" * 50)
-    print("Press Ctrl+C to stop monitoring")
+    print("⚠️  DEPRECATED: This script has been replaced by GitHub Actions workflow")
+    print("   for cost efficiency and better integration.")
     print()
-    
-    monitor = GitHubPRMonitor()
-    monitor.start_monitoring()
+    print("   Please use the event-driven GitHub Actions workflow instead.")
+    print("   This script is preserved for reference only.")
+    print("=" * 50)
+    print("Exiting...")
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

@@ -1,9 +1,13 @@
 name: 🤖 Automated PR Workflow
 
 on:
+  # Event-driven triggers (cost-efficient)
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  # Optional: Light monitoring during work hours only
   schedule:
-    # Run every 10 minutes
-    - cron: '*/10 * * * *'
+    # Run only every 4 hours during weekdays (business hours)
+    - cron: '0 */4 * * 1-5'
   workflow_dispatch:
     inputs:
       pr_number:
@@ -47,11 +51,12 @@ jobs:
           script: |
             const specificPr = '${{ github.event.inputs.pr_number }}';
             const forceReprocess = '${{ github.event.inputs.force_reprocess }}' === 'true';
+            const eventName = '${{ github.event_name }}';
             
             let prs;
             
             if (specificPr) {
-              // Process specific PR
+              // Process specific PR (workflow_dispatch)
               const { data: pr } = await github.rest.pulls.get({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -63,8 +68,19 @@ jobs:
               } else {
                 prs = [];
               }
+            } else if (eventName === 'pull_request') {
+              // Process the triggering PR (event-driven)
+              const pr = context.payload.pull_request;
+              
+              // Skip draft PRs unless they're being marked ready
+              if (pr.draft && context.payload.action !== 'ready_for_review') {
+                console.log('Skipping draft PR');
+                prs = [];
+              } else {
+                prs = [pr];
+              }
             } else {
-              // Get all open PRs
+              // Scheduled run - get all open PRs
               const { data: allPrs } = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -78,7 +94,7 @@ jobs:
                 // Skip draft PRs
                 if (pr.draft) return false;
                 
-                // Skip very recent PRs (less than 10 minutes old)
+                // Skip very recent PRs (less than 10 minutes old) unless forced
                 const createdAt = new Date(pr.created_at);
                 const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
                 if (createdAt > tenMinutesAgo && !forceReprocess) return false;
