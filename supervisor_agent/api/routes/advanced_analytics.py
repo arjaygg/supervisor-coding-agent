@@ -17,10 +17,9 @@ import asyncio
 import csv
 import io
 import json
-from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 from fastapi import (
     APIRouter,
@@ -33,21 +32,15 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from supervisor_agent.auth.dependencies import (
-    get_current_user,
-    require_permissions,
-)
+from supervisor_agent.auth.dependencies import require_permissions
 from supervisor_agent.auth.models import User
 from supervisor_agent.core.advanced_analytics_engine import (
-    AlertSeverity,
-    AnomalyType,
     MetricsCollector,
     MetricType,
     StatisticalAnomalyDetector,
     TimeSeries,
     TimeSeriesPredictor,
 )
-from supervisor_agent.core.analytics_models import TimeRange
 from supervisor_agent.db.database import get_db
 from supervisor_agent.utils.logger import get_logger
 

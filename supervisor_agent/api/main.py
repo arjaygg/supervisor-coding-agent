@@ -18,7 +18,7 @@ from supervisor_agent.api.websocket_providers import router as providers_ws_rout
 from supervisor_agent.auth.routes import router as auth_router
 from supervisor_agent.config import settings
 from supervisor_agent.core.quota import quota_manager
-from supervisor_agent.db.database import engine, get_db
+from supervisor_agent.db.database import engine
 from supervisor_agent.db.models import Base
 from supervisor_agent.security.middleware import (
     InputValidationMiddleware,
