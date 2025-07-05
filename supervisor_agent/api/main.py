@@ -1,31 +1,39 @@
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
 from sqlalchemy import text
-from supervisor_agent.config import settings
-from supervisor_agent.api.routes.tasks import router as tasks_router
-from supervisor_agent.api.routes.health import router as health_router
+
 from supervisor_agent.api.routes.analytics import router as analytics_router
-from supervisor_agent.api.routes.workflows import router as workflows_router
 from supervisor_agent.api.routes.chat import router as chat_router
+from supervisor_agent.api.routes.health import router as health_router
 from supervisor_agent.api.routes.providers import router as providers_router
-from supervisor_agent.auth.routes import router as auth_router
+from supervisor_agent.api.routes.tasks import router as tasks_router
+from supervisor_agent.api.routes.workflows import router as workflows_router
 from supervisor_agent.api.websocket import websocket_endpoint
-from supervisor_agent.api.websocket_analytics import router as analytics_ws_router
-from supervisor_agent.api.websocket_providers import router as providers_ws_router
+from supervisor_agent.api.websocket_analytics import (
+    router as analytics_ws_router,
+)
+from supervisor_agent.api.websocket_providers import (
+    router as providers_ws_router,
+)
+from supervisor_agent.auth.routes import router as auth_router
+from supervisor_agent.config import settings
+from supervisor_agent.core.quota import quota_manager
 from supervisor_agent.db.database import engine
 from supervisor_agent.db.models import Base
-from supervisor_agent.core.quota import quota_manager
-from supervisor_agent.db.database import get_db
-from supervisor_agent.utils.logger import setup_logging, get_logger
 from supervisor_agent.security.middleware import (
-    SecurityHeadersMiddleware, 
-    InputValidationMiddleware, 
-    RequestLoggingMiddleware
+    InputValidationMiddleware,
+    RequestLoggingMiddleware,
+    SecurityHeadersMiddleware,
 )
-from supervisor_agent.security.rate_limiter import rate_limit_middleware, rate_limiter_cleanup_task
-import asyncio
+from supervisor_agent.security.rate_limiter import (
+    rate_limit_middleware,
+    rate_limiter_cleanup_task,
+)
+from supervisor_agent.utils.logger import get_logger, setup_logging
 
 
 @asynccontextmanager
@@ -34,11 +42,11 @@ async def lifespan(app: FastAPI):
     setup_logging()
     logger = get_logger(__name__)
     logger.info("Starting Supervisor Agent API")
-    
+
     # Log configuration info
     config_info = settings.get_startup_info()
     logger.info(f"Configuration: {config_info}")
-    
+
     # Log configuration warnings
     warnings = settings.validate_configuration()
     if warnings:
@@ -55,6 +63,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize agents in database
     from supervisor_agent.db.database import SessionLocal
+
     db = SessionLocal()
     try:
         # Test database connection
@@ -63,24 +72,35 @@ async def lifespan(app: FastAPI):
         logger.info("Agents initialized in database")
     except Exception as e:
         logger.error(f"Failed to initialize agents: {str(e)}")
-        logger.warning("Application will start but some features may not work properly")
+        logger.warning(
+            "Application will start but some features may not work properly"
+        )
     finally:
         db.close()
 
     # Initialize multi-provider service if enabled
     if settings.multi_provider_enabled:
         try:
-            from supervisor_agent.core.multi_provider_service import multi_provider_service
+            from supervisor_agent.core.multi_provider_service import (
+                multi_provider_service,
+            )
+
             await multi_provider_service.initialize()
             logger.info("Multi-provider service initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize multi-provider service: {str(e)}")
+            logger.error(
+                f"Failed to initialize multi-provider service: {str(e)}"
+            )
             logger.warning("Multi-provider features will not be available")
-    
+
     # Initialize authentication system
     if settings.security_enabled:
         try:
-            from supervisor_agent.auth.crud import initialize_default_permissions, initialize_default_roles
+            from supervisor_agent.auth.crud import (
+                initialize_default_permissions,
+                initialize_default_roles,
+            )
+
             db = SessionLocal()
             try:
                 initialize_default_permissions(db)
@@ -89,8 +109,10 @@ async def lifespan(app: FastAPI):
             finally:
                 db.close()
         except Exception as e:
-            logger.error(f"Failed to initialize authentication system: {str(e)}")
-    
+            logger.error(
+                f"Failed to initialize authentication system: {str(e)}"
+            )
+
     # Start background tasks
     if settings.rate_limit_enabled:
         asyncio.create_task(rate_limiter_cleanup_task())
@@ -122,12 +144,14 @@ if settings.rate_limit_enabled:
 # CORS middleware - configured from settings
 cors_origins = settings.cors_allow_origins
 if settings.app_debug:
-    cors_origins.extend([
-        "http://localhost:5173",  # Vite dev server
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",  # Alternative dev port  
-        "http://127.0.0.1:3000",
-    ])
+    cors_origins.extend(
+        [
+            "http://localhost:5173",  # Vite dev server
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",  # Alternative dev port
+            "http://127.0.0.1:3000",
+        ]
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -136,7 +160,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=[
         "Accept",
-        "Accept-Language", 
+        "Accept-Language",
         "Content-Language",
         "Content-Type",
         "Authorization",
@@ -144,7 +168,7 @@ app.add_middleware(
         "X-API-Key",
         "Origin",
         "Access-Control-Request-Method",
-        "Access-Control-Request-Headers"
+        "Access-Control-Request-Headers",
     ],
 )
 
@@ -166,7 +190,8 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
 
     return JSONResponse(
-        status_code=500, content={"detail": "Internal server error", "error": str(exc)}
+        status_code=500,
+        content={"detail": "Internal server error", "error": str(exc)},
     )
 
 

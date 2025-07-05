@@ -4,9 +4,11 @@ Cost tracking and token estimation for Claude API usage
 
 import hashlib
 import re
-from typing import Dict, Any, Optional
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
 from sqlalchemy.orm import Session
+
 from supervisor_agent.db import crud, schemas
 from supervisor_agent.utils.logger import get_logger
 
@@ -66,7 +68,9 @@ class TokenEstimator:
             estimated_tokens = (word_based + char_based) // 2
 
         # Add overhead for special tokens, formatting, etc.
-        overhead = max(10, estimated_tokens // 20)  # 5% overhead, minimum 10 tokens
+        overhead = max(
+            10, estimated_tokens // 20
+        )  # 5% overhead, minimum 10 tokens
 
         return max(1, estimated_tokens + overhead)
 
@@ -155,12 +159,16 @@ class CostTracker:
         """
         try:
             # Estimate tokens
-            prompt_tokens = self.token_estimator.estimate_prompt_tokens(prompt, context)
+            prompt_tokens = self.token_estimator.estimate_prompt_tokens(
+                prompt, context
+            )
             completion_tokens = self.token_estimator.estimate_tokens(response)
             total_tokens = prompt_tokens + completion_tokens
 
             # Try to extract model from response (best effort)
-            model_used = self.token_estimator.extract_model_from_cli_output(response)
+            model_used = self.token_estimator.extract_model_from_cli_output(
+                response
+            )
             if not model_used:
                 model_used = "claude-3-5-sonnet-20241022"  # Default assumption
 
@@ -231,7 +239,9 @@ class CostTracker:
             )
 
             # Update hourly metrics
-            hourly_metrics = self._get_or_create_metrics(db, "hourly", hour_key)
+            hourly_metrics = self._get_or_create_metrics(
+                db, "hourly", hour_key
+            )
             self._increment_metrics(
                 db, hourly_metrics, tokens, cost, execution_time_ms, success
             )
@@ -294,7 +304,9 @@ class CostTracker:
         new_avg_time = (old_total_time + execution_time_ms) // new_requests
 
         # Calculate new success rate
-        old_successes = (float(metrics.success_rate) / 100) * metrics.total_requests
+        old_successes = (
+            float(metrics.success_rate) / 100
+        ) * metrics.total_requests
         new_successes = old_successes + (1 if success else 0)
         new_success_rate = (new_successes / new_requests) * 100
 
@@ -318,7 +330,9 @@ class CostTracker:
         end_date: Optional[datetime] = None,
     ) -> schemas.CostSummaryResponse:
         """Get cost summary for a time period"""
-        summary_data = crud.CostTrackingCRUD.get_cost_summary(db, start_date, end_date)
+        summary_data = crud.CostTrackingCRUD.get_cost_summary(
+            db, start_date, end_date
+        )
         return schemas.CostSummaryResponse(**summary_data)
 
     def generate_prompt_hash(self, prompt: str) -> str:

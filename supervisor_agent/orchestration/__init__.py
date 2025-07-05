@@ -12,20 +12,30 @@ from .agent_specialization_engine import (
     SpecializationScore,
     create_agent_specialization_engine,
 )
-
 from .multi_provider_coordinator import (
+    CoordinationResult,
     MultiProviderCoordinator,
     ProviderOrchestrationStrategy,
-    CoordinationResult,
     create_multi_provider_coordinator,
 )
-
 from .task_distribution_engine import (
-    TaskDistributionEngine,
-    DistributionStrategy,
-    TaskSplit,
     DistributionResult,
+    DistributionStrategy,
+    TaskDistributionEngine,
+    TaskSplit,
     create_task_distribution_engine,
+)
+from .advanced_workflow_engine import (
+    AdvancedWorkflowEngine,
+    WorkflowExecution,
+    WorkflowExecutionState,
+    WorkflowTask,
+)
+from .dynamic_task_scheduler import (
+    DynamicTaskScheduler,
+    ScheduledTask,
+    SchedulingStrategy,
+    TaskPriority,
 )
 
 __all__ = [
@@ -43,4 +53,12 @@ __all__ = [
     "TaskSplit",
     "DistributionResult",
     "create_task_distribution_engine",
+    "AdvancedWorkflowEngine",
+    "WorkflowExecutionState",
+    "WorkflowTask",
+    "WorkflowExecution",
+    "DynamicTaskScheduler",
+    "ScheduledTask",
+    "SchedulingStrategy",
+    "TaskPriority",
 ]

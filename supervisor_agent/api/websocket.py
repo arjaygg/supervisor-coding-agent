@@ -1,8 +1,9 @@
 import json
-import asyncio
-from typing import List, Dict, Any
-from fastapi import WebSocket, WebSocketDisconnect
 from datetime import datetime, timezone
+from typing import Any, Dict, List
+
+from fastapi import WebSocket, WebSocketDisconnect
+
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -64,7 +65,9 @@ class WebSocketManager:
         }
 
         await self.broadcast(json.dumps(message))
-        logger.debug(f"Sent task update for task {task_data.get('id', 'unknown')}")
+        logger.debug(
+            f"Sent task update for task {task_data.get('id', 'unknown')}"
+        )
 
     async def send_quota_update(self, quota_data: Dict[str, Any]):
         """Send a quota update to all connected clients."""
@@ -153,7 +156,10 @@ async def websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "error",
                                 "message": "Invalid JSON format",
-                                "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+                                "timestamp": datetime.now(
+                                    timezone.utc
+                                ).isoformat()
+                                + "Z",
                             }
                         ),
                         websocket,
@@ -179,7 +185,10 @@ async def handle_client_message(message: Dict[str, Any], websocket: WebSocket):
         # Respond to ping with pong
         await websocket_manager.send_personal_message(
             json.dumps(
-                {"type": "pong", "timestamp": datetime.now(timezone.utc).isoformat() + "Z"}
+                {
+                    "type": "pong",
+                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+                }
             ),
             websocket,
         )

@@ -1,14 +1,16 @@
+import asyncio
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from typing import List, Optional
-import asyncio
-from supervisor_agent.db.database import get_db
-from supervisor_agent.db import schemas, crud
-from supervisor_agent.db.enums import TaskStatus
-from supervisor_agent.core.quota import quota_manager
+
 from supervisor_agent.api.websocket import notify_task_update
-from supervisor_agent.utils.logger import get_logger
+from supervisor_agent.core.quota import quota_manager
 from supervisor_agent.core.task_processor_interface import TaskProcessorFactory
+from supervisor_agent.db import crud, schemas
+from supervisor_agent.db.database import get_db
+from supervisor_agent.db.enums import TaskStatus
+from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -49,14 +51,18 @@ async def create_task(
                     "status": db_task.status,
                     "priority": db_task.priority,
                     "created_at": (
-                        db_task.created_at.isoformat() if db_task.created_at else None
+                        db_task.created_at.isoformat()
+                        if db_task.created_at
+                        else None
                     ),
                     "payload": db_task.payload,
                 }
             )
         )
 
-        logger.info(f"Created and queued task {db_task.id} of type {task.type}")
+        logger.info(
+            f"Created and queued task {db_task.id} of type {task.type}"
+        )
 
         return db_task
 
@@ -73,7 +79,9 @@ async def get_tasks(
     db: Session = Depends(get_db),
 ):
     try:
-        tasks = crud.TaskCRUD.get_tasks(db, skip=skip, limit=limit, status=status)
+        tasks = crud.TaskCRUD.get_tasks(
+            db, skip=skip, limit=limit, status=status
+        )
         return tasks
 
     except Exception as e:
@@ -98,7 +106,8 @@ async def get_task(task_id: int, db: Session = Depends(get_db)):
 
 
 @router.get(
-    "/tasks/{task_id}/sessions", response_model=List[schemas.TaskSessionResponse]
+    "/tasks/{task_id}/sessions",
+    response_model=List[schemas.TaskSessionResponse],
 )
 async def get_task_sessions(task_id: int, db: Session = Depends(get_db)):
     try:
@@ -126,15 +135,19 @@ async def retry_task(task_id: int, db: Session = Depends(get_db)):
 
         if task.status not in [TaskStatus.FAILED, TaskStatus.COMPLETED]:
             raise HTTPException(
-                status_code=400, detail=f"Cannot retry task with status {task.status}"
+                status_code=400,
+                detail=f"Cannot retry task with status {task.status}",
             )
 
         # Reset task status
-        update_data = schemas.TaskUpdate(status=TaskStatus.PENDING, error_message=None)
+        update_data = schemas.TaskUpdate(
+            status=TaskStatus.PENDING, error_message=None
+        )
         crud.TaskCRUD.update_task(db, task_id, update_data)
 
-        # Queue for processing
-        process_single_task.delay(task_id)
+        # Queue for processing using dependency injection
+        processor = TaskProcessorFactory.create_processor()
+        await processor.queue_task(task_id, db)
 
         logger.info(f"Retrying task {task_id}")
 
@@ -169,11 +182,15 @@ async def get_task_stats(db: Session = Depends(get_db)):
 
             # Count by type
             task_type = task.type
-            stats["by_type"][task_type] = stats["by_type"].get(task_type, 0) + 1
+            stats["by_type"][task_type] = (
+                stats["by_type"].get(task_type, 0) + 1
+            )
 
             # Count by priority
             priority = task.priority
-            stats["by_priority"][priority] = stats["by_priority"].get(priority, 0) + 1
+            stats["by_priority"][priority] = (
+                stats["by_priority"].get(priority, 0) + 1
+            )
 
         return stats
 

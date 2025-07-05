@@ -5,12 +5,13 @@ Coordinates execution across multiple AI providers with load balancing and failo
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any, Set
-from dataclasses import dataclass, field
-from enum import Enum
-import structlog
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+import structlog
 
 from supervisor_agent.providers.base_provider import (
     AIProvider,
@@ -192,7 +193,9 @@ class MultiProviderCoordinator:
         return capacity_map.get(provider_type, 50)
 
     async def coordinate_task(
-        self, task: CoordinationTask, strategy: Optional[CoordinationStrategy] = None
+        self,
+        task: CoordinationTask,
+        strategy: Optional[CoordinationStrategy] = None,
     ) -> ExecutionResult:
         """
         Coordinate execution of a task across providers.
@@ -314,7 +317,9 @@ class MultiProviderCoordinator:
                 continue
 
             # Check if provider supports task type
-            if not await self._supports_task_type(provider_type, task.task_type):
+            if not await self._supports_task_type(
+                provider_type, task.task_type
+            ):
                 continue
 
             available.append(provider_type)
@@ -500,7 +505,9 @@ class MultiProviderCoordinator:
         return ExecutionResult(
             task_id=task.task_id,
             success=False,
-            provider_used=providers[0] if providers else ProviderType.LOCAL_MOCK,
+            provider_used=(
+                providers[0] if providers else ProviderType.LOCAL_MOCK
+            ),
             execution_time=0.0,
             cost=0.0,
             error_message=f"All providers failed. Last error: {last_error}",
@@ -532,7 +539,9 @@ class MultiProviderCoordinator:
             return ExecutionResult(
                 task_id=task.task_id,
                 success=False,
-                provider_used=providers[0] if providers else ProviderType.LOCAL_MOCK,
+                provider_used=(
+                    providers[0] if providers else ProviderType.LOCAL_MOCK
+                ),
                 execution_time=0.0,
                 cost=0.0,
                 error_message="Parallel execution failed",
@@ -542,7 +551,9 @@ class MultiProviderCoordinator:
             return ExecutionResult(
                 task_id=task.task_id,
                 success=False,
-                provider_used=providers[0] if providers else ProviderType.LOCAL_MOCK,
+                provider_used=(
+                    providers[0] if providers else ProviderType.LOCAL_MOCK
+                ),
                 execution_time=0.0,
                 cost=0.0,
                 error_message=f"Parallel execution error: {str(e)}",

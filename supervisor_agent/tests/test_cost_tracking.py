@@ -1,8 +1,14 @@
-import pytest
-from unittest.mock import Mock, patch
 from datetime import datetime, timezone
-from supervisor_agent.core.cost_tracker import TokenEstimator, CostTracker, cost_tracker
-from supervisor_agent.db import models, schemas, crud
+from unittest.mock import Mock, patch
+
+import pytest
+
+from supervisor_agent.core.cost_tracker import (
+    CostTracker,
+    TokenEstimator,
+    cost_tracker,
+)
+from supervisor_agent.db import crud, models, schemas
 from supervisor_agent.tests.conftest import test_db
 
 
@@ -63,20 +69,28 @@ class TestTokenEstimator:
             "project": "test-project",
         }
 
-        tokens_with_context = TokenEstimator.estimate_prompt_tokens(prompt, context)
-        tokens_without_context = TokenEstimator.estimate_prompt_tokens(prompt, None)
+        tokens_with_context = TokenEstimator.estimate_prompt_tokens(
+            prompt, context
+        )
+        tokens_without_context = TokenEstimator.estimate_prompt_tokens(
+            prompt, None
+        )
 
         # With context should have more tokens
         assert tokens_with_context > tokens_without_context
 
     def test_extract_model_from_cli_output(self):
         """Test model extraction from CLI output"""
-        output_with_model = "Response generated using claude-3-5-sonnet-20241022"
+        output_with_model = (
+            "Response generated using claude-3-5-sonnet-20241022"
+        )
         model = TokenEstimator.extract_model_from_cli_output(output_with_model)
         assert model == "claude-3-5-sonnet-20241022"
 
         output_without_model = "This is just a regular response"
-        model = TokenEstimator.extract_model_from_cli_output(output_without_model)
+        model = TokenEstimator.extract_model_from_cli_output(
+            output_without_model
+        )
         assert model is None
 
 
@@ -183,7 +197,10 @@ class TestCostTracker:
                 "avg_cost_per_request": "0.0125",
                 "avg_tokens_per_request": 500.0,
                 "cost_by_agent": {"agent-1": "0.0750", "agent-2": "0.0500"},
-                "cost_by_task_type": {"PR_REVIEW": "0.1000", "CODE_ANALYSIS": "0.0250"},
+                "cost_by_task_type": {
+                    "PR_REVIEW": "0.1000",
+                    "CODE_ANALYSIS": "0.0250",
+                },
                 "daily_breakdown": [],
             }
 
@@ -213,10 +230,14 @@ class TestCostTrackingCRUD:
         )
 
         # This would fail without proper database setup, but tests the interface
-        with patch.object(test_db, "add"), patch.object(
-            test_db, "commit"
-        ), patch.object(test_db, "refresh"):
-            db_entry = crud.CostTrackingCRUD.create_cost_entry(test_db, cost_entry)
+        with (
+            patch.object(test_db, "add"),
+            patch.object(test_db, "commit"),
+            patch.object(test_db, "refresh"),
+        ):
+            db_entry = crud.CostTrackingCRUD.create_cost_entry(
+                test_db, cost_entry
+            )
             # Just verify the method can be called without errors
             # In a real integration test, we'd verify the actual database operations
 
@@ -228,7 +249,9 @@ class TestCostTrackingCRUD:
             )
 
             # Test with task_id filter
-            entries = crud.CostTrackingCRUD.get_cost_entries(test_db, task_id=1)
+            entries = crud.CostTrackingCRUD.get_cost_entries(
+                test_db, task_id=1
+            )
             mock_query.assert_called()
 
             # Test with agent_id filter
@@ -269,9 +292,11 @@ class TestUsageMetricsCRUD:
             success_rate="95.00",
         )
 
-        with patch.object(test_db, "add"), patch.object(
-            test_db, "commit"
-        ), patch.object(test_db, "refresh"):
+        with (
+            patch.object(test_db, "add"),
+            patch.object(test_db, "commit"),
+            patch.object(test_db, "refresh"),
+        ):
             db_metric = crud.UsageMetricsCRUD.create_metric(test_db, metric)
             # Verify method can be called
 
@@ -279,11 +304,15 @@ class TestUsageMetricsCRUD:
         """Test upserting new metric"""
         with patch.object(test_db, "query") as mock_query:
             # Mock no existing metric
-            mock_query.return_value.filter.return_value.first.return_value = None
+            mock_query.return_value.filter.return_value.first.return_value = (
+                None
+            )
 
-            with patch.object(test_db, "add"), patch.object(
-                test_db, "commit"
-            ), patch.object(test_db, "refresh"):
+            with (
+                patch.object(test_db, "add"),
+                patch.object(test_db, "commit"),
+                patch.object(test_db, "refresh"),
+            ):
                 result = crud.UsageMetricsCRUD.upsert_metric(
                     test_db,
                     "daily",
@@ -305,7 +334,10 @@ class TestUsageMetricsCRUD:
                 existing_metric
             )
 
-            with patch.object(test_db, "commit"), patch.object(test_db, "refresh"):
+            with (
+                patch.object(test_db, "commit"),
+                patch.object(test_db, "refresh"),
+            ):
                 result = crud.UsageMetricsCRUD.upsert_metric(
                     test_db,
                     "daily",

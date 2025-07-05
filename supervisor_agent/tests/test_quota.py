@@ -1,5 +1,7 @@
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
 from supervisor_agent.core.quota import QuotaManager
 from supervisor_agent.db import crud, schemas
 
@@ -80,7 +82,9 @@ def test_estimate_messages_for_task():
 
     # Test different task types
     assert quota_manager.estimate_messages_from_task("PR_REVIEW", 1000) >= 2
-    assert quota_manager.estimate_messages_from_task("ISSUE_SUMMARY", 1000) == 1
+    assert (
+        quota_manager.estimate_messages_from_task("ISSUE_SUMMARY", 1000) == 1
+    )
     assert quota_manager.estimate_messages_from_task("FEATURE", 1000) >= 3
 
     # Test large payload

@@ -1,6 +1,7 @@
 import logging
 import sys
 from typing import Optional
+
 from supervisor_agent.config import settings
 
 

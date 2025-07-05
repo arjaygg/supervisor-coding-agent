@@ -1,19 +1,21 @@
 import asyncio
 import json
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from celery import current_task
 from sqlalchemy.orm import Session
-from supervisor_agent.queue.celery_app import celery_app
-from supervisor_agent.db.database import get_db
-from supervisor_agent.db import models, schemas, crud
-from supervisor_agent.db.enums import TaskStatus
-from supervisor_agent.core.agent import agent_manager
-from supervisor_agent.core.memory import shared_memory
-from supervisor_agent.core.quota import quota_manager
-from supervisor_agent.core.batcher import task_batcher
-from supervisor_agent.core.notifier import notification_manager
+
 from supervisor_agent.config import settings
+from supervisor_agent.core.agent import agent_manager
+from supervisor_agent.core.batcher import task_batcher
+from supervisor_agent.core.memory import shared_memory
+from supervisor_agent.core.notifier import notification_manager
+from supervisor_agent.core.quota import quota_manager
+from supervisor_agent.db import crud, models, schemas
+from supervisor_agent.db.database import get_db
+from supervisor_agent.db.enums import TaskStatus
+from supervisor_agent.queue.celery_app import celery_app
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -100,7 +102,10 @@ def process_single_task(self, task_id: int):
                 event_type="TASK_COMPLETED",
                 agent_id=agent.id,
                 task_id=task_id,
-                details={"execution_time": result["execution_time"], "success": True},
+                details={
+                    "execution_time": result["execution_time"],
+                    "success": True,
+                },
             )
             crud.AuditLogCRUD.create_log(db, audit_data)
 
@@ -135,7 +140,9 @@ def process_single_task(self, task_id: int):
                     )
                 )
 
-                logger.error(f"Task {task_id} failed after {task.retry_count} retries")
+                logger.error(
+                    f"Task {task_id} failed after {task.retry_count} retries"
+                )
             else:
                 update_data = schemas.TaskUpdate(
                     status=TaskStatus.RETRY, error_message=error_message
@@ -143,7 +150,9 @@ def process_single_task(self, task_id: int):
                 crud.TaskCRUD.update_task(db, task_id, update_data)
 
                 # Retry the task
-                raise self.retry(countdown=60 * task.retry_count)  # Exponential backoff
+                raise self.retry(
+                    countdown=60 * task.retry_count
+                )  # Exponential backoff
 
             # Create audit log
             audit_data = schemas.AuditLogCreate(
@@ -158,10 +167,16 @@ def process_single_task(self, task_id: int):
             )
             crud.AuditLogCRUD.create_log(db, audit_data)
 
-            return {"success": False, "error": error_message, "task_id": task_id}
+            return {
+                "success": False,
+                "error": error_message,
+                "task_id": task_id,
+            }
 
     except Exception as e:
-        logger.error(f"Error processing task {task_id}: {str(e)}", exc_info=True)
+        logger.error(
+            f"Error processing task {task_id}: {str(e)}", exc_info=True
+        )
 
         # Update task status to failed
         update_data = schemas.TaskUpdate(
@@ -230,7 +245,10 @@ def batch_and_process_tasks():
             f"Processed {processed_batches} batches with {total_tasks} total tasks"
         )
 
-        return {"processed_batches": processed_batches, "total_tasks": total_tasks}
+        return {
+            "processed_batches": processed_batches,
+            "total_tasks": total_tasks,
+        }
 
     except Exception as e:
         logger.error(f"Error in batch processing: {str(e)}", exc_info=True)
@@ -297,7 +315,9 @@ def process_task_batch(self, task_ids: List[int]):
                     )
                     crud.TaskSessionCRUD.create_session(db, session_data)
 
-                    update_data = schemas.TaskUpdate(status=TaskStatus.COMPLETED)
+                    update_data = schemas.TaskUpdate(
+                        status=TaskStatus.COMPLETED
+                    )
                     crud.TaskCRUD.update_task(db, task.id, update_data)
 
                     shared_memory.store_task_result(task, result)
@@ -313,19 +333,27 @@ def process_task_batch(self, task_ids: List[int]):
 
                 # Count task types
                 task_types[task.type] = task_types.get(task.type, 0) + 1
-                results.append({"task_id": task.id, "success": result["success"]})
+                results.append(
+                    {"task_id": task.id, "success": result["success"]}
+                )
 
             except Exception as e:
-                logger.error(f"Error processing task {task.id} in batch: {str(e)}")
+                logger.error(
+                    f"Error processing task {task.id} in batch: {str(e)}"
+                )
                 update_data = schemas.TaskUpdate(
                     status=TaskStatus.FAILED, error_message=str(e)
                 )
                 crud.TaskCRUD.update_task(db, task.id, update_data)
                 failed_count += 1
-                results.append({"task_id": task.id, "success": False, "error": str(e)})
+                results.append(
+                    {"task_id": task.id, "success": False, "error": str(e)}
+                )
 
         # Calculate processing time
-        processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds())
+        processing_time = int(
+            (datetime.now(timezone.utc) - start_time).total_seconds()
+        )
 
         # Send batch completion notification
         batch_summary = {
@@ -337,7 +365,9 @@ def process_task_batch(self, task_ids: List[int]):
             "task_types": task_types,
         }
 
-        asyncio.run(notification_manager.send_batch_completion_alert(batch_summary))
+        asyncio.run(
+            notification_manager.send_batch_completion_alert(batch_summary)
+        )
 
         logger.info(
             f"Batch processing completed: {successful_count} successful, {failed_count} failed"
@@ -378,6 +408,7 @@ def health_check_task():
         # Check database connectivity
         try:
             from sqlalchemy import text
+
             db.execute(text("SELECT 1"))
         except Exception as e:
             health_issues.append(f"Database connectivity issue: {str(e)}")
@@ -406,7 +437,9 @@ def health_check_task():
                 "issues": health_issues,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            asyncio.run(notification_manager.send_system_health_alert(health_status))
+            asyncio.run(
+                notification_manager.send_system_health_alert(health_status)
+            )
 
         return {
             "status": "healthy" if not health_issues else "degraded",

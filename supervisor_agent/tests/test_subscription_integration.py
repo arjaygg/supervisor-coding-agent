@@ -1,12 +1,20 @@
-import pytest
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-from supervisor_agent.core.subscription_intelligence import SubscriptionIntelligence
-from supervisor_agent.queue.tasks import process_single_task, process_task_batch
-from supervisor_agent.core.intelligent_task_processor import IntelligentTaskProcessor
+import pytest
+
+from supervisor_agent.core.intelligent_task_processor import (
+    IntelligentTaskProcessor,
+)
+from supervisor_agent.core.subscription_intelligence import (
+    SubscriptionIntelligence,
+)
 from supervisor_agent.db.models import Task, TaskStatus
+from supervisor_agent.queue.tasks import (
+    process_single_task,
+    process_task_batch,
+)
 
 
 class TestIntelligentTaskProcessor:
@@ -40,7 +48,9 @@ class TestIntelligentTaskProcessor:
             }
         )
 
-        result = await task_processor.process_task(mock_task, mock_agent_processor)
+        result = await task_processor.process_task(
+            mock_task, mock_agent_processor
+        )
 
         assert result["success"] is True
         assert result["result"] == "Analysis complete"
@@ -48,7 +58,9 @@ class TestIntelligentTaskProcessor:
         assert mock_agent_processor.call_count >= 1
 
     @pytest.mark.asyncio
-    async def test_process_task_duplicate_request(self, task_processor, mock_task):
+    async def test_process_task_duplicate_request(
+        self, task_processor, mock_task
+    ):
         """Test that duplicate requests return cached results."""
         mock_agent_processor = AsyncMock(
             return_value={
@@ -63,7 +75,9 @@ class TestIntelligentTaskProcessor:
         await task_processor.process_task(mock_task, mock_agent_processor)
 
         # Second identical request
-        result = await task_processor.process_task(mock_task, mock_agent_processor)
+        result = await task_processor.process_task(
+            mock_task, mock_agent_processor
+        )
 
         assert result["success"] is True
         assert result["result"] == "Analysis complete"
@@ -71,9 +85,13 @@ class TestIntelligentTaskProcessor:
         mock_agent_processor.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_process_task_quota_exceeded(self, task_processor, mock_task):
+    async def test_process_task_quota_exceeded(
+        self, task_processor, mock_task
+    ):
         """Test behavior when quota is exceeded."""
-        task_processor.subscription_intelligence.current_usage = 11000  # Exceed limit
+        task_processor.subscription_intelligence.current_usage = (
+            11000  # Exceed limit
+        )
 
         mock_agent_processor = AsyncMock()
 
@@ -97,12 +115,18 @@ class TestIntelligentTaskProcessor:
 
         mock_agent_processor = AsyncMock(
             return_value=[
-                {"success": True, "result": f"Analysis {i+1}", "tokens_used": 800}
+                {
+                    "success": True,
+                    "result": f"Analysis {i+1}",
+                    "tokens_used": 800,
+                }
                 for i in range(3)
             ]
         )
 
-        results = await task_processor.process_batch(tasks, mock_agent_processor)
+        results = await task_processor.process_batch(
+            tasks, mock_agent_processor
+        )
 
         assert len(results) == 3
         assert all(result["success"] for result in results)
@@ -171,7 +195,8 @@ class TestIntelligentTaskProcessor:
 
         # Should have processed the pending request
         assert (
-            task_processor.subscription_intelligence.batch_processor.current_batch == []
+            task_processor.subscription_intelligence.batch_processor.current_batch
+            == []
         )
 
 
@@ -181,15 +206,15 @@ class TestCeleryTaskIntegration:
     @pytest.mark.asyncio
     async def test_enhanced_process_single_task(self):
         """Test that process_single_task uses subscription intelligence."""
-        with patch("supervisor_agent.queue.tasks.get_db") as mock_get_db, patch(
-            "supervisor_agent.queue.tasks.crud"
-        ) as mock_crud, patch(
-            "supervisor_agent.queue.tasks.quota_manager"
-        ) as mock_quota, patch(
-            "supervisor_agent.queue.tasks.agent_manager"
-        ) as mock_agent_mgr, patch(
-            "supervisor_agent.queue.tasks.shared_memory"
-        ) as mock_memory:
+        with (
+            patch("supervisor_agent.queue.tasks.get_db") as mock_get_db,
+            patch("supervisor_agent.queue.tasks.crud") as mock_crud,
+            patch("supervisor_agent.queue.tasks.quota_manager") as mock_quota,
+            patch(
+                "supervisor_agent.queue.tasks.agent_manager"
+            ) as mock_agent_mgr,
+            patch("supervisor_agent.queue.tasks.shared_memory") as mock_memory,
+        ):
 
             # Mock database and task
             mock_db = Mock()
@@ -231,13 +256,14 @@ class TestCeleryTaskIntegration:
     @pytest.mark.asyncio
     async def test_enhanced_batch_processing(self):
         """Test that batch processing integrates with subscription intelligence."""
-        with patch("supervisor_agent.queue.tasks.get_db") as mock_get_db, patch(
-            "supervisor_agent.queue.tasks.crud"
-        ) as mock_crud, patch(
-            "supervisor_agent.queue.tasks.quota_manager"
-        ) as mock_quota, patch(
-            "supervisor_agent.queue.tasks.agent_manager"
-        ) as mock_agent_mgr:
+        with (
+            patch("supervisor_agent.queue.tasks.get_db") as mock_get_db,
+            patch("supervisor_agent.queue.tasks.crud") as mock_crud,
+            patch("supervisor_agent.queue.tasks.quota_manager") as mock_quota,
+            patch(
+                "supervisor_agent.queue.tasks.agent_manager"
+            ) as mock_agent_mgr,
+        ):
 
             # Mock setup similar to above
             mock_db = Mock()
@@ -281,12 +307,16 @@ class TestQuotaIntegration:
 
     @pytest.fixture
     def task_processor(self):
-        return IntelligentTaskProcessor(daily_limit=1000)  # Low limit for testing
+        return IntelligentTaskProcessor(
+            daily_limit=1000
+        )  # Low limit for testing
 
     @pytest.mark.asyncio
     async def test_quota_warning_notifications(self, task_processor):
         """Test that quota warnings are sent via WebSocket."""
-        with patch("supervisor_agent.api.websocket.notify_quota_update") as mock_notify:
+        with patch(
+            "supervisor_agent.api.websocket.notify_quota_update"
+        ) as mock_notify:
             # Simulate high usage (80% of quota)
             task_processor.subscription_intelligence.current_usage = 800
 
@@ -395,7 +425,8 @@ class TestPerformanceOptimizations:
 
         mock_processor = AsyncMock(
             return_value=[
-                {"success": True, "result": f"Analysis {i+1}"} for i in range(5)
+                {"success": True, "result": f"Analysis {i+1}"}
+                for i in range(5)
             ]
         )
 
@@ -409,4 +440,6 @@ class TestPerformanceOptimizations:
         batch_stats = (
             task_processor.subscription_intelligence.batch_processor.get_batch_stats()
         )
-        assert batch_stats["configured_batch_size"] == 3  # Default from task_processor
+        assert (
+            batch_stats["configured_batch_size"] == 3
+        )  # Default from task_processor

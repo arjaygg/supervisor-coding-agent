@@ -9,14 +9,14 @@ This module provides the main interfaces for:
 """
 
 # Existing exports
-from .agent import ClaudeAgentWrapper, AgentManager
+from .agent import AgentManager, ClaudeAgentWrapper
 from .intelligent_task_processor import IntelligentTaskProcessor
 from .subscription_intelligence import SubscriptionIntelligence
 
 # New multi-provider exports - temporarily commented out to fix circular imports
 # from .provider_coordinator import (
-#     ProviderCoordinator, 
-#     ExecutionContext, 
+#     ProviderCoordinator,
+#     ExecutionContext,
 #     TaskAffinityStrategy,
 #     TaskAffinityTracker
 # )
@@ -36,14 +36,13 @@ from .subscription_intelligence import SubscriptionIntelligence
 __all__ = [
     # Legacy exports (maintained for backward compatibility)
     "ClaudeAgentWrapper",
-    "AgentManager", 
+    "AgentManager",
     "IntelligentTaskProcessor",
     "SubscriptionIntelligence",
-    
     # Multi-provider architecture exports - temporarily commented out
     # "ProviderCoordinator",
     # "ExecutionContext",
-    # "TaskAffinityStrategy", 
+    # "TaskAffinityStrategy",
     # "TaskAffinityTracker",
     # "MultiProviderSubscriptionIntelligence",
     # "QuotaStatus",

@@ -1,12 +1,14 @@
-import subprocess
 import json
 import logging
-from typing import Dict, Any, Optional
+import subprocess
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
 from supervisor_agent.config import settings
-from supervisor_agent.db.models import Task, TaskSession, Agent
+
 # Removed unused imports TaskSessionCRUD, AgentCRUD to fix circular import issue
 from supervisor_agent.core.cost_tracker import cost_tracker
+from supervisor_agent.db.models import Agent, Task, TaskSession
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -35,7 +37,9 @@ class ClaudeAgentWrapper:
 
             end_time = datetime.now(timezone.utc)
             execution_time = int((end_time - start_time).total_seconds())
-            execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            execution_time_ms = int(
+                (end_time - start_time).total_seconds() * 1000
+            )
 
             # Track cost and usage if database session is provided
             if db_session:
@@ -65,9 +69,13 @@ class ClaudeAgentWrapper:
         except Exception as e:
             end_time = datetime.now(timezone.utc)
             execution_time = int((end_time - start_time).total_seconds())
-            execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            execution_time_ms = int(
+                (end_time - start_time).total_seconds() * 1000
+            )
 
-            logger.error(f"Task {task.id} failed with agent {self.agent_id}: {str(e)}")
+            logger.error(
+                f"Task {task.id} failed with agent {self.agent_id}: {str(e)}"
+            )
 
             # Track failed execution cost if database session is provided
             if db_session and prompt:
@@ -129,7 +137,9 @@ class ClaudeAgentWrapper:
         elif task_type == "FEATURE":
             return base_prompt + self._build_feature_prompt(payload)
         else:
-            return base_prompt + f"Task Details: {json.dumps(payload, indent=2)}"
+            return (
+                base_prompt + f"Task Details: {json.dumps(payload, indent=2)}"
+            )
 
     def _build_pr_review_prompt(self, payload: Dict[str, Any]) -> str:
         return f"""Please review the following pull request:
@@ -220,12 +230,17 @@ Please provide:
     async def _run_claude_cli(self, prompt: str) -> str:
         try:
             # Check if we're in mock mode
-            if settings.claude_cli_path == "mock" or not settings.claude_api_keys:
+            if (
+                settings.claude_cli_path == "mock"
+                or not settings.claude_api_keys
+            ):
                 return self._generate_mock_response(prompt)
-            
+
             # Validate Claude CLI exists
             if not self._validate_claude_cli():
-                logger.warning(f"Claude CLI not found at {self.cli_path}, using mock response")
+                logger.warning(
+                    f"Claude CLI not found at {self.cli_path}, using mock response"
+                )
                 return self._generate_mock_response(prompt)
 
             # Set environment variable for API key, inheriting current environment
@@ -250,57 +265,69 @@ Please provide:
 
             if process.returncode != 0:
                 error_msg = (
-                    process.stderr.strip() if process.stderr else "Unknown error"
+                    process.stderr.strip()
+                    if process.stderr
+                    else "Unknown error"
                 )
-                logger.warning(f"Claude CLI failed, falling back to mock response: {error_msg}")
+                logger.warning(
+                    f"Claude CLI failed, falling back to mock response: {error_msg}"
+                )
                 return self._generate_mock_response(prompt)
 
             return process.stdout.strip()
 
         except subprocess.TimeoutExpired:
-            logger.warning("Claude CLI execution timed out, using mock response")
+            logger.warning(
+                "Claude CLI execution timed out, using mock response"
+            )
             return self._generate_mock_response(prompt)
         except FileNotFoundError:
-            logger.warning(f"Claude CLI not found at path: {self.cli_path}, using mock response")
+            logger.warning(
+                f"Claude CLI not found at path: {self.cli_path}, using mock response"
+            )
             return self._generate_mock_response(prompt)
         except Exception as e:
-            logger.warning(f"Failed to execute Claude CLI, using mock response: {str(e)}")
+            logger.warning(
+                f"Failed to execute Claude CLI, using mock response: {str(e)}"
+            )
             return self._generate_mock_response(prompt)
-    
+
     def _validate_claude_cli(self) -> bool:
         """Validate that Claude CLI is available and functional"""
         try:
             import os
             import shutil
-            
+
             # In mock mode, always return False to trigger mock responses
             if self.cli_path == "mock":
                 return False
-            
+
             # Check if file exists
-            if not shutil.which(self.cli_path) and not os.path.isfile(self.cli_path):
+            if not shutil.which(self.cli_path) and not os.path.isfile(
+                self.cli_path
+            ):
                 return False
-                
+
             # Try to run a simple help command
             process = subprocess.run(
                 [self.cli_path, "--help"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
-            
+
             return process.returncode == 0
         except Exception:
             return False
-    
+
     def _generate_mock_response(self, prompt: str) -> str:
         """Generate a realistic mock response for testing"""
         import hashlib
         import random
-        
+
         # Create a deterministic but varied response based on prompt
         prompt_hash = hashlib.md5(prompt.encode()).hexdigest()[:8]
-        
+
         if "PR_REVIEW" in prompt:
             return f"""## Code Review Analysis
 

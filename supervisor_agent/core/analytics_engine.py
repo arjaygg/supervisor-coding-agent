@@ -13,14 +13,19 @@ from typing import Dict, List, Optional
 
 from sqlalchemy import func
 
-from supervisor_agent.core.analytics_models import (AggregationType,
-                                                    AnalyticsCache,
-                                                    AnalyticsQuery,
-                                                    AnalyticsResult,
-                                                    AnalyticsSummary, Insight,
-                                                    MetricEntry, MetricPoint,
-                                                    MetricType, TimeRange,
-                                                    TrendPrediction)
+from supervisor_agent.core.analytics_models import (
+    AggregationType,
+    AnalyticsCache,
+    AnalyticsQuery,
+    AnalyticsResult,
+    AnalyticsSummary,
+    Insight,
+    MetricEntry,
+    MetricPoint,
+    MetricType,
+    TimeRange,
+    TrendPrediction,
+)
 from supervisor_agent.db.database import SessionLocal
 
 
@@ -60,7 +65,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
     def _generate_query_hash(self, query: AnalyticsQuery) -> str:
         """Generate unique hash for query caching"""
         query_str = json.dumps(query.model_dump(), sort_keys=True, default=str)
-        return hashlib.md5(query_str.encode(), usedforsecurity=False).hexdigest()
+        return hashlib.md5(
+            query_str.encode(), usedforsecurity=False
+        ).hexdigest()
 
     def _parse_time_range(self, time_range: TimeRange) -> timedelta:
         """Convert TimeRange enum to timedelta"""
@@ -89,7 +96,10 @@ class AnalyticsEngine(AnalyticsEngineInterface):
                     data=cached_result["data"],
                     total_points=cached_result["total_points"],
                     processing_time_ms=int(
-                        (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                        (
+                            datetime.now(timezone.utc) - start_time
+                        ).total_seconds()
+                        * 1000
                     ),
                     cache_hit=True,
                 )
@@ -101,7 +111,8 @@ class AnalyticsEngine(AnalyticsEngineInterface):
             await self._cache_result(session, query_hash, query, data)
 
             processing_time = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                (datetime.now(timezone.utc) - start_time).total_seconds()
+                * 1000
             )
 
             return AnalyticsResult(
@@ -114,7 +125,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
         finally:
             session.close()
 
-    async def _get_cached_result(self, session, query_hash: str) -> Optional[Dict]:
+    async def _get_cached_result(
+        self, session, query_hash: str
+    ) -> Optional[Dict]:
         """Retrieve cached analytics result"""
         cache_entry = (
             session.query(AnalyticsCache)
@@ -134,7 +147,11 @@ class AnalyticsEngine(AnalyticsEngineInterface):
         return None
 
     async def _cache_result(
-        self, session, query_hash: str, query: AnalyticsQuery, data: List[MetricPoint]
+        self,
+        session,
+        query_hash: str,
+        query: AnalyticsQuery,
+        data: List[MetricPoint],
     ):
         """Cache analytics result"""
         expires_at = datetime.now(timezone.utc) + timedelta(
@@ -170,7 +187,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
         session.add(cache_entry)
         session.commit()
 
-    async def _execute_query(self, session, query: AnalyticsQuery) -> List[MetricPoint]:
+    async def _execute_query(
+        self, session, query: AnalyticsQuery
+    ) -> List[MetricPoint]:
         """Execute analytics query against database"""
         # Calculate time window
         time_delta = self._parse_time_range(query.time_range)
@@ -192,9 +211,13 @@ class AnalyticsEngine(AnalyticsEngineInterface):
                     )
             elif key == "value_range":
                 if "min" in value:
-                    base_query = base_query.filter(MetricEntry.value >= value["min"])
+                    base_query = base_query.filter(
+                        MetricEntry.value >= value["min"]
+                    )
                 if "max" in value:
-                    base_query = base_query.filter(MetricEntry.value <= value["max"])
+                    base_query = base_query.filter(
+                        MetricEntry.value <= value["max"]
+                    )
 
         # Apply aggregation
         if query.aggregation == AggregationType.COUNT:
@@ -228,7 +251,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
             # Raw data (with limit)
             limit = query.limit or 1000
             entries = (
-                base_query.order_by(MetricEntry.timestamp.desc()).limit(limit).all()
+                base_query.order_by(MetricEntry.timestamp.desc())
+                .limit(limit)
+                .all()
             )
 
             return [
@@ -250,17 +275,27 @@ class AnalyticsEngine(AnalyticsEngineInterface):
     ) -> List[MetricPoint]:
         """Apply numeric aggregation functions"""
         if query.group_by:
-            return self._apply_grouping(base_query, query.group_by, query.aggregation)
+            return self._apply_grouping(
+                base_query, query.group_by, query.aggregation
+            )
 
         # Single aggregated value
         if query.aggregation == AggregationType.SUM:
-            result = base_query.with_entities(func.sum(MetricEntry.value)).scalar()
+            result = base_query.with_entities(
+                func.sum(MetricEntry.value)
+            ).scalar()
         elif query.aggregation == AggregationType.AVERAGE:
-            result = base_query.with_entities(func.avg(MetricEntry.value)).scalar()
+            result = base_query.with_entities(
+                func.avg(MetricEntry.value)
+            ).scalar()
         elif query.aggregation == AggregationType.MIN:
-            result = base_query.with_entities(func.min(MetricEntry.value)).scalar()
+            result = base_query.with_entities(
+                func.min(MetricEntry.value)
+            ).scalar()
         elif query.aggregation == AggregationType.MAX:
-            result = base_query.with_entities(func.max(MetricEntry.value)).scalar()
+            result = base_query.with_entities(
+                func.max(MetricEntry.value)
+            ).scalar()
         else:
             result = 0
 
@@ -288,7 +323,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
             # Group by hour intervals
             grouped = {}
             for entry in entries:
-                hour_key = entry.timestamp.replace(minute=0, second=0, microsecond=0)
+                hour_key = entry.timestamp.replace(
+                    minute=0, second=0, microsecond=0
+                )
                 if hour_key not in grouped:
                     grouped[hour_key] = []
                 grouped[hour_key].append(entry.value)
@@ -357,7 +394,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
                         Insight(
                             title="High Error Rate Detected",
                             description=f"Task error rate is {error_rate:.1f}% in the last {timeframe.value}",
-                            severity="critical" if error_rate > 25 else "warning",
+                            severity=(
+                                "critical" if error_rate > 25 else "warning"
+                            ),
                             metric_type=MetricType.ERROR_RATE,
                             value=error_rate,
                             threshold=10,
@@ -380,7 +419,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
                         title="High CPU Usage",
                         description=f"Average CPU usage is {cpu_result.data[0].value:.1f}%",
                         severity=(
-                            "warning" if cpu_result.data[0].value < 90 else "critical"
+                            "warning"
+                            if cpu_result.data[0].value < 90
+                            else "critical"
                         ),
                         metric_type=MetricType.SYSTEM_PERFORMANCE,
                         value=cpu_result.data[0].value,
@@ -446,7 +487,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
 
             # Simple linear trend calculation
             timestamps = [
-                (entry.timestamp - historical_data[0].timestamp).total_seconds()
+                (
+                    entry.timestamp - historical_data[0].timestamp
+                ).total_seconds()
                 for entry in historical_data
             ]
             values = [entry.value for entry in historical_data]
@@ -461,7 +504,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
             if n * sum_x2 - sum_x * sum_x == 0:
                 slope = 0
             else:
-                slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+                slope = (n * sum_xy - sum_x * sum_y) / (
+                    n * sum_x2 - sum_x * sum_x
+                )
 
             intercept = (sum_y - slope * sum_x) / n
 
@@ -520,7 +565,9 @@ class AnalyticsEngine(AnalyticsEngineInterface):
                 aggregation=AggregationType.COUNT,
             )
             total_result = await self.process_metrics(total_tasks_query)
-            total_tasks = int(total_result.data[0].value) if total_result.data else 0
+            total_tasks = (
+                int(total_result.data[0].value) if total_result.data else 0
+            )
 
             # Successful tasks
             success_query = AnalyticsQuery(

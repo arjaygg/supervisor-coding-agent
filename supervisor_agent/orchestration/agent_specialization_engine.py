@@ -16,21 +16,21 @@ import asyncio
 import json
 import uuid
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional, Any, Tuple, Protocol
+from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 import structlog
 
+from supervisor_agent.core.provider_coordinator import ExecutionContext
+from supervisor_agent.db.models import Task, TaskType
 from supervisor_agent.providers.base_provider import (
     AIProvider,
     ProviderCapabilities,
-    TaskCapability,
     ProviderType,
+    TaskCapability,
 )
-from supervisor_agent.core.provider_coordinator import ExecutionContext
-from supervisor_agent.db.models import Task, TaskType
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -236,7 +236,13 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
         constraints = {}
 
         # Extract common constraint patterns
-        constraint_keys = ["timeout", "budget", "resources", "deadline", "quality"]
+        constraint_keys = [
+            "timeout",
+            "budget",
+            "resources",
+            "deadline",
+            "quality",
+        ]
         for key in constraint_keys:
             if key in config:
                 constraints[key] = config[key]
@@ -291,7 +297,11 @@ class DefaultCapabilityMatcher(CapabilityMatcher):
 
             for capability in capabilities:
                 score = self._calculate_capability_match(
-                    capability, task_type, domain, complexity, task_characteristics
+                    capability,
+                    task_type,
+                    domain,
+                    complexity,
+                    task_characteristics,
                 )
                 best_match_score = max(best_match_score, score)
 
@@ -368,7 +378,9 @@ class DefaultPerformancePredictor(PerformancePredictor):
         # Base predictions with reasonable defaults
         predictions = {
             "success_rate": specialty_history.get("avg_success_rate", 0.85),
-            "avg_execution_time": specialty_history.get("avg_execution_time", 300.0),
+            "avg_execution_time": specialty_history.get(
+                "avg_execution_time", 300.0
+            ),
             "quality_score": specialty_history.get("avg_quality_score", 0.8),
             "cost_efficiency": specialty_history.get("avg_cost_efficiency", 0.75),
             "confidence": specialty_history.get("prediction_confidence", 0.6),
@@ -507,8 +519,12 @@ class DefaultSpecializationStrategy:
         best_match = 0.0
         for capability in capabilities:
             try:
-                task_capability = TaskCapability(task.type.value) if task.type else None
-                if task_capability and capability.matches_task(task_capability):
+                task_capability = (
+                    TaskCapability(task.type.value) if task.type else None
+                )
+                if task_capability and capability.matches_task(
+                    task_capability
+                ):
                     match_score = capability.proficiency_score
                     best_match = max(best_match, match_score)
             except (ValueError, AttributeError):
@@ -807,7 +823,11 @@ class AgentSpecializationEngine:
         scores = []
         for specialty in AgentSpecialty:
             score = await self.specialization_strategy.calculate_specialization_score(
-                specialty, task, context, self.agent_capabilities, provider_status
+                specialty,
+                task,
+                context,
+                self.agent_capabilities,
+                provider_status,
             )
             scores.append(score)
 
@@ -899,7 +919,10 @@ class AgentSpecializationEngine:
                 SpecializationCapability(
                     name="Bug Detection",
                     proficiency_score=0.85,
-                    task_types=[TaskCapability.BUG_FIX, TaskCapability.CODE_ANALYSIS],
+                    task_types=[
+                        TaskCapability.BUG_FIX,
+                        TaskCapability.CODE_ANALYSIS,
+                    ],
                     provider_preferences=[ProviderType.CLAUDE_CLI],
                     context_requirements={"domain": "debugging"},
                     performance_metrics={
@@ -947,7 +970,10 @@ class AgentSpecializationEngine:
                 SpecializationCapability(
                     name="Test Development",
                     proficiency_score=0.85,
-                    task_types=[TaskCapability.TESTING, TaskCapability.CODE_ANALYSIS],
+                    task_types=[
+                        TaskCapability.TESTING,
+                        TaskCapability.CODE_ANALYSIS,
+                    ],
                     provider_preferences=[ProviderType.CLAUDE_CLI],
                     context_requirements={"domain": "testing"},
                     performance_metrics={

@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import text
 from datetime import datetime, timezone
+
 import redis
-from supervisor_agent.db.database import get_db, engine
-from supervisor_agent.db import schemas, crud
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
 from supervisor_agent.config import settings
 from supervisor_agent.core.notifier import notification_manager
+from supervisor_agent.db import crud, schemas
+from supervisor_agent.db.database import get_db
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -40,7 +42,9 @@ async def health_check(db: Session = Depends(get_db)):
             logger.error(f"Redis health check failed: {str(e)}")
             redis_healthy = False
         else:
-            logger.warning(f"Redis unavailable but not required in development: {str(e)}")
+            logger.warning(
+                f"Redis unavailable but not required in development: {str(e)}"
+            )
             redis_healthy = True  # Consider healthy in development mode
 
     # Count active agents
@@ -85,11 +89,16 @@ async def readiness_check(db: Session = Depends(get_db)):
         if len(active_agents) == 0:
             raise Exception("No active agents available")
 
-        return {"status": "ready", "timestamp": datetime.now(timezone.utc).isoformat()}
+        return {
+            "status": "ready",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Readiness check failed: {str(e)}")
-        raise HTTPException(status_code=503, detail=f"Service not ready: {str(e)}")
+        raise HTTPException(
+            status_code=503, detail=f"Service not ready: {str(e)}"
+        )
 
 
 @router.get("/health/detailed")
@@ -118,7 +127,10 @@ async def detailed_health_check(db: Session = Depends(get_db)):
             },
         }
     except Exception as e:
-        health_data["components"]["database"] = {"status": "unhealthy", "error": str(e)}
+        health_data["components"]["database"] = {
+            "status": "unhealthy",
+            "error": str(e),
+        }
         health_data["issues"].append(f"Database: {str(e)}")
 
     # Redis health
@@ -137,7 +149,10 @@ async def detailed_health_check(db: Session = Depends(get_db)):
             },
         }
     except Exception as e:
-        health_data["components"]["redis"] = {"status": "unhealthy", "error": str(e)}
+        health_data["components"]["redis"] = {
+            "status": "unhealthy",
+            "error": str(e),
+        }
         health_data["issues"].append(f"Redis: {str(e)}")
 
     # Agent health
@@ -147,15 +162,24 @@ async def detailed_health_check(db: Session = Depends(get_db)):
         quota_status = quota_manager.get_quota_status(db)
 
         health_data["components"]["agents"] = {
-            "status": "healthy" if quota_status["available_agents"] > 0 else "degraded",
+            "status": (
+                "healthy"
+                if quota_status["available_agents"] > 0
+                else "degraded"
+            ),
             "details": quota_status,
         }
 
         if quota_status["available_agents"] == 0:
-            health_data["issues"].append("No agents available for task processing")
+            health_data["issues"].append(
+                "No agents available for task processing"
+            )
 
     except Exception as e:
-        health_data["components"]["agents"] = {"status": "unhealthy", "error": str(e)}
+        health_data["components"]["agents"] = {
+            "status": "unhealthy",
+            "error": str(e),
+        }
         health_data["issues"].append(f"Agents: {str(e)}")
 
     # Queue health (basic check)
@@ -171,11 +195,16 @@ async def detailed_health_check(db: Session = Depends(get_db)):
             "details": {"connection": "ok", "queue_length": queue_length},
         }
     except Exception as e:
-        health_data["components"]["queue"] = {"status": "unhealthy", "error": str(e)}
+        health_data["components"]["queue"] = {
+            "status": "unhealthy",
+            "error": str(e),
+        }
         health_data["issues"].append(f"Queue: {str(e)}")
 
     # Overall status
-    component_statuses = [comp["status"] for comp in health_data["components"].values()]
+    component_statuses = [
+        comp["status"] for comp in health_data["components"].values()
+    ]
     if "unhealthy" in component_statuses:
         health_data["status"] = "unhealthy"
     elif "degraded" in component_statuses:
@@ -230,7 +259,9 @@ async def get_metrics(db: Session = Depends(get_db)):
 
         quota_status = quota_manager.get_quota_status(db)
         metrics["supervisor_agent_agents_total"] = quota_status["total_agents"]
-        metrics["supervisor_agent_agents_available"] = quota_status["available_agents"]
+        metrics["supervisor_agent_agents_available"] = quota_status[
+            "available_agents"
+        ]
 
         # Cost and usage metrics
         try:
@@ -238,8 +269,12 @@ async def get_metrics(db: Session = Depends(get_db)):
             metrics["supervisor_agent_total_cost_usd"] = float(
                 cost_summary["total_cost_usd"]
             )
-            metrics["supervisor_agent_total_tokens"] = cost_summary["total_tokens"]
-            metrics["supervisor_agent_total_requests"] = cost_summary["total_requests"]
+            metrics["supervisor_agent_total_tokens"] = cost_summary[
+                "total_tokens"
+            ]
+            metrics["supervisor_agent_total_requests"] = cost_summary[
+                "total_requests"
+            ]
             metrics["supervisor_agent_avg_cost_per_request"] = float(
                 cost_summary["avg_cost_per_request"]
             )

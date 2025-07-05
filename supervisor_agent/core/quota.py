@@ -1,11 +1,13 @@
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional
+
 from sqlalchemy.orm import Session
-from supervisor_agent.db.models import Agent
+
+from supervisor_agent.config import settings
 from supervisor_agent.db.crud import AgentCRUD
 from supervisor_agent.db.database import get_db
-from supervisor_agent.config import settings
+from supervisor_agent.db.models import Agent
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -64,7 +66,9 @@ class QuotaManager:
 
         return best_agent
 
-    def consume_quota(self, db: Session, agent_id: str, messages_used: int = 1) -> bool:
+    def consume_quota(
+        self, db: Session, agent_id: str, messages_used: int = 1
+    ) -> bool:
         agent = AgentCRUD.get_agent(db, agent_id)
         if not agent:
             logger.error(f"Agent {agent_id} not found")
@@ -86,7 +90,8 @@ class QuotaManager:
         from supervisor_agent.db.schemas import AgentUpdate
 
         update_data = AgentUpdate(
-            quota_used=agent.quota_used + messages_used, last_used_at=datetime.now(timezone.utc)
+            quota_used=agent.quota_used + messages_used,
+            last_used_at=datetime.now(timezone.utc),
         )
         AgentCRUD.update_agent(db, agent_id, update_data)
 
@@ -103,7 +108,8 @@ class QuotaManager:
 
         update_data = AgentUpdate(
             quota_used=0,
-            quota_reset_at=datetime.now(timezone.utc) + timedelta(hours=self.reset_hours),
+            quota_reset_at=datetime.now(timezone.utc)
+            + timedelta(hours=self.reset_hours),
         )
         AgentCRUD.update_agent(db, agent.id, update_data)
         logger.info(f"Reset quota for agent {agent.id}")
@@ -111,7 +117,11 @@ class QuotaManager:
     def get_quota_status(self, db: Session) -> dict:
         agents = AgentCRUD.get_active_agents(db)
 
-        status = {"total_agents": len(agents), "available_agents": 0, "agents": []}
+        status = {
+            "total_agents": len(agents),
+            "available_agents": 0,
+            "agents": [],
+        }
 
         for agent in agents:
             agent_status = {
@@ -122,7 +132,9 @@ class QuotaManager:
                 "quota_reset_at": agent.quota_reset_at.isoformat(),
                 "is_available": agent.quota_used < agent.quota_limit,
                 "last_used_at": (
-                    agent.last_used_at.isoformat() if agent.last_used_at else None
+                    agent.last_used_at.isoformat()
+                    if agent.last_used_at
+                    else None
                 ),
             }
 
@@ -147,7 +159,9 @@ class QuotaManager:
         next_reset = min(agent.quota_reset_at for agent in agents)
         return next_reset
 
-    def estimate_messages_from_task(self, task_type: str, payload_size: int) -> int:
+    def estimate_messages_from_task(
+        self, task_type: str, payload_size: int
+    ) -> int:
         # Estimate messages based on task type and payload size
         base_messages = 1
 

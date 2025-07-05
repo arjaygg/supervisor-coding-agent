@@ -10,21 +10,21 @@ import hashlib
 import json
 import random
 import time
-from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+from supervisor_agent.utils.logger import get_logger
 
 from .base_provider import (
     AIProvider,
+    CostEstimate,
     ProviderCapabilities,
     ProviderHealth,
     ProviderResponse,
-    CostEstimate,
     ProviderStatus,
     Task,
     TaskCapability,
 )
-
-from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -32,57 +32,63 @@ logger = get_logger(__name__)
 class LocalMockProvider(AIProvider):
     """
     Local mock provider for testing and offline scenarios.
-    
+
     Provides deterministic responses based on request patterns without
     making any external API calls. Useful for development, testing,
     and offline operation.
     """
-    
+
     def __init__(self, provider_id: str, config: Dict[str, Any]):
         super().__init__(provider_id, config)
-        
+
         # Configuration
         self.response_delay_min: float = config.get("response_delay_min", 0.5)
         self.response_delay_max: float = config.get("response_delay_max", 2.0)
-        self.failure_rate: float = config.get("failure_rate", 0.05)  # 5% failure rate
+        self.failure_rate: float = config.get(
+            "failure_rate", 0.05
+        )  # 5% failure rate
         self.deterministic: bool = config.get("deterministic", True)
-        self.custom_responses: Dict[str, str] = config.get("custom_responses", {})
-        
+        self.custom_responses: Dict[str, str] = config.get(
+            "custom_responses", {}
+        )
+
         # State tracking
         self._request_count: int = 0
         self._failure_count: int = 0
         self._total_response_time: float = 0.0
-        
+
         # Deterministic failure patterns
         self._failure_pattern: List[int] = config.get("failure_pattern", [])
         self._pattern_index: int = 0
-    
+
     async def initialize(self) -> None:
         """Initialize the local mock provider."""
         self._initialized = True
         logger.info(f"Local mock provider {self.provider_id} initialized")
-        
+
         if not self.deterministic:
             logger.info("Mock provider running in non-deterministic mode")
-    
-    async def execute_task(self, task: Task, context: Dict[str, Any] = None) -> ProviderResponse:
+
+    async def execute_task(
+        self, task: Task, context: Dict[str, Any] = None
+    ) -> ProviderResponse:
         """Execute a task with mock response."""
         start_time = datetime.now(timezone.utc)
-        
+
         # Simulate processing delay
         delay = await self._get_response_delay()
         await asyncio.sleep(delay)
-        
+
         execution_time_ms = int(delay * 1000)
         self._request_count += 1
-        
+
         # Determine if this request should fail
         should_fail = self._should_fail()
-        
+
         if should_fail:
             self._failure_count += 1
             error_message = self._generate_error_message(task)
-            
+
             return ProviderResponse(
                 success=False,
                 result=None,
@@ -95,16 +101,16 @@ class LocalMockProvider(AIProvider):
                     "mock_provider": True,
                     "task_type": task.type,
                     "request_count": self._request_count,
-                    "simulated_failure": True
-                }
+                    "simulated_failure": True,
+                },
             )
-        
+
         # Generate successful response
         result = await self._generate_response(task, context or {})
         tokens_used = self._estimate_tokens_for_task(task, result)
-        
+
         self._total_response_time += delay
-        
+
         return ProviderResponse(
             success=True,
             result=result,
@@ -118,26 +124,30 @@ class LocalMockProvider(AIProvider):
                 "task_type": task.type,
                 "request_count": self._request_count,
                 "deterministic": self.deterministic,
-                "response_hash": self._get_response_hash(task)
-            }
+                "response_hash": self._get_response_hash(task),
+            },
         )
-    
-    async def execute_batch(self, tasks: List[Task], context: Dict[str, Any] = None) -> List[ProviderResponse]:
+
+    async def execute_batch(
+        self, tasks: List[Task], context: Dict[str, Any] = None
+    ) -> List[ProviderResponse]:
         """Execute multiple tasks as a batch."""
         responses = []
-        
+
         # Simulate batch processing with a longer delay
-        batch_delay = await self._get_response_delay() * len(tasks) * 0.7  # Batch efficiency
+        batch_delay = (
+            await self._get_response_delay() * len(tasks) * 0.7
+        )  # Batch efficiency
         await asyncio.sleep(batch_delay)
-        
+
         for task in tasks:
             # For batch processing, we don't add individual delays
             response = await self._execute_task_without_delay(task, context)
             responses.append(response)
-        
+
         logger.info(f"Mock provider processed batch of {len(tasks)} tasks")
         return responses
-    
+
     def get_capabilities(self) -> ProviderCapabilities:
         """Get the capabilities of this mock provider."""
         return ProviderCapabilities(
@@ -162,21 +172,28 @@ class LocalMockProvider(AIProvider):
             rate_limit_per_hour=60000,
             rate_limit_per_day=1000000,
         )
-    
-    async def get_health_status(self, use_cache: bool = True) -> ProviderHealth:
+
+    async def get_health_status(
+        self, use_cache: bool = True
+    ) -> ProviderHealth:
         """Get the current health status of the provider."""
         if use_cache and self._should_cache_health():
             return self._health_cache
-        
+
         # Calculate metrics
         success_rate = 100.0
         if self._request_count > 0:
-            success_rate = ((self._request_count - self._failure_count) / self._request_count) * 100
-        
+            success_rate = (
+                (self._request_count - self._failure_count)
+                / self._request_count
+            ) * 100
+
         avg_response_time = 0.0
         if self._request_count > 0:
-            avg_response_time = (self._total_response_time / self._request_count) * 1000  # Convert to ms
-        
+            avg_response_time = (
+                self._total_response_time / self._request_count
+            ) * 1000  # Convert to ms
+
         health = ProviderHealth(
             status=ProviderStatus.ACTIVE,  # Mock provider is always active
             response_time_ms=avg_response_time,
@@ -187,37 +204,39 @@ class LocalMockProvider(AIProvider):
             quota_remaining=999999,  # Unlimited quota for mock provider
             quota_reset_time=None,
         )
-        
+
         self._cache_health(health)
         return health
-    
+
     def estimate_cost(self, task: Task) -> CostEstimate:
         """Estimate the cost of executing a task (always $0 for mock)."""
         estimated_tokens = self._estimate_tokens_for_task(task, "")
-        
+
         return CostEstimate(
             estimated_tokens=estimated_tokens,
             cost_per_token=0.0,
             estimated_cost_usd=0.0,
             currency="USD",
-            model_used="mock-model-v1"
+            model_used="mock-model-v1",
         )
-    
+
     # Private methods
-    
-    async def _execute_task_without_delay(self, task: Task, context: Dict[str, Any] = None) -> ProviderResponse:
+
+    async def _execute_task_without_delay(
+        self, task: Task, context: Dict[str, Any] = None
+    ) -> ProviderResponse:
         """Execute task without delay (for batch processing)."""
         start_time = datetime.now(timezone.utc)
-        
+
         self._request_count += 1
-        
+
         # Determine if this request should fail
         should_fail = self._should_fail()
-        
+
         if should_fail:
             self._failure_count += 1
             error_message = self._generate_error_message(task)
-            
+
             return ProviderResponse(
                 success=False,
                 result=None,
@@ -230,14 +249,14 @@ class LocalMockProvider(AIProvider):
                     "mock_provider": True,
                     "task_type": task.type,
                     "batch_execution": True,
-                    "simulated_failure": True
-                }
+                    "simulated_failure": True,
+                },
             )
-        
+
         # Generate successful response
         result = await self._generate_response(task, context or {})
         tokens_used = self._estimate_tokens_for_task(task, result)
-        
+
         return ProviderResponse(
             success=True,
             result=result,
@@ -250,10 +269,10 @@ class LocalMockProvider(AIProvider):
                 "mock_provider": True,
                 "task_type": task.type,
                 "batch_execution": True,
-                "response_hash": self._get_response_hash(task)
-            }
+                "response_hash": self._get_response_hash(task),
+            },
         )
-    
+
     async def _get_response_delay(self) -> float:
         """Get response delay based on configuration."""
         if self.deterministic:
@@ -263,25 +282,27 @@ class LocalMockProvider(AIProvider):
             return self.response_delay_min + (task_hash / 1000.0) * delay_range
         else:
             # Random delay
-            return random.uniform(self.response_delay_min, self.response_delay_max)
-    
+            return random.uniform(
+                self.response_delay_min, self.response_delay_max
+            )
+
     def _should_fail(self) -> bool:
         """Determine if this request should fail."""
         if self.failure_rate <= 0:
             return False
-        
+
         if self._failure_pattern:
             # Use predefined failure pattern
             should_fail = self._request_count in self._failure_pattern
             return should_fail
-        
+
         if self.deterministic:
             # Deterministic failure based on request count and failure rate
             return (self._request_count % int(1 / self.failure_rate)) == 0
         else:
             # Random failure
             return random.random() < self.failure_rate
-    
+
     def _generate_error_message(self, task: Task) -> str:
         """Generate a realistic error message."""
         error_types = [
@@ -291,21 +312,25 @@ class LocalMockProvider(AIProvider):
             "Mock authentication failure",
             "Simulated parsing error",
         ]
-        
+
         if self.deterministic:
             # Use hash to select consistent error type
-            error_index = abs(hash(f"{task.id}_{task.type}")) % len(error_types)
+            error_index = abs(hash(f"{task.id}_{task.type}")) % len(
+                error_types
+            )
             return f"{error_types[error_index]} for task {task.id}"
         else:
             return f"{random.choice(error_types)} for task {task.id}"
-    
-    async def _generate_response(self, task: Task, context: Dict[str, Any]) -> str:
+
+    async def _generate_response(
+        self, task: Task, context: Dict[str, Any]
+    ) -> str:
         """Generate a mock response for the task."""
         # Check for custom responses first
         task_key = f"{task.type}_{self._get_response_hash(task)[:8]}"
         if task_key in self.custom_responses:
             return self.custom_responses[task_key]
-        
+
         # Generate response based on task type
         if task.type == "PR_REVIEW":
             return self._generate_pr_review_response(task)
@@ -321,11 +346,11 @@ class LocalMockProvider(AIProvider):
             return self._generate_feature_response(task)
         else:
             return self._generate_generic_response(task)
-    
+
     def _generate_pr_review_response(self, task: Task) -> str:
         """Generate a mock PR review response."""
         response_hash = self._get_response_hash(task)[:8]
-        
+
         return f"""## Mock Code Review Analysis
 
 **Overall Assessment**: The code changes look good with minor suggestions for improvement.
@@ -351,11 +376,11 @@ class LocalMockProvider(AIProvider):
 
 *Mock response generated - Request ID: {response_hash}*
 *Generated by Local Mock Provider: {self.provider_id}*"""
-    
+
     def _generate_issue_summary_response(self, task: Task) -> str:
         """Generate a mock issue summary response."""
         response_hash = self._get_response_hash(task)[:8]
-        
+
         return f"""## Mock Issue Analysis
 
 **Summary**: Well-defined issue with clear reproduction steps and expected behavior.
@@ -383,11 +408,11 @@ class LocalMockProvider(AIProvider):
 
 *Mock response generated - Request ID: {response_hash}*
 *Generated by Local Mock Provider: {self.provider_id}*"""
-    
+
     def _generate_code_analysis_response(self, task: Task) -> str:
         """Generate a mock code analysis response."""
         response_hash = self._get_response_hash(task)[:8]
-        
+
         return f"""## Mock Code Analysis Report
 
 **Code Quality Score**: 7.5/10
@@ -419,11 +444,11 @@ class LocalMockProvider(AIProvider):
 
 *Mock response generated - Request ID: {response_hash}*
 *Generated by Local Mock Provider: {self.provider_id}*"""
-    
+
     def _generate_bug_fix_response(self, task: Task) -> str:
         """Generate a mock bug fix response."""
         response_hash = self._get_response_hash(task)[:8]
-        
+
         return f"""## Mock Bug Fix Analysis
 
 **Root Cause**: Race condition in concurrent data access leading to inconsistent state.
@@ -470,11 +495,11 @@ def update_shared_data(data):
 
 *Mock response generated - Request ID: {response_hash}*
 *Generated by Local Mock Provider: {self.provider_id}*"""
-    
+
     def _generate_feature_response(self, task: Task) -> str:
         """Generate a mock feature response."""
         response_hash = self._get_response_hash(task)[:8]
-        
+
         return f"""## Mock Feature Implementation Plan
 
 **Architecture Approach**: Microservices pattern with event-driven communication.
@@ -516,11 +541,11 @@ def update_shared_data(data):
 
 *Mock response generated - Request ID: {response_hash}*
 *Generated by Local Mock Provider: {self.provider_id}*"""
-    
+
     def _generate_refactor_response(self, task: Task) -> str:
         """Generate a mock refactor response."""
         response_hash = self._get_response_hash(task)[:8]
-        
+
         return f"""## Mock Refactoring Plan
 
 **Current Issues Analysis**:
@@ -573,11 +598,11 @@ class UserService:
 
 *Mock response generated - Request ID: {response_hash}*
 *Generated by Local Mock Provider: {self.provider_id}*"""
-    
+
     def _generate_generic_response(self, task: Task) -> str:
         """Generate a generic mock response."""
         response_hash = self._get_response_hash(task)[:8]
-        
+
         return f"""## Mock Task Analysis
 
 **Task Type**: {task.type}
@@ -608,16 +633,16 @@ I've successfully analyzed your request and generated the following recommendati
 
 *Mock response generated - Request ID: {response_hash}*
 *Generated by Local Mock Provider: {self.provider_id}*"""
-    
+
     def _get_response_hash(self, task: Task) -> str:
         """Generate a deterministic hash for the task."""
         task_data = f"{task.type}_{task.payload}_{task.priority}"
         return hashlib.md5(task_data.encode()).hexdigest()
-    
+
     def _estimate_tokens_for_task(self, task: Task, response: str) -> int:
         """Estimate token count for a task and response."""
         prompt_length = len(str(task.payload))
         response_length = len(response)
-        
+
         # Rough approximation: 1 token per 4 characters
         return max((prompt_length + response_length) // 4, 50)

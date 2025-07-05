@@ -1,10 +1,12 @@
 import json
-import redis
-from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+
+import redis
+
 from supervisor_agent.config import settings
-from supervisor_agent.db.models import Task, TaskSession
 from supervisor_agent.db.crud import TaskCRUD, TaskSessionCRUD
+from supervisor_agent.db.models import Task, TaskSession
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -53,7 +55,9 @@ class SharedMemoryStore:
             logger.info(f"Stored result for task {task.id} in shared memory")
 
         except Exception as e:
-            logger.error(f"Failed to store task result in shared memory: {str(e)}")
+            logger.error(
+                f"Failed to store task result in shared memory: {str(e)}"
+            )
 
     def _get_similar_task_history(self, task: Task) -> List[Dict[str, Any]]:
         try:
@@ -77,7 +81,9 @@ class SharedMemoryStore:
                             }
                         )
                 except Exception as e:
-                    logger.warning(f"Failed to parse cached task data: {str(e)}")
+                    logger.warning(
+                        f"Failed to parse cached task data: {str(e)}"
+                    )
 
             return similar_tasks
 
@@ -147,7 +153,9 @@ class SharedMemoryStore:
                 context = existing_context
 
             # Store project context with 30-day expiration
-            self.redis_client.setex(repo_key, timedelta(days=30), json.dumps(context))
+            self.redis_client.setex(
+                repo_key, timedelta(days=30), json.dumps(context)
+            )
 
             logger.info(f"Updated project context for {repository}")
 

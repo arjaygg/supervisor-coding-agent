@@ -5,29 +5,32 @@ Tests SCC, Semgrep, and unified pipeline functionality.
 Follows TDD principles with comprehensive test coverage.
 """
 
-import pytest
-import tempfile
 import json
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
 from datetime import datetime
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+
+from supervisor_agent.analysis.scc_analyzer import AnalysisResult as SCCResult
 from supervisor_agent.analysis.scc_analyzer import (
-    SCCAnalyzer,
     CodeMetrics,
     FileMetrics,
-    AnalysisResult as SCCResult,
+    SCCAnalyzer,
 )
 from supervisor_agent.analysis.semgrep_analyzer import (
-    SemgrepAnalyzer,
-    Finding,
-    SeverityLevel,
-    FindingCategory,
     AnalysisResult as SemgrepResult,
 )
+from supervisor_agent.analysis.semgrep_analyzer import (
+    Finding,
+    FindingCategory,
+    SemgrepAnalyzer,
+    SeverityLevel,
+)
 from supervisor_agent.analysis.static_analysis_pipeline import (
-    StaticAnalysisPipeline,
     PipelineResult,
+    StaticAnalysisPipeline,
     UnifiedInsights,
 )
 
@@ -80,13 +83,17 @@ class TestSCCAnalyzer:
 
     def test_scc_analyzer_initialization(self):
         """Test SCC analyzer initialization."""
-        with patch.object(SCCAnalyzer, "_verify_scc_installation") as mock_verify:
+        with patch.object(
+            SCCAnalyzer, "_verify_scc_installation"
+        ) as mock_verify:
             analyzer = SCCAnalyzer("custom_scc_path")
             assert analyzer.scc_binary_path == "custom_scc_path"
             mock_verify.assert_called_once()
 
     @patch("subprocess.run")
-    def test_analyze_repository_success(self, mock_run, scc_analyzer, mock_scc_output):
+    def test_analyze_repository_success(
+        self, mock_run, scc_analyzer, mock_scc_output
+    ):
         """Test successful repository analysis."""
         # Mock subprocess result
         mock_result = Mock()
@@ -166,7 +173,9 @@ class TestSCCAnalyzer:
 
         score = scc_analyzer._calculate_maintainability_score(result)
         assert 0 <= score <= 100
-        assert score < 80  # Should be penalized for high complexity and large files
+        assert (
+            score < 80
+        )  # Should be penalized for high complexity and large files
 
 
 class TestSemgrepAnalyzer:
@@ -207,9 +216,10 @@ class TestSemgrepAnalyzer:
     @pytest.fixture
     def semgrep_analyzer(self):
         """Create Semgrep analyzer with mocked checks."""
-        with patch.object(
-            SemgrepAnalyzer, "_verify_semgrep_installation"
-        ), patch.object(SemgrepAnalyzer, "_setup_custom_rules"):
+        with (
+            patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"),
+            patch.object(SemgrepAnalyzer, "_setup_custom_rules"),
+        ):
             return SemgrepAnalyzer()
 
     @patch("subprocess.run")
@@ -284,9 +294,11 @@ class TestSemgrepAnalyzer:
 
     def test_custom_rules_setup(self):
         """Test custom rules directory creation."""
-        with patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"), patch(
-            "pathlib.Path.mkdir"
-        ) as mock_mkdir, patch("builtins.open", mock=Mock()) as mock_open:
+        with (
+            patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"),
+            patch("pathlib.Path.mkdir") as mock_mkdir,
+            patch("builtins.open", mock=Mock()) as mock_open,
+        ):
 
             analyzer = SemgrepAnalyzer()
             mock_mkdir.assert_called()  # Rules directory should be created
@@ -358,34 +370,50 @@ class TestStaticAnalysisPipeline:
     @pytest.fixture
     def pipeline(self):
         """Create pipeline with mocked analyzers."""
-        with patch.object(SCCAnalyzer, "_verify_scc_installation"), patch.object(
-            SemgrepAnalyzer, "_verify_semgrep_installation"
-        ), patch.object(SemgrepAnalyzer, "_setup_custom_rules"):
+        with (
+            patch.object(SCCAnalyzer, "_verify_scc_installation"),
+            patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"),
+            patch.object(SemgrepAnalyzer, "_setup_custom_rules"),
+        ):
             return StaticAnalysisPipeline()
 
     def test_pipeline_initialization(self):
         """Test pipeline initialization."""
-        with patch.object(SCCAnalyzer, "_verify_scc_installation"), patch.object(
-            SemgrepAnalyzer, "_verify_semgrep_installation"
-        ), patch.object(SemgrepAnalyzer, "_setup_custom_rules"):
+        with (
+            patch.object(SCCAnalyzer, "_verify_scc_installation"),
+            patch.object(SemgrepAnalyzer, "_verify_semgrep_installation"),
+            patch.object(SemgrepAnalyzer, "_setup_custom_rules"),
+        ):
 
-            pipeline = StaticAnalysisPipeline("custom_scc", "custom_semgrep", 4)
+            pipeline = StaticAnalysisPipeline(
+                "custom_scc", "custom_semgrep", 4
+            )
             assert pipeline.scc_analyzer.scc_binary_path == "custom_scc"
-            assert pipeline.semgrep_analyzer.semgrep_binary_path == "custom_semgrep"
+            assert (
+                pipeline.semgrep_analyzer.semgrep_binary_path
+                == "custom_semgrep"
+            )
             assert pipeline.max_workers == 4
 
     def test_analyze_repository_sequential(
         self, pipeline, mock_scc_result, mock_semgrep_result
     ):
         """Test sequential repository analysis."""
-        with patch.object(
-            pipeline, "_run_scc_analysis", return_value=mock_scc_result
-        ), patch.object(
-            pipeline, "_run_semgrep_analysis", return_value=mock_semgrep_result
+        with (
+            patch.object(
+                pipeline, "_run_scc_analysis", return_value=mock_scc_result
+            ),
+            patch.object(
+                pipeline,
+                "_run_semgrep_analysis",
+                return_value=mock_semgrep_result,
+            ),
         ):
 
             with tempfile.TemporaryDirectory() as temp_dir:
-                result = pipeline.analyze_repository(temp_dir, enable_parallel=False)
+                result = pipeline.analyze_repository(
+                    temp_dir, enable_parallel=False
+                )
 
                 assert isinstance(result, PipelineResult)
                 assert result.scc_result == mock_scc_result
@@ -406,7 +434,9 @@ class TestStaticAnalysisPipeline:
         ):
 
             with tempfile.TemporaryDirectory() as temp_dir:
-                result = pipeline.analyze_repository(temp_dir, enable_parallel=True)
+                result = pipeline.analyze_repository(
+                    temp_dir, enable_parallel=True
+                )
 
                 assert isinstance(result, PipelineResult)
                 assert result.pipeline_metrics.parallel_efficiency >= 0.0
@@ -415,14 +445,20 @@ class TestStaticAnalysisPipeline:
         self, pipeline, mock_scc_result, mock_semgrep_result
     ):
         """Test unified insights generation."""
-        with patch.object(
-            pipeline.scc_analyzer,
-            "get_language_insights",
-            return_value={"maintainability_score": 80, "dominant_language": "Python"},
-        ), patch.object(
-            pipeline.semgrep_analyzer,
-            "get_security_insights",
-            return_value={"security_score": 90, "risk_assessment": "LOW"},
+        with (
+            patch.object(
+                pipeline.scc_analyzer,
+                "get_language_insights",
+                return_value={
+                    "maintainability_score": 80,
+                    "dominant_language": "Python",
+                },
+            ),
+            patch.object(
+                pipeline.semgrep_analyzer,
+                "get_security_insights",
+                return_value={"security_score": 90, "risk_assessment": "LOW"},
+            ),
         ):
 
             insights = pipeline._generate_unified_insights(
@@ -432,7 +468,12 @@ class TestStaticAnalysisPipeline:
             assert isinstance(insights, UnifiedInsights)
             assert 0 <= insights.code_quality_score <= 100
             assert 0 <= insights.security_score <= 100
-            assert insights.risk_profile in ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+            assert insights.risk_profile in [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL",
+            ]
             assert isinstance(insights.technical_debt_indicators, list)
             assert isinstance(insights.priority_recommendations, list)
             assert isinstance(insights.ai_model_context, dict)
@@ -452,7 +493,8 @@ class TestStaticAnalysisPipeline:
 
         assert isinstance(debt_indicators, list)
         assert any(
-            "files exceed 500 lines" in indicator for indicator in debt_indicators
+            "files exceed 500 lines" in indicator
+            for indicator in debt_indicators
         )
 
     def test_risk_profile_calculation(self, pipeline):
@@ -477,14 +519,20 @@ class TestStaticAnalysisPipeline:
         self, pipeline, mock_scc_result, mock_semgrep_result
     ):
         """Test AI model context creation."""
-        with patch.object(
-            pipeline.scc_analyzer,
-            "get_language_insights",
-            return_value={"maintainability_score": 75, "dominant_language": "Python"},
-        ), patch.object(
-            pipeline.semgrep_analyzer,
-            "get_security_insights",
-            return_value={"security_score": 85, "risk_assessment": "LOW"},
+        with (
+            patch.object(
+                pipeline.scc_analyzer,
+                "get_language_insights",
+                return_value={
+                    "maintainability_score": 75,
+                    "dominant_language": "Python",
+                },
+            ),
+            patch.object(
+                pipeline.semgrep_analyzer,
+                "get_security_insights",
+                return_value={"security_score": 85, "risk_assessment": "LOW"},
+            ),
         ):
 
             context = pipeline._create_ai_model_context(
@@ -502,9 +550,13 @@ class TestStaticAnalysisPipeline:
             assert context["security_context"]["vulnerability_count"] == 1
             assert "is_python_project" in context["project_characteristics"]
 
-    def test_export_unified_json(self, pipeline, mock_scc_result, mock_semgrep_result):
+    def test_export_unified_json(
+        self, pipeline, mock_scc_result, mock_semgrep_result
+    ):
         """Test unified JSON export."""
-        with patch.object(pipeline, "_generate_unified_insights") as mock_insights:
+        with patch.object(
+            pipeline, "_generate_unified_insights"
+        ) as mock_insights:
             mock_insights.return_value = UnifiedInsights(
                 code_quality_score=80,
                 security_score=90,
@@ -551,22 +603,30 @@ class TestStaticAnalysisPipeline:
     def test_parallel_efficiency_calculation(self, pipeline):
         """Test parallel efficiency calculation."""
         # Test with parallel execution
-        efficiency = pipeline._calculate_parallel_efficiency(3.0, 2.0, 2.5, True)
+        efficiency = pipeline._calculate_parallel_efficiency(
+            3.0, 2.0, 2.5, True
+        )
         assert efficiency > 0  # Should save time
 
         # Test without parallel execution
-        efficiency_seq = pipeline._calculate_parallel_efficiency(5.0, 2.0, 3.0, False)
+        efficiency_seq = pipeline._calculate_parallel_efficiency(
+            5.0, 2.0, 3.0, False
+        )
         assert efficiency_seq == 0.0  # No parallel benefit
 
         # Test edge case
-        efficiency_zero = pipeline._calculate_parallel_efficiency(0.0, 0.0, 0.0, True)
+        efficiency_zero = pipeline._calculate_parallel_efficiency(
+            0.0, 0.0, 0.0, True
+        )
         assert efficiency_zero == 0.0
 
 
 class TestIntegrationFunctions:
     """Test convenience functions for integration."""
 
-    @patch("supervisor_agent.analysis.static_analysis_pipeline.StaticAnalysisPipeline")
+    @patch(
+        "supervisor_agent.analysis.static_analysis_pipeline.StaticAnalysisPipeline"
+    )
     def test_quick_repository_analysis(self, mock_pipeline_class):
         """Test quick repository analysis function."""
         # Mock pipeline and result
@@ -600,7 +660,9 @@ class TestIntegrationFunctions:
         assert result["execution_time"] == 10.5
         assert len(result["top_recommendations"]) == 1
 
-    @patch("supervisor_agent.analysis.static_analysis_pipeline.StaticAnalysisPipeline")
+    @patch(
+        "supervisor_agent.analysis.static_analysis_pipeline.StaticAnalysisPipeline"
+    )
     def test_get_ai_analysis_context(self, mock_pipeline_class):
         """Test AI analysis context function."""
         # Mock pipeline and result

@@ -8,19 +8,21 @@ with the workflow engine for intelligent task distribution and execution.
 """
 
 import asyncio
+import heapq
 import json
+import math
 import uuid
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, Callable
-import heapq
-import math
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import structlog
 
-from supervisor_agent.intelligence.workflow_synthesizer import ClaudeAgentWrapper
+from supervisor_agent.intelligence.workflow_synthesizer import (
+    ClaudeAgentWrapper,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
