@@ -350,14 +350,20 @@ class TestBottleneckDetector:
 
         # data_processing should be identified as bottleneck (95% utilization)
         processing_bottleneck = next(
-            (b for b in bottleneck_stages if b["stage_name"] == "data_processing"),
+            (
+                b
+                for b in bottleneck_stages
+                if b["stage_name"] == "data_processing"
+            ),
             None,
         )
         assert processing_bottleneck is not None
         assert processing_bottleneck["severity"] == "critical"
 
     @pytest.mark.asyncio
-    async def test_identify_slow_components(self, detector, sample_component_metrics):
+    async def test_identify_slow_components(
+        self, detector, sample_component_metrics
+    ):
         """Test slow component identification."""
         slow_components = await detector.identify_slow_components(
             sample_component_metrics
@@ -367,7 +373,11 @@ class TestBottleneckDetector:
 
         # API gateway should be identified as slow (high response times, CPU usage)
         api_component = next(
-            (c for c in slow_components if c["component_name"] == "api_gateway"),
+            (
+                c
+                for c in slow_components
+                if c["component_name"] == "api_gateway"
+            ),
             None,
         )
         assert api_component is not None
@@ -375,20 +385,32 @@ class TestBottleneckDetector:
 
         # Check for high response time issue
         response_issue = next(
-            (i for i in api_component["issues"] if i["type"] == "slow_response"),
+            (
+                i
+                for i in api_component["issues"]
+                if i["type"] == "slow_response"
+            ),
             None,
         )
         assert response_issue is not None
 
         # Database should be identified for memory issues
         db_component = next(
-            (c for c in slow_components if c["component_name"] == "database_pool"),
+            (
+                c
+                for c in slow_components
+                if c["component_name"] == "database_pool"
+            ),
             None,
         )
         assert db_component is not None
 
         memory_issue = next(
-            (i for i in db_component["issues"] if i["type"] == "high_memory_usage"),
+            (
+                i
+                for i in db_component["issues"]
+                if i["type"] == "high_memory_usage"
+            ),
             None,
         )
         assert memory_issue is not None
@@ -417,7 +439,9 @@ class TestBottleneckDetector:
             },
         ]
 
-        recommendations = await detector.suggest_optimization_strategies(bottlenecks)
+        recommendations = await detector.suggest_optimization_strategies(
+            bottlenecks
+        )
 
         assert len(recommendations) > 0
 
@@ -443,7 +467,9 @@ class TestBottleneckDetector:
             assert rec.implementation_effort in ["low", "medium", "high"]
 
     @pytest.mark.asyncio
-    async def test_parallelization_opportunities(self, detector, sample_pipeline):
+    async def test_parallelization_opportunities(
+        self, detector, sample_pipeline
+    ):
         """Test parallelization opportunity identification."""
         analysis = await detector.analyze_execution_pipeline(sample_pipeline)
         opportunities = analysis["parallelization_opportunities"]
@@ -576,8 +602,8 @@ class TestPerformanceOptimizer:
     ):
         """Test optimization recommendation generation."""
         analysis = {"current_metrics": sample_metrics_data}
-        recommendations = await optimizer.generate_optimization_recommendations(
-            analysis
+        recommendations = (
+            await optimizer.generate_optimization_recommendations(analysis)
         )
 
         assert len(recommendations) > 0
@@ -608,12 +634,16 @@ class TestPerformanceOptimizer:
             assert 1 <= rec.priority <= 10
 
     @pytest.mark.asyncio
-    async def test_analyze_performance_patterns(self, optimizer, sample_time_window):
+    async def test_analyze_performance_patterns(
+        self, optimizer, sample_time_window
+    ):
         """Test performance pattern analysis."""
         # Add some historical metrics
         for i in range(24):  # 24 hours of data
             for j in range(5):  # 5 metrics per hour
-                timestamp = datetime.now() - timedelta(hours=23 - i, minutes=j * 10)
+                timestamp = datetime.now() - timedelta(
+                    hours=23 - i, minutes=j * 10
+                )
 
                 # Simulate business hours pattern
                 hour = timestamp.hour
@@ -628,7 +658,9 @@ class TestPerformanceOptimizer:
                     )
                 )
 
-        patterns = await optimizer.analyze_performance_patterns(sample_time_window)
+        patterns = await optimizer.analyze_performance_patterns(
+            sample_time_window
+        )
 
         assert "analysis_period" in patterns
         assert "patterns" in patterns
@@ -681,7 +713,9 @@ class TestPerformanceOptimizer:
             (r for r in regressions if r["metric"] == "response_time"), None
         )
         assert response_regression is not None
-        assert response_regression["regression_percent"] > 10  # Significant regression
+        assert (
+            response_regression["regression_percent"] > 10
+        )  # Significant regression
         assert response_regression["severity"] in [
             "medium",
             "high",
@@ -716,7 +750,9 @@ class TestPerformanceOptimizer:
         provider_metrics = result["provider_metrics"]
         assert provider_metrics["response_time"] > 0
         assert provider_metrics["throughput"] > 0
-        assert provider_metrics["reliability"] > 90  # Should be high reliability
+        assert (
+            provider_metrics["reliability"] > 90
+        )  # Should be high reliability
 
     @pytest.mark.asyncio
     async def test_implement_automatic_adjustments(self, optimizer):
@@ -737,7 +773,9 @@ class TestPerformanceOptimizer:
             )
         ]
 
-        adjustments = await optimizer.implement_automatic_adjustments(recommendations)
+        adjustments = await optimizer.implement_automatic_adjustments(
+            recommendations
+        )
 
         assert len(adjustments) == 1
         adjustment = adjustments[0]
@@ -762,7 +800,9 @@ class TestPerformanceOptimizer:
                 )
             )
 
-        correlation = optimizer._calculate_correlation("cpu_usage", "response_time")
+        correlation = optimizer._calculate_correlation(
+            "cpu_usage", "response_time"
+        )
 
         # Should detect strong positive correlation
         assert correlation > 0.8
@@ -818,7 +858,9 @@ class TestPerformanceOptimizer:
             "target_system": "test_system",
         }
 
-        plan = await optimizer.create_optimization_plan(recommendations, constraints)
+        plan = await optimizer.create_optimization_plan(
+            recommendations, constraints
+        )
 
         assert plan.plan_id is not None
         assert plan.target_system == "test_system"

@@ -83,7 +83,9 @@ class CollaborationRequest:
     estimated_duration: int = 60  # minutes
     deadline: Optional[datetime] = None
     prerequisites: List[str] = field(default_factory=list)
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 @dataclass
@@ -100,7 +102,9 @@ class CollaborationSession:
     decisions: List[Dict[str, Any]] = field(default_factory=list)
     review_feedback: List[Dict[str, Any]] = field(default_factory=list)
     knowledge_shared: List[Dict[str, Any]] = field(default_factory=list)
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     completed_at: Optional[datetime] = None
     outcome: Optional[Dict[str, Any]] = None
 
@@ -118,7 +122,9 @@ class PeerReviewResult:
     quality_score: float  # 0-100
     confidence: float  # 0-1
     review_criteria: List[str] = field(default_factory=list)
-    reviewed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    reviewed_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 @dataclass
@@ -133,20 +139,24 @@ class KnowledgeTransfer:
     context: str
     effectiveness_score: Optional[float] = None
     validation_status: Optional[str] = None
-    transferred_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    transferred_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 class CollaborationNetwork:
     """Manages collaboration relationships and patterns between agents."""
 
     def __init__(self):
-        self.collaboration_history: Dict[str, List[CollaborationSession]] = defaultdict(
-            list
+        self.collaboration_history: Dict[str, List[CollaborationSession]] = (
+            defaultdict(list)
         )
         self.agent_relationships: Dict[str, Dict[str, float]] = defaultdict(
             dict
         )  # Trust scores
-        self.collaboration_patterns: Dict[str, Dict[str, Any]] = defaultdict(dict)
+        self.collaboration_patterns: Dict[str, Dict[str, Any]] = defaultdict(
+            dict
+        )
         self.skill_registry: Dict[str, Dict[str, float]] = defaultdict(
             dict
         )  # Agent skills
@@ -160,15 +170,17 @@ class CollaborationNetwork:
             for other_participant in session.participants:
                 if other_participant != participant:
                     success_factor = (
-                        1.0 if session.status == CollaborationStatus.COMPLETED else 0.5
+                        1.0
+                        if session.status == CollaborationStatus.COMPLETED
+                        else 0.5
                     )
                     current_trust = self.agent_relationships[participant].get(
                         other_participant, 0.5
                     )
                     # Exponential moving average for trust updates
-                    self.agent_relationships[participant][other_participant] = (
-                        0.8 * current_trust + 0.2 * success_factor
-                    )
+                    self.agent_relationships[participant][
+                        other_participant
+                    ] = (0.8 * current_trust + 0.2 * success_factor)
 
     def get_collaboration_recommendations(
         self, agent_id: str, task_context: Dict[str, Any]
@@ -178,8 +190,12 @@ class CollaborationNetwork:
 
         # Score potential collaborators
         candidates = []
-        for other_agent, trust_score in self.agent_relationships[agent_id].items():
-            skill_match = self._calculate_skill_match(other_agent, required_skills)
+        for other_agent, trust_score in self.agent_relationships[
+            agent_id
+        ].items():
+            skill_match = self._calculate_skill_match(
+                other_agent, required_skills
+            )
             collaboration_score = trust_score * 0.6 + skill_match * 0.4
             candidates.append((other_agent, collaboration_score))
 
@@ -283,19 +299,24 @@ class AgentCollaborationEngine:
 
         return request_id
 
-    async def _process_collaboration_request(self, request: CollaborationRequest):
+    async def _process_collaboration_request(
+        self, request: CollaborationRequest
+    ):
         """Process a collaboration request and initiate sessions."""
 
         try:
             # Analyze collaboration requirements using AI
-            collaboration_plan = await self._generate_collaboration_plan(request)
+            collaboration_plan = await self._generate_collaboration_plan(
+                request
+            )
 
             # Create collaboration session
             session_id = str(uuid.uuid4())
             session = CollaborationSession(
                 session_id=session_id,
                 collaboration_type=request.collaboration_type,
-                participants=[request.requesting_agent] + request.target_agents,
+                participants=[request.requesting_agent]
+                + request.target_agents,
                 initiator=request.requesting_agent,
                 status=CollaborationStatus.INITIATED,
                 context=request.context,
@@ -306,16 +327,37 @@ class AgentCollaborationEngine:
             # Initialize collaboration based on type
             if request.collaboration_type == CollaborationType.PEER_REVIEW:
                 await self._initiate_peer_review(session, collaboration_plan)
-            elif request.collaboration_type == CollaborationType.KNOWLEDGE_TRANSFER:
-                await self._initiate_knowledge_transfer(session, collaboration_plan)
-            elif request.collaboration_type == CollaborationType.TASK_DELEGATION:
-                await self._initiate_task_delegation(session, collaboration_plan)
-            elif request.collaboration_type == CollaborationType.COLLABORATIVE_SOLVING:
-                await self._initiate_collaborative_solving(session, collaboration_plan)
-            elif request.collaboration_type == CollaborationType.CONSENSUS_BUILDING:
-                await self._initiate_consensus_building(session, collaboration_plan)
+            elif (
+                request.collaboration_type
+                == CollaborationType.KNOWLEDGE_TRANSFER
+            ):
+                await self._initiate_knowledge_transfer(
+                    session, collaboration_plan
+                )
+            elif (
+                request.collaboration_type == CollaborationType.TASK_DELEGATION
+            ):
+                await self._initiate_task_delegation(
+                    session, collaboration_plan
+                )
+            elif (
+                request.collaboration_type
+                == CollaborationType.COLLABORATIVE_SOLVING
+            ):
+                await self._initiate_collaborative_solving(
+                    session, collaboration_plan
+                )
+            elif (
+                request.collaboration_type
+                == CollaborationType.CONSENSUS_BUILDING
+            ):
+                await self._initiate_consensus_building(
+                    session, collaboration_plan
+                )
             else:
-                await self._initiate_generic_collaboration(session, collaboration_plan)
+                await self._initiate_generic_collaboration(
+                    session, collaboration_plan
+                )
 
             # Remove from pending requests
             if request.request_id in self.pending_requests:
@@ -491,7 +533,8 @@ class AgentCollaborationEngine:
             return {
                 "evaluation_aspects": criteria,
                 "guiding_questions": [
-                    f"How well does this meet {criterion}?" for criterion in criteria
+                    f"How well does this meet {criterion}?"
+                    for criterion in criteria
                 ],
                 "quality_metrics": ["accuracy", "completeness", "clarity"],
                 "deliverables": ["feedback", "score", "recommendations"],
@@ -506,7 +549,9 @@ class AgentCollaborationEngine:
         session.status = CollaborationStatus.IN_PROGRESS
 
         knowledge_source = session.initiator
-        knowledge_targets = [p for p in session.participants if p != session.initiator]
+        knowledge_targets = [
+            p for p in session.participants if p != session.initiator
+        ]
 
         # Extract knowledge to transfer
         knowledge_content = session.context.get("knowledge", {})
@@ -521,7 +566,9 @@ class AgentCollaborationEngine:
                 target_agent=target_agent,
                 knowledge_type=knowledge_type,
                 content=knowledge_content,
-                context=session.context.get("description", "Knowledge transfer"),
+                context=session.context.get(
+                    "description", "Knowledge transfer"
+                ),
             )
 
             self.knowledge_transfers[transfer_id] = transfer
@@ -547,7 +594,9 @@ class AgentCollaborationEngine:
         session.status = CollaborationStatus.IN_PROGRESS
 
         delegating_agent = session.initiator
-        delegate_agents = [p for p in session.participants if p != session.initiator]
+        delegate_agents = [
+            p for p in session.participants if p != session.initiator
+        ]
 
         # Extract task details
         task_details = session.context.get("task", {})
@@ -559,7 +608,9 @@ class AgentCollaborationEngine:
         )
 
         # Store delegation assignments
-        session.shared_artifacts["delegation_assignments"] = delegation_assignments
+        session.shared_artifacts["delegation_assignments"] = (
+            delegation_assignments
+        )
         session.shared_artifacts["task_details"] = task_details
 
         self.logger.info(
@@ -620,11 +671,15 @@ class AgentCollaborationEngine:
                 "task_breakdown": [
                     {
                         "subtask": "complete_task",
-                        "assigned_to": (delegate_agents[0] if delegate_agents else ""),
+                        "assigned_to": (
+                            delegate_agents[0] if delegate_agents else ""
+                        ),
                     }
                 ],
                 "agent_assignments": {
-                    delegate_agents[0]: (["complete_task"] if delegate_agents else {})
+                    delegate_agents[0]: (
+                        ["complete_task"] if delegate_agents else {}
+                    )
                 },
                 "coordination_plan": {"method": "periodic_updates"},
                 "timeline": {"estimated_duration": 60},
@@ -673,7 +728,9 @@ class AgentCollaborationEngine:
             "available_options": options,
             "agent_preferences": {},
             "discussion_points": [],
-            "consensus_criteria": plan.get("success_criteria", ["majority_agreement"]),
+            "consensus_criteria": plan.get(
+                "success_criteria", ["majority_agreement"]
+            ),
             "final_decision": None,
         }
 
@@ -702,7 +759,9 @@ class AgentCollaborationEngine:
             "participant_contributions": {p: [] for p in session.participants},
         }
 
-        session.shared_artifacts["collaboration_framework"] = collaboration_framework
+        session.shared_artifacts["collaboration_framework"] = (
+            collaboration_framework
+        )
 
         self.logger.info(
             "Generic collaboration session initiated",
@@ -751,7 +810,9 @@ class AgentCollaborationEngine:
         session.review_feedback.append(review_id)
 
         # Check if all reviews are complete
-        expected_reviewers = [p for p in session.participants if p != session.initiator]
+        expected_reviewers = [
+            p for p in session.participants if p != session.initiator
+        ]
         if len(session.review_feedback) >= len(expected_reviewers):
             await self._finalize_peer_review_session(session)
 
@@ -775,17 +836,21 @@ class AgentCollaborationEngine:
 
         # Adjust based on agent's historical review performance
         agent_reviews = [
-            r for r in self.peer_reviews.values() if r.reviewer_agent == reviewer_agent
+            r
+            for r in self.peer_reviews.values()
+            if r.reviewer_agent == reviewer_agent
         ]
         if agent_reviews:
-            avg_quality = sum(r.quality_score for r in agent_reviews[-10:]) / min(
-                len(agent_reviews), 10
-            )
+            avg_quality = sum(
+                r.quality_score for r in agent_reviews[-10:]
+            ) / min(len(agent_reviews), 10)
             confidence += (avg_quality / 100) * 0.2
 
         # Adjust based on skill match
         required_skills = context.get("required_skills", [])
-        agent_skills = self.collaboration_network.skill_registry.get(reviewer_agent, {})
+        agent_skills = self.collaboration_network.skill_registry.get(
+            reviewer_agent, {}
+        )
 
         if required_skills and agent_skills:
             skill_match = sum(
@@ -795,15 +860,20 @@ class AgentCollaborationEngine:
 
         return min(1.0, confidence)
 
-    async def _finalize_peer_review_session(self, session: CollaborationSession):
+    async def _finalize_peer_review_session(
+        self, session: CollaborationSession
+    ):
         """Finalize a peer review session and determine overall outcome."""
 
         reviews = [
-            self.peer_reviews[review_id] for review_id in session.review_feedback
+            self.peer_reviews[review_id]
+            for review_id in session.review_feedback
         ]
 
         # Aggregate review results
-        avg_quality_score = sum(r.quality_score for r in reviews) / len(reviews)
+        avg_quality_score = sum(r.quality_score for r in reviews) / len(
+            reviews
+        )
         approval_count = len(
             [r for r in reviews if r.outcome == ReviewOutcome.APPROVED]
         )
@@ -841,7 +911,9 @@ class AgentCollaborationEngine:
             review_count=len(reviews),
         )
 
-    async def get_collaboration_status(self, session_id: str) -> Dict[str, Any]:
+    async def get_collaboration_status(
+        self, session_id: str
+    ) -> Dict[str, Any]:
         """Get the current status of a collaboration session."""
 
         if session_id not in self.active_sessions:
@@ -878,13 +950,19 @@ class AgentCollaborationEngine:
         if session.collaboration_type == CollaborationType.PEER_REVIEW:
             status_info["reviews_submitted"] = len(session.review_feedback)
 
-        elif session.collaboration_type == CollaborationType.KNOWLEDGE_TRANSFER:
-            transfer_ids = session.shared_artifacts.get("knowledge_transfers", [])
+        elif (
+            session.collaboration_type == CollaborationType.KNOWLEDGE_TRANSFER
+        ):
+            transfer_ids = session.shared_artifacts.get(
+                "knowledge_transfers", []
+            )
             status_info["knowledge_transfers"] = len(transfer_ids)
 
         return status_info
 
-    async def get_agent_collaboration_history(self, agent_id: str) -> Dict[str, Any]:
+    async def get_agent_collaboration_history(
+        self, agent_id: str
+    ) -> Dict[str, Any]:
         """Get collaboration history and metrics for an agent."""
 
         agent_sessions = self.collaboration_network.collaboration_history.get(
@@ -894,7 +972,11 @@ class AgentCollaborationEngine:
         # Calculate collaboration metrics
         total_collaborations = len(agent_sessions)
         successful_collaborations = len(
-            [s for s in agent_sessions if s.status == CollaborationStatus.COMPLETED]
+            [
+                s
+                for s in agent_sessions
+                if s.status == CollaborationStatus.COMPLETED
+            ]
         )
 
         collaboration_types = defaultdict(int)
@@ -903,7 +985,9 @@ class AgentCollaborationEngine:
 
         # Calculate average ratings from peer reviews
         agent_reviews = [
-            r for r in self.peer_reviews.values() if r.reviewer_agent == agent_id
+            r
+            for r in self.peer_reviews.values()
+            if r.reviewer_agent == agent_id
         ]
         avg_review_quality = (
             sum(r.quality_score for r in agent_reviews) / len(agent_reviews)
@@ -912,7 +996,9 @@ class AgentCollaborationEngine:
         )
 
         # Get collaboration partners and trust scores
-        trust_scores = self.collaboration_network.agent_relationships.get(agent_id, {})
+        trust_scores = self.collaboration_network.agent_relationships.get(
+            agent_id, {}
+        )
 
         return {
             "agent_id": agent_id,
@@ -945,7 +1031,9 @@ class AgentCollaborationEngine:
             ],
         }
 
-    async def register_agent_skills(self, agent_id: str, skills: Dict[str, float]):
+    async def register_agent_skills(
+        self, agent_id: str, skills: Dict[str, float]
+    ):
         """Register or update an agent's skills in the collaboration network."""
 
         # Validate skill levels (0-1)
@@ -953,7 +1041,9 @@ class AgentCollaborationEngine:
             skill: max(0.0, min(1.0, level)) for skill, level in skills.items()
         }
 
-        self.collaboration_network.skill_registry[agent_id].update(validated_skills)
+        self.collaboration_network.skill_registry[agent_id].update(
+            validated_skills
+        )
 
         self.logger.info(
             "Agent skills registered",
@@ -1042,7 +1132,9 @@ class AgentCollaborationEngine:
                     "agent_id": agent,
                     "trust_score": self.collaboration_network.agent_relationships[
                         agent_id
-                    ].get(agent, 0.5),
+                    ].get(
+                        agent, 0.5
+                    ),
                     "collaboration_type": "collaborative_solving",
                     "expected_benefits": [
                         "shared_expertise",

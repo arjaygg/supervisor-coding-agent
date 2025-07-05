@@ -24,11 +24,15 @@ router = APIRouter(prefix="/api/v1/providers", tags=["providers"])
 class ProviderConfig(BaseModel):
     """Provider configuration model"""
 
-    type: str = Field(..., description="Provider type (claude_cli, local_mock, etc.)")
+    type: str = Field(
+        ..., description="Provider type (claude_cli, local_mock, etc.)"
+    )
     config: Dict[str, Any] = Field(
         default_factory=dict, description="Provider-specific configuration"
     )
-    priority: Optional[int] = Field(None, description="Provider priority (1-10)")
+    priority: Optional[int] = Field(
+        None, description="Provider priority (1-10)"
+    )
     enabled: bool = Field(True, description="Whether provider is enabled")
 
 
@@ -40,7 +44,9 @@ class TaskExecutionRequest(BaseModel):
     routing_strategy: Optional[str] = Field(
         None, description="Routing strategy (optimal, fastest, cheapest, etc.)"
     )
-    context: Optional[Dict[str, Any]] = Field(None, description="Execution context")
+    context: Optional[Dict[str, Any]] = Field(
+        None, description="Execution context"
+    )
     shared_memory: Optional[Dict[str, Any]] = Field(
         None, description="Shared memory between tasks"
     )
@@ -63,7 +69,9 @@ class ProviderRecommendationRequest(BaseModel):
 
     task_type: str = Field(..., description="Type of task")
     payload: Dict[str, Any] = Field(..., description="Task payload")
-    context: Optional[Dict[str, Any]] = Field(None, description="Execution context")
+    context: Optional[Dict[str, Any]] = Field(
+        None, description="Execution context"
+    )
 
 
 @router.get("/status")
@@ -206,8 +214,10 @@ async def get_provider_recommendations(request: ProviderRecommendationRequest):
             status="pending",
         )
 
-        recommendations = await multi_provider_service.get_provider_recommendations(
-            task=task, context=request.context
+        recommendations = (
+            await multi_provider_service.get_provider_recommendations(
+                task=task, context=request.context
+            )
         )
 
         return {
@@ -239,7 +249,9 @@ async def register_provider(provider_id: str, config: ProviderConfig):
         )
 
         if not success:
-            raise HTTPException(status_code=400, detail="Failed to register provider")
+            raise HTTPException(
+                status_code=400, detail="Failed to register provider"
+            )
 
         return {
             "success": True,
@@ -314,7 +326,9 @@ async def get_provider_health(provider_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting provider health for {provider_id}: {str(e)}")
+        logger.error(
+            f"Error getting provider health for {provider_id}: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -341,9 +355,9 @@ async def get_provider_usage(
             "usage_data": {
                 "requests_today": analytics.get("total_requests_today", 0),
                 "cost_today": analytics.get("total_cost_today", 0.0),
-                "quota_utilization": analytics.get("quota_utilization", {}).get(
-                    provider_id, 0.0
-                ),
+                "quota_utilization": analytics.get(
+                    "quota_utilization", {}
+                ).get(provider_id, 0.0),
             },
             "period_days": days,
         }
@@ -353,7 +367,9 @@ async def get_provider_usage(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting provider usage for {provider_id}: {str(e)}")
+        logger.error(
+            f"Error getting provider usage for {provider_id}: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -362,7 +378,9 @@ async def list_providers(
     include_health: bool = Query(
         False, description="Include health status in response"
     ),
-    provider_type: Optional[str] = Query(None, description="Filter by provider type"),
+    provider_type: Optional[str] = Query(
+        None, description="Filter by provider type"
+    ),
 ):
     """
     List all registered providers

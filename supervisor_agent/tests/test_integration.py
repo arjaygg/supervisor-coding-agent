@@ -13,7 +13,9 @@ from supervisor_agent.db.models import Task, TaskStatus, TaskType
 class TestCriticalUserFlows:
     """Test the most important user flows end-to-end"""
 
-    def test_create_and_process_task_flow(self, test_client: TestClient, test_db):
+    def test_create_and_process_task_flow(
+        self, test_client: TestClient, test_db
+    ):
         """Test the complete flow: create task -> process -> complete"""
 
         # 1. Create a task via API
@@ -163,13 +165,17 @@ class TestCriticalUserFlows:
                 "type": task_type,
                 "payload": {
                     "description": f"Test {task_type} task",
-                    "code": ("test code" if task_type == "CODE_ANALYSIS" else None),
+                    "code": (
+                        "test code" if task_type == "CODE_ANALYSIS" else None
+                    ),
                 },
                 "priority": 5,
             }
 
             response = test_client.post("/api/v1/tasks", json=task_data)
-            assert response.status_code == 200, f"Failed to create {task_type} task"
+            assert (
+                response.status_code == 200
+            ), f"Failed to create {task_type} task"
             task = response.json()
             assert task["type"] == task_type
             created_tasks.append(task["id"])

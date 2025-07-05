@@ -87,7 +87,9 @@ class WorkflowIntegrationService:
         self.task_crud = task_crud
         self.workflow_crud = workflow_crud
         self.synthesizer_cache: Dict[str, AIWorkflowSynthesizer] = {}
-        self.logger = structured_logger.bind(component="workflow_integration_service")
+        self.logger = structured_logger.bind(
+            component="workflow_integration_service"
+        )
 
     async def synthesize_and_create_workflow(
         self, request: WorkflowSynthesisRequest
@@ -109,7 +111,9 @@ class WorkflowIntegrationService:
 
         try:
             # Get or create synthesizer for tenant
-            synthesizer = await self._get_synthesizer_for_tenant(request.tenant_id)
+            synthesizer = await self._get_synthesizer_for_tenant(
+                request.tenant_id
+            )
 
             # Analyze requirements using AI
             requirements = await synthesizer.analyze_requirements(
@@ -127,7 +131,9 @@ class WorkflowIntegrationService:
             )
 
             # Create workflow in database
-            created_workflow = await self.workflow_crud.create(standard_workflow)
+            created_workflow = await self.workflow_crud.create(
+                standard_workflow
+            )
 
             # Create result
             result = WorkflowSynthesisResult(
@@ -226,7 +232,9 @@ class WorkflowIntegrationService:
 
         try:
             # Get workflow execution details
-            execution = await self.workflow_crud.get_execution(workflow_execution_id)
+            execution = await self.workflow_crud.get_execution(
+                workflow_execution_id
+            )
             if not execution:
                 raise ValueError(
                     f"Workflow execution {workflow_execution_id} not found"
@@ -279,22 +287,30 @@ class WorkflowIntegrationService:
         Returns:
             Intelligence metrics and insights
         """
-        self.logger.info("Getting workflow intelligence metrics", tenant_id=tenant_id)
+        self.logger.info(
+            "Getting workflow intelligence metrics", tenant_id=tenant_id
+        )
 
         try:
             # Get workflow performance data
-            workflows = await self.workflow_crud.get_by_tenant(tenant_id, time_range)
+            workflows = await self.workflow_crud.get_by_tenant(
+                tenant_id, time_range
+            )
 
             # Calculate metrics
             metrics = {
                 "total_workflows_synthesized": len(workflows),
                 "average_synthesis_confidence": 0.85,  # TODO: Calculate from actual data
-                "workflow_success_rate": await self._calculate_success_rate(workflows),
+                "workflow_success_rate": await self._calculate_success_rate(
+                    workflows
+                ),
                 "average_execution_time_improvement": 0.6,  # TODO: Calculate vs baseline
                 "human_intervention_rate": await self._calculate_human_intervention_rate(
                     workflows
                 ),
-                "most_common_domains": await self._get_domain_distribution(workflows),
+                "most_common_domains": await self._get_domain_distribution(
+                    workflows
+                ),
                 "optimization_impact": await self._calculate_optimization_impact(
                     workflows
                 ),
@@ -394,12 +410,16 @@ class WorkflowIntegrationService:
 
         return actions_taken
 
-    async def _calculate_success_rate(self, workflows: List[Dict[str, Any]]) -> float:
+    async def _calculate_success_rate(
+        self, workflows: List[Dict[str, Any]]
+    ) -> float:
         """Calculate workflow success rate"""
         if not workflows:
             return 0.0
 
-        successful = sum(1 for w in workflows if w.get("status") == "completed")
+        successful = sum(
+            1 for w in workflows if w.get("status") == "completed"
+        )
         return successful / len(workflows)
 
     async def _calculate_human_intervention_rate(

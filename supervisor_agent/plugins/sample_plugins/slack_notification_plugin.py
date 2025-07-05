@@ -50,8 +50,12 @@ class SlackNotificationPlugin(NotificationInterface):
         self.default_channel = self.get_configuration_value(
             "default_channel", "#general"
         )
-        self.username = self.get_configuration_value("username", "Supervisor Agent")
-        self.icon_emoji = self.get_configuration_value("icon_emoji", ":robot_face:")
+        self.username = self.get_configuration_value(
+            "username", "Supervisor Agent"
+        )
+        self.icon_emoji = self.get_configuration_value(
+            "icon_emoji", ":robot_face:"
+        )
 
         # HTTP client for API calls
         self.http_client: Optional[httpx.AsyncClient] = None
@@ -115,7 +119,9 @@ class SlackNotificationPlugin(NotificationInterface):
         try:
             # Validate configuration
             if not self.webhook_url and not self.api_token:
-                logger.error("Slack plugin requires either webhook_url or api_token")
+                logger.error(
+                    "Slack plugin requires either webhook_url or api_token"
+                )
                 return False
 
             # Initialize HTTP client
@@ -126,7 +132,9 @@ class SlackNotificationPlugin(NotificationInterface):
 
             # Set API token header if using API
             if self.api_token:
-                self.http_client.headers["Authorization"] = f"Bearer {self.api_token}"
+                self.http_client.headers["Authorization"] = (
+                    f"Bearer {self.api_token}"
+                )
 
             logger.info("Slack notification plugin initialized successfully")
             return True
@@ -144,7 +152,9 @@ class SlackNotificationPlugin(NotificationInterface):
                 logger.info("Slack notification plugin activated successfully")
                 return True
             else:
-                logger.error("Slack plugin activation failed - connection test failed")
+                logger.error(
+                    "Slack plugin activation failed - connection test failed"
+                )
                 return False
 
         except Exception as e:
@@ -178,7 +188,9 @@ class SlackNotificationPlugin(NotificationInterface):
         """Check plugin health status"""
         try:
             if not self.http_client:
-                return PluginResult(success=False, error="HTTP client not initialized")
+                return PluginResult(
+                    success=False, error="HTTP client not initialized"
+                )
 
             # Test connection
             connection_ok = await self._test_connection()
@@ -232,7 +244,9 @@ class SlackNotificationPlugin(NotificationInterface):
 
             # Add priority formatting
             if priority == "critical":
-                payload["text"] = f":warning: *CRITICAL* :warning:\n{payload['text']}"
+                payload["text"] = (
+                    f":warning: *CRITICAL* :warning:\n{payload['text']}"
+                )
                 payload["color"] = "danger"
             elif priority == "warning":
                 payload["text"] = f":warning: *WARNING*\n{payload['text']}"
@@ -271,7 +285,9 @@ class SlackNotificationPlugin(NotificationInterface):
                 logger.info(f"Sent Slack notification to {channel}: {subject}")
             else:
                 self.failed_count += 1
-                logger.error(f"Failed to send Slack notification: {result.error}")
+                logger.error(
+                    f"Failed to send Slack notification: {result.error}"
+                )
 
             return result
 
@@ -296,7 +312,9 @@ class SlackNotificationPlugin(NotificationInterface):
             return (
                 recipient.startswith("#")  # Channel
                 or recipient.startswith("@")  # User mention
-                or not recipient.startswith("#")  # Assume channel name without #
+                or not recipient.startswith(
+                    "#"
+                )  # Assume channel name without #
             )
         except Exception:
             return False
@@ -306,7 +324,9 @@ class SlackNotificationPlugin(NotificationInterface):
         try:
             if self.api_token:
                 # Test with API auth.test endpoint
-                response = await self.http_client.get("https://slack.com/api/auth.test")
+                response = await self.http_client.get(
+                    "https://slack.com/api/auth.test"
+                )
                 if response.status_code == 200:
                     data = response.json()
                     return data.get("ok", False)
@@ -333,7 +353,9 @@ class SlackNotificationPlugin(NotificationInterface):
         try:
             if self.webhook_url:
                 # Use webhook
-                response = await self.http_client.post(self.webhook_url, json=payload)
+                response = await self.http_client.post(
+                    self.webhook_url, json=payload
+                )
 
                 if response.status_code == 200:
                     return PluginResult(

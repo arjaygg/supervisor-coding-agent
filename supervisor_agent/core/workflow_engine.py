@@ -103,7 +103,9 @@ class WorkflowEngine:
 
         with SessionLocal() as db:
             # Get workflow definition
-            db_workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
+            db_workflow = (
+                db.query(Workflow).filter(Workflow.id == workflow_id).first()
+            )
             if not db_workflow:
                 raise ValueError(f"Workflow not found: {workflow_id}")
 
@@ -152,12 +154,16 @@ class WorkflowEngine:
             )
 
             if not db_execution:
-                raise ValueError(f"Workflow execution not found: {execution_id}")
+                raise ValueError(
+                    f"Workflow execution not found: {execution_id}"
+                )
 
             # Get task execution details
             task_executions = (
                 db.query(WorkflowTaskExecution)
-                .filter(WorkflowTaskExecution.workflow_execution_id == execution_id)
+                .filter(
+                    WorkflowTaskExecution.workflow_execution_id == execution_id
+                )
                 .all()
             )
 
@@ -249,10 +255,14 @@ class WorkflowEngine:
                         db_execution.error_message = result.error_message
                     db.commit()
 
-            logger.info(f"Workflow execution completed: {executor.execution_id}")
+            logger.info(
+                f"Workflow execution completed: {executor.execution_id}"
+            )
 
         except Exception as e:
-            logger.error(f"Workflow execution failed: {executor.execution_id}: {e}")
+            logger.error(
+                f"Workflow execution failed: {executor.execution_id}: {e}"
+            )
 
             # Update execution status to failed
             with SessionLocal() as db:
@@ -309,7 +319,9 @@ class WorkflowExecutor:
             await self._update_execution_status(WorkflowStatus.RUNNING)
 
             # Create execution plan
-            execution_plan = self.dag_resolver.create_execution_plan(self.workflow_def)
+            execution_plan = self.dag_resolver.create_execution_plan(
+                self.workflow_def
+            )
 
             # Execute tasks according to plan
             await self._execute_plan(execution_plan)
@@ -395,10 +407,14 @@ class WorkflowExecutor:
             await self._create_task_execution_record(task_def, task_record.id)
 
             # Process task using existing infrastructure
-            await self.task_processor.queue_task(task_record.id, SessionLocal())
+            await self.task_processor.queue_task(
+                task_record.id, SessionLocal()
+            )
 
             # Wait for task completion with polling
-            result = await self._wait_for_task_completion(task_record.id, task_def.name)
+            result = await self._wait_for_task_completion(
+                task_record.id, task_def.name
+            )
 
             # Store result
             self._task_results[task_def.id] = result
@@ -416,7 +432,9 @@ class WorkflowExecutor:
                 "error": str(e),
             }
             self._task_results[task_def.id] = error_result
-            await self._update_task_execution_result(task_def.name, error_result)
+            await self._update_task_execution_result(
+                task_def.name, error_result
+            )
             return error_result
 
     async def _create_task_record(self, task_def) -> Task:
@@ -465,7 +483,9 @@ class WorkflowExecutor:
                 return {"status": "CANCELLED", "success": False}
 
             # Check timeout
-            if (datetime.now(timezone.utc) - start_time).total_seconds() > timeout:
+            if (
+                datetime.now(timezone.utc) - start_time
+            ).total_seconds() > timeout:
                 return {
                     "status": "TIMEOUT",
                     "success": False,
@@ -482,7 +502,9 @@ class WorkflowExecutor:
                     return {
                         "status": "COMPLETED",
                         "success": True,
-                        "result": (task.result if hasattr(task, "result") else {}),
+                        "result": (
+                            task.result if hasattr(task, "result") else {}
+                        ),
                     }
                 elif task.status == TaskStatus.FAILED:
                     return {
@@ -503,7 +525,8 @@ class WorkflowExecutor:
             execution_record = (
                 db.query(WorkflowTaskExecution)
                 .filter(
-                    WorkflowTaskExecution.workflow_execution_id == self.execution_id,
+                    WorkflowTaskExecution.workflow_execution_id
+                    == self.execution_id,
                     WorkflowTaskExecution.task_name == task_name,
                 )
                 .first()
@@ -518,7 +541,9 @@ class WorkflowExecutor:
                 execution_record.completed_at = datetime.now(timezone.utc)
                 execution_record.result = result
                 if not result.get("success"):
-                    execution_record.error_message = result.get("error", "Task failed")
+                    execution_record.error_message = result.get(
+                        "error", "Task failed"
+                    )
                 db.commit()
 
     async def _update_execution_status(self, status: WorkflowStatus):
@@ -558,5 +583,6 @@ class WorkflowExecutor:
     def _has_failed_tasks(self) -> bool:
         """Check if any tasks failed"""
         return any(
-            not result.get("success", False) for result in self._task_results.values()
+            not result.get("success", False)
+            for result in self._task_results.values()
         )

@@ -28,7 +28,9 @@ role_permissions = Table(
     "role_permissions",
     Base.metadata,
     Column("role_id", String, ForeignKey("roles.id"), primary_key=True),
-    Column("permission_id", String, ForeignKey("permissions.id"), primary_key=True),
+    Column(
+        "permission_id", String, ForeignKey("permissions.id"), primary_key=True
+    ),
 )
 
 
@@ -39,7 +41,9 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=True)
-    hashed_password = Column(String, nullable=True)  # Nullable for OAuth-only users
+    hashed_password = Column(
+        String, nullable=True
+    )  # Nullable for OAuth-only users
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
 
@@ -68,7 +72,9 @@ class Role(Base):
     __tablename__ = "roles"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String, unique=True, nullable=False)  # admin, user, viewer, etc.
+    name = Column(
+        String, unique=True, nullable=False
+    )  # admin, user, viewer, etc.
     description = Column(String, nullable=True)
     is_system_role = Column(Boolean, default=False)  # Cannot be deleted
 
@@ -85,9 +91,15 @@ class Permission(Base):
     __tablename__ = "permissions"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String, unique=True, nullable=False)  # tasks:create, tasks:read, etc.
-    resource = Column(String, nullable=False)  # tasks, workflows, analytics, etc.
-    action = Column(String, nullable=False)  # create, read, update, delete, execute
+    name = Column(
+        String, unique=True, nullable=False
+    )  # tasks:create, tasks:read, etc.
+    resource = Column(
+        String, nullable=False
+    )  # tasks, workflows, analytics, etc.
+    action = Column(
+        String, nullable=False
+    )  # create, read, update, delete, execute
     description = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -125,7 +137,9 @@ class APIKey(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     name = Column(String, nullable=False)
-    key_prefix = Column(String, nullable=False)  # First 8 chars for identification
+    key_prefix = Column(
+        String, nullable=False
+    )  # First 8 chars for identification
     hashed_key = Column(String, nullable=False)
 
     is_active = Column(Boolean, default=True)
@@ -146,7 +160,9 @@ class SecurityAuditLog(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
-    action = Column(String, nullable=False)  # login, logout, permission_denied, etc.
+    action = Column(
+        String, nullable=False
+    )  # login, logout, permission_denied, etc.
     resource = Column(String, nullable=True)  # What was accessed
     details = Column(Text, nullable=True)  # JSON details
 

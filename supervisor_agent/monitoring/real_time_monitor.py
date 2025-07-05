@@ -199,7 +199,9 @@ class RealTimeMonitor:
                 # Network I/O
                 network_io = psutil.net_io_counters()
                 if network_io:
-                    network_usage = network_io.bytes_sent + network_io.bytes_recv
+                    network_usage = (
+                        network_io.bytes_sent + network_io.bytes_recv
+                    )
                     self._record_metric(MetricType.NETWORK_IO, network_usage)
 
                 await asyncio.sleep(5)  # Monitor every 5 seconds
@@ -326,7 +328,9 @@ class RealTimeMonitor:
         while self.monitoring_active:
             try:
                 for sla_name, sla_req in self.sla_requirements.items():
-                    compliance_status = await self._check_sla_compliance(sla_req)
+                    compliance_status = await self._check_sla_compliance(
+                        sla_req
+                    )
 
                     if compliance_status["status"] == SLAStatus.VIOLATED:
                         violation = SLAViolation(
@@ -378,7 +382,9 @@ class RealTimeMonitor:
                 )
 
         # Detect potential bottlenecks
-        bottlenecks = await self.detect_bottlenecks({"workflow_id": workflow_id})
+        bottlenecks = await self.detect_bottlenecks(
+            {"workflow_id": workflow_id}
+        )
         status.bottlenecks = [b["component"] for b in bottlenecks]
 
         return {
@@ -387,7 +393,9 @@ class RealTimeMonitor:
             "progress": {
                 "completed": status.tasks_completed,
                 "total": status.tasks_total,
-                "percentage": (status.tasks_completed / max(1, status.tasks_total))
+                "percentage": (
+                    status.tasks_completed / max(1, status.tasks_total)
+                )
                 * 100,
             },
             "timing": {
@@ -413,7 +421,8 @@ class RealTimeMonitor:
         # CPU bottleneck detection
         if MetricType.CPU_USAGE in self.metrics_history:
             recent_cpu = [
-                m.value for m in list(self.metrics_history[MetricType.CPU_USAGE])[-5:]
+                m.value
+                for m in list(self.metrics_history[MetricType.CPU_USAGE])[-5:]
             ]
             if recent_cpu and sum(recent_cpu) / len(recent_cpu) > 85.0:
                 bottlenecks.append(
@@ -430,9 +439,14 @@ class RealTimeMonitor:
         if MetricType.MEMORY_USAGE in self.metrics_history:
             recent_memory = [
                 m.value
-                for m in list(self.metrics_history[MetricType.MEMORY_USAGE])[-5:]
+                for m in list(self.metrics_history[MetricType.MEMORY_USAGE])[
+                    -5:
+                ]
             ]
-            if recent_memory and sum(recent_memory) / len(recent_memory) > 90.0:
+            if (
+                recent_memory
+                and sum(recent_memory) / len(recent_memory) > 90.0
+            ):
                 bottlenecks.append(
                     {
                         "type": "memory_bottleneck",
@@ -446,7 +460,10 @@ class RealTimeMonitor:
         # Queue depth bottleneck
         if MetricType.QUEUE_DEPTH in self.metrics_history:
             recent_queue = [
-                m.value for m in list(self.metrics_history[MetricType.QUEUE_DEPTH])[-3:]
+                m.value
+                for m in list(self.metrics_history[MetricType.QUEUE_DEPTH])[
+                    -3:
+                ]
             ]
             if recent_queue and sum(recent_queue) / len(recent_queue) > 75:
                 bottlenecks.append(
@@ -463,10 +480,13 @@ class RealTimeMonitor:
         if MetricType.RESPONSE_TIME in self.metrics_history:
             recent_response = [
                 m.value
-                for m in list(self.metrics_history[MetricType.RESPONSE_TIME])[-5:]
+                for m in list(self.metrics_history[MetricType.RESPONSE_TIME])[
+                    -5:
+                ]
             ]
             if (
-                recent_response and sum(recent_response) / len(recent_response) > 4000
+                recent_response
+                and sum(recent_response) / len(recent_response) > 4000
             ):  # 4 seconds
                 bottlenecks.append(
                     {
@@ -636,7 +656,9 @@ class RealTimeMonitor:
         elif comparison == ">=":
             return actual >= threshold
         elif comparison == "==":
-            return abs(actual - threshold) < 0.01  # Small tolerance for floating point
+            return (
+                abs(actual - threshold) < 0.01
+            )  # Small tolerance for floating point
         return False
 
     def _is_near_threshold(
@@ -702,7 +724,9 @@ class RealTimeMonitor:
             "sla_compliance": sla_compliance,
             "workflow_status": {
                 "active_workflows": len(self.workflow_statuses),
-                "workflows": list(self.workflow_statuses.values())[:5],  # Latest 5
+                "workflows": list(self.workflow_statuses.values())[
+                    :5
+                ],  # Latest 5
             },
         }
 
@@ -714,13 +738,17 @@ class RealTimeMonitor:
         ):
             return "stable"
 
-        recent_values = [m.value for m in list(self.metrics_history[metric_type])[-5:]]
+        recent_values = [
+            m.value for m in list(self.metrics_history[metric_type])[-5:]
+        ]
 
         # Simple trend calculation
         first_half = sum(recent_values[:2]) / 2
         second_half = sum(recent_values[-2:]) / 2
 
-        change_percent = ((second_half - first_half) / max(0.1, first_half)) * 100
+        change_percent = (
+            (second_half - first_half) / max(0.1, first_half)
+        ) * 100
 
         if change_percent > 10:
             return "increasing"
@@ -747,7 +775,9 @@ class RealTimeMonitor:
             MetricType.MEMORY_USAGE in self.metrics_history
             and self.metrics_history[MetricType.MEMORY_USAGE]
         ):
-            memory_usage = self.metrics_history[MetricType.MEMORY_USAGE][-1].value
+            memory_usage = self.metrics_history[MetricType.MEMORY_USAGE][
+                -1
+            ].value
             memory_score = max(0, 100 - memory_usage)
             scores.append(memory_score)
 
@@ -765,8 +795,12 @@ class RealTimeMonitor:
             MetricType.RESPONSE_TIME in self.metrics_history
             and self.metrics_history[MetricType.RESPONSE_TIME]
         ):
-            response_time = self.metrics_history[MetricType.RESPONSE_TIME][-1].value
-            response_score = max(0, 100 - (response_time / 50))  # Scale response time
+            response_time = self.metrics_history[MetricType.RESPONSE_TIME][
+                -1
+            ].value
+            response_score = max(
+                0, 100 - (response_time / 50)
+            )  # Scale response time
             scores.append(response_score)
 
         if not scores:

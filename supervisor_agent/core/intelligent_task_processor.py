@@ -109,10 +109,15 @@ class IntelligentTaskProcessor:
             )
 
             request_hash = RequestHash.generate(request)
-            if request_hash in self.subscription_intelligence.deduplicator.cache:
-                cache_entry = self.subscription_intelligence.deduplicator.cache[
-                    request_hash
-                ]
+            if (
+                request_hash
+                in self.subscription_intelligence.deduplicator.cache
+            ):
+                cache_entry = (
+                    self.subscription_intelligence.deduplicator.cache[
+                        request_hash
+                    ]
+                )
                 if cache_entry.hit_count > 0:
                     self.processing_stats["cache_hits"] += 1
 
@@ -142,7 +147,9 @@ class IntelligentTaskProcessor:
             )
 
             # Fall back to direct processing on optimization errors
-            logger.warning(f"Falling back to direct processing for task {task.id}")
+            logger.warning(
+                f"Falling back to direct processing for task {task.id}"
+            )
             return await agent_processor(task)
 
     async def process_batch(
@@ -187,14 +194,18 @@ class IntelligentTaskProcessor:
 
                 async def batch_processor(requests):
                     # Convert back to tasks for agent processor
-                    batch_tasks = [self._request_to_task(req) for req in requests]
+                    batch_tasks = [
+                        self._request_to_task(req) for req in requests
+                    ]
                     return await agent_processor(batch_tasks)
 
                 # Process through subscription intelligence
                 batch_results = []
                 for request in batch_requests:
-                    result = await self.subscription_intelligence.process_request(
-                        request, batch_processor
+                    result = (
+                        await self.subscription_intelligence.process_request(
+                            request, batch_processor
+                        )
                     )
                     batch_results.append(result)
 
@@ -217,7 +228,9 @@ class IntelligentTaskProcessor:
                     result = await agent_processor(task)
                     results.append(result)
                 except Exception as task_error:
-                    logger.error(f"Error processing task {task.id}: {task_error}")
+                    logger.error(
+                        f"Error processing task {task.id}: {task_error}"
+                    )
                     results.append(
                         {
                             "success": False,
@@ -317,7 +330,9 @@ class IntelligentTaskProcessor:
                         "daily_limit": usage_stats["daily_limit"],
                         "usage_percentage": usage_percentage,
                         "warning_level": threshold,
-                        "time_until_reset_hours": usage_stats["time_until_reset_hours"],
+                        "time_until_reset_hours": usage_stats[
+                            "time_until_reset_hours"
+                        ],
                     }
                 )
 

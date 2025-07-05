@@ -178,14 +178,18 @@ class SafeEvaluator:
             # Check all nodes are allowed
             for node in ast.walk(tree):
                 if type(node) not in self.ALLOWED_NODES:
-                    logger.warning(f"Unsafe AST node type: {type(node).__name__}")
+                    logger.warning(
+                        f"Unsafe AST node type: {type(node).__name__}"
+                    )
                     return False
 
                 # Check function calls are safe
                 if isinstance(node, ast.Call):
                     if isinstance(node.func, ast.Name):
                         if node.func.id not in self.ALLOWED_BUILTINS:
-                            logger.warning(f"Unsafe function call: {node.func.id}")
+                            logger.warning(
+                                f"Unsafe function call: {node.func.id}"
+                            )
                             return False
                     elif isinstance(node.func, ast.Attribute):
                         # Only allow specific attribute access
@@ -240,7 +244,8 @@ class SafeEvaluator:
         # Create safe evaluation environment
         safe_globals = {
             "__builtins__": {
-                name: getattr(__builtins__, name) for name in self.ALLOWED_BUILTINS
+                name: getattr(__builtins__, name)
+                for name in self.ALLOWED_BUILTINS
             },
             **self.SAFE_MATH_FUNCTIONS,
         }
@@ -252,7 +257,9 @@ class SafeEvaluator:
             result = eval(expression, safe_globals, safe_locals)
             return result
         except Exception as e:
-            logger.error(f"Expression evaluation failed: {expression}, error: {str(e)}")
+            logger.error(
+                f"Expression evaluation failed: {expression}, error: {str(e)}"
+            )
             raise
 
     def _sanitize_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -274,7 +281,8 @@ class SafeEvaluator:
                 sanitized[key] = {
                     attr: getattr(value, attr)
                     for attr in dir(value)
-                    if not attr.startswith("_") and not callable(getattr(value, attr))
+                    if not attr.startswith("_")
+                    and not callable(getattr(value, attr))
                 }
 
         return sanitized
@@ -436,7 +444,9 @@ class ConditionEvaluator:
         op_func = operators[operator_str]
         return op_func(var_value, comp_value)
 
-    def _evaluate_task_status(self, condition: str, context: Dict[str, Any]) -> bool:
+    def _evaluate_task_status(
+        self, condition: str, context: Dict[str, Any]
+    ) -> bool:
         """Evaluate task status conditions"""
         # Expected format: "task_id:status" or function call
         if ":" in condition:
@@ -452,7 +462,9 @@ class ConditionEvaluator:
         # Fallback to custom function evaluation
         return self._evaluate_custom_function(condition, context)
 
-    def _evaluate_context_value(self, condition: str, context: Dict[str, Any]) -> bool:
+    def _evaluate_context_value(
+        self, condition: str, context: Dict[str, Any]
+    ) -> bool:
         """Evaluate context value existence and truthiness"""
         # Simple key existence check
         if condition.startswith("has:"):
@@ -467,18 +479,24 @@ class ConditionEvaluator:
         # Direct value access
         return bool(context.get(condition, False))
 
-    def _evaluate_time_based(self, condition: str, context: Dict[str, Any]) -> bool:
+    def _evaluate_time_based(
+        self, condition: str, context: Dict[str, Any]
+    ) -> bool:
         """Evaluate time-based conditions"""
         now = datetime.now(timezone.utc)
 
         if condition.startswith("after:"):
             time_str = condition[6:]
-            target_time = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+            target_time = datetime.fromisoformat(
+                time_str.replace("Z", "+00:00")
+            )
             return now > target_time
 
         elif condition.startswith("before:"):
             time_str = condition[7:]
-            target_time = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+            target_time = datetime.fromisoformat(
+                time_str.replace("Z", "+00:00")
+            )
             return now < target_time
 
         elif condition.startswith("weekday:"):
@@ -616,7 +634,9 @@ class ConditionEvaluator:
         except TypeError:
             return False
 
-    def _percentage_complete(self, context: Dict[str, Any], threshold: float) -> bool:
+    def _percentage_complete(
+        self, context: Dict[str, Any], threshold: float
+    ) -> bool:
         """Check if workflow completion percentage exceeds threshold"""
         task_results = context.get("task_results", {})
         if not task_results:

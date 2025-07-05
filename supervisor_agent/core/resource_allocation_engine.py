@@ -99,7 +99,9 @@ class DynamicResourceAllocator:
 
     def __init__(self):
         self.current_allocations: Dict[str, AllocationPlan] = {}
-        self.resource_history: deque = deque(maxlen=1000)  # Keep last 1000 measurements
+        self.resource_history: deque = deque(
+            maxlen=1000
+        )  # Keep last 1000 measurements
         self.demand_predictions: Dict[int, ResourceDemand] = (
             {}
         )  # time_horizon -> prediction
@@ -144,10 +146,14 @@ class DynamicResourceAllocator:
                 timestamp=datetime.now(),
             )
 
-    async def predict_resource_demand(self, time_horizon: int) -> ResourceDemand:
+    async def predict_resource_demand(
+        self, time_horizon: int
+    ) -> ResourceDemand:
         """Predict resource demand using historical data and ML models."""
         # Get recent metrics for trend analysis
-        recent_metrics = list(self.resource_history)[-50:]  # Last 50 measurements
+        recent_metrics = list(self.resource_history)[
+            -50:
+        ]  # Last 50 measurements
 
         if not recent_metrics:
             # No historical data, use baseline predictions
@@ -161,9 +167,15 @@ class DynamicResourceAllocator:
             )
 
         # Calculate trends
-        cpu_trend = self._calculate_trend([m.cpu_percent for m in recent_metrics])
-        memory_trend = self._calculate_trend([m.memory_percent for m in recent_metrics])
-        disk_trend = self._calculate_trend([m.disk_percent for m in recent_metrics])
+        cpu_trend = self._calculate_trend(
+            [m.cpu_percent for m in recent_metrics]
+        )
+        memory_trend = self._calculate_trend(
+            [m.memory_percent for m in recent_metrics]
+        )
+        disk_trend = self._calculate_trend(
+            [m.disk_percent for m in recent_metrics]
+        )
 
         # Predict based on current usage + trend + time-based patterns
         current = recent_metrics[-1]
@@ -193,7 +205,9 @@ class DynamicResourceAllocator:
                 (current.memory_percent + memory_trend * time_horizon)
                 * prediction_multiplier,
             ),
-            disk_demand=min(95.0, current.disk_percent + disk_trend * time_horizon),
+            disk_demand=min(
+                95.0, current.disk_percent + disk_trend * time_horizon
+            ),
             network_demand=current.network_io * prediction_multiplier,
             confidence=min(
                 0.9, 0.6 + len(recent_metrics) / 100
@@ -277,7 +291,8 @@ class DynamicResourceAllocator:
         # Apply cost optimization strategies
         optimized_plan = AllocationPlan(
             task_id=allocation_plan.task_id,
-            cpu_allocation=allocation_plan.cpu_allocation * 0.9,  # Slight reduction
+            cpu_allocation=allocation_plan.cpu_allocation
+            * 0.9,  # Slight reduction
             memory_allocation=int(allocation_plan.memory_allocation * 0.95),
             disk_allocation=allocation_plan.disk_allocation,
             network_allocation=allocation_plan.network_allocation,
@@ -336,7 +351,9 @@ class DynamicResourceAllocator:
                     magnitude=25.0,
                     reasoning=f"Memory demand predicted at {demand.memory_demand:.1f}%, approaching limit",
                     urgency="high" if demand.memory_demand > 90 else "medium",
-                    estimated_cost=self.cost_per_unit[ResourceType.MEMORY] * 0.25 * 24,
+                    estimated_cost=self.cost_per_unit[ResourceType.MEMORY]
+                    * 0.25
+                    * 24,
                     estimated_benefit="Prevent memory pressure and potential OOM conditions",
                 )
             )
@@ -350,7 +367,9 @@ class DynamicResourceAllocator:
                     magnitude=50.0,
                     reasoning=f"High network I/O predicted: {demand.network_demand/1e9:.2f} GB/s",
                     urgency="medium",
-                    estimated_cost=self.cost_per_unit[ResourceType.NETWORK] * 0.5 * 24,
+                    estimated_cost=self.cost_per_unit[ResourceType.NETWORK]
+                    * 0.5
+                    * 24,
                     estimated_benefit="Improve network throughput for data-intensive tasks",
                 )
             )
@@ -402,7 +421,9 @@ class DynamicResourceAllocator:
 
         # Calculate cost
         cost_estimate = (
-            base_cpu * self.cost_per_unit[ResourceType.CPU] * (estimated_duration / 60)
+            base_cpu
+            * self.cost_per_unit[ResourceType.CPU]
+            * (estimated_duration / 60)
             + base_memory
             / 1024
             * self.cost_per_unit[ResourceType.MEMORY]
@@ -484,12 +505,12 @@ class DynamicResourceAllocator:
             avg_cpu = sum(m.cpu_percent for m in self.resource_history) / len(
                 self.resource_history
             )
-            avg_memory = sum(m.memory_percent for m in self.resource_history) / len(
-                self.resource_history
-            )
-            avg_disk = sum(m.disk_percent for m in self.resource_history) / len(
-                self.resource_history
-            )
+            avg_memory = sum(
+                m.memory_percent for m in self.resource_history
+            ) / len(self.resource_history)
+            avg_disk = sum(
+                m.disk_percent for m in self.resource_history
+            ) / len(self.resource_history)
         else:
             avg_cpu = avg_memory = avg_disk = 0.0
 
@@ -498,7 +519,8 @@ class DynamicResourceAllocator:
             plan.cpu_allocation for plan in self.current_allocations.values()
         )
         total_memory_allocated = sum(
-            plan.memory_allocation for plan in self.current_allocations.values()
+            plan.memory_allocation
+            for plan in self.current_allocations.values()
         )
         total_cost = sum(
             plan.cost_estimate for plan in self.current_allocations.values()
@@ -534,7 +556,10 @@ class DynamicResourceAllocator:
             "efficiency_metrics": {
                 "cpu_efficiency": min(
                     100,
-                    (total_cpu_allocated / max(1, current_metrics.cpu_percent / 100))
+                    (
+                        total_cpu_allocated
+                        / max(1, current_metrics.cpu_percent / 100)
+                    )
                     * 100,
                 ),
                 "memory_efficiency": min(

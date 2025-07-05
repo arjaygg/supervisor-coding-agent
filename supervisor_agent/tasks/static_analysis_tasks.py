@@ -30,7 +30,9 @@ logger = get_logger(__name__)
 
 
 @celery_app.task(bind=True, max_retries=2)
-def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None):
+def analyze_repository_task(
+    self, repo_path: str, task_id: Optional[int] = None
+):
     """
     Celery task for complete repository static analysis.
 
@@ -135,14 +137,18 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
                 ][:3],
             },
             "semgrep_summary": {
-                "total_findings": result.semgrep_result.summary["total_findings"],
-                "critical_issues": result.semgrep_result.summary["by_severity"][
-                    "ERROR"
+                "total_findings": result.semgrep_result.summary[
+                    "total_findings"
                 ],
+                "critical_issues": result.semgrep_result.summary[
+                    "by_severity"
+                ]["ERROR"],
                 "warning_issues": result.semgrep_result.summary["by_severity"][
                     "WARNING"
                 ],
-                "files_with_issues": result.semgrep_result.summary["files_with_issues"],
+                "files_with_issues": result.semgrep_result.summary[
+                    "files_with_issues"
+                ],
             },
         }
 
@@ -202,7 +208,9 @@ def analyze_repository_task(self, repo_path: str, task_id: Optional[int] = None)
         }
 
     except Exception as e:
-        logger.error(f"Static analysis failed for {repo_path}: {str(e)}", exc_info=True)
+        logger.error(
+            f"Static analysis failed for {repo_path}: {str(e)}", exc_info=True
+        )
 
         # Update task status on failure
         if task_id:
@@ -277,7 +285,9 @@ def analyze_files_task(
 
         # Initialize pipeline and analyze files
         pipeline = StaticAnalysisPipeline()
-        result = pipeline.analyze_files(file_paths, base_path, enable_parallel=True)
+        result = pipeline.analyze_files(
+            file_paths, base_path, enable_parallel=True
+        )
 
         # Create response data
         analysis_data = {
@@ -417,7 +427,9 @@ def batch_repository_analysis(repo_paths: List[str]):
     results = []
 
     try:
-        logger.info(f"Starting batch analysis for {len(repo_paths)} repositories")
+        logger.info(
+            f"Starting batch analysis for {len(repo_paths)} repositories"
+        )
 
         for repo_path in repo_paths:
             try:
@@ -430,7 +442,9 @@ def batch_repository_analysis(repo_paths: List[str]):
                     }
                 )
             except Exception as e:
-                logger.error(f"Batch analysis failed for {repo_path}: {str(e)}")
+                logger.error(
+                    f"Batch analysis failed for {repo_path}: {str(e)}"
+                )
                 results.append(
                     {
                         "repository_path": repo_path,
@@ -458,7 +472,9 @@ def batch_repository_analysis(repo_paths: List[str]):
 
 # Scheduled task for repository health monitoring
 @celery_app.task
-def monitor_repository_health(repo_path: str, threshold_quality_score: int = 70):
+def monitor_repository_health(
+    repo_path: str, threshold_quality_score: int = 70
+):
     """
     Scheduled task to monitor repository health metrics.
 
@@ -491,7 +507,9 @@ def monitor_repository_health(repo_path: str, threshold_quality_score: int = 70)
                     "type": "high_risk",
                     "message": f"Repository risk level: {result['risk_profile']}",
                     "severity": (
-                        "ERROR" if result["risk_profile"] == "CRITICAL" else "WARNING"
+                        "ERROR"
+                        if result["risk_profile"] == "CRITICAL"
+                        else "WARNING"
                     ),
                 }
             )
@@ -521,7 +539,9 @@ def monitor_repository_health(repo_path: str, threshold_quality_score: int = 70)
         }
 
     except Exception as e:
-        logger.error(f"Repository health monitoring failed for {repo_path}: {str(e)}")
+        logger.error(
+            f"Repository health monitoring failed for {repo_path}: {str(e)}"
+        )
         return {
             "success": False,
             "repository_path": repo_path,

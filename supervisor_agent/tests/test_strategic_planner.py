@@ -332,7 +332,9 @@ class TestStrategicPlanner:
                 "monitoring_framework",
             ]
             found_elements = [
-                elem for elem in expected_elements if elem in plan.risk_management
+                elem
+                for elem in expected_elements
+                if elem in plan.risk_management
             ]
             assert len(found_elements) >= 1
 
@@ -361,7 +363,9 @@ class TestStrategicPlanner:
                 "dashboard_structure",
             ]
             found_elements = [
-                elem for elem in expected_elements if elem in plan.success_metrics
+                elem
+                for elem in expected_elements
+                if elem in plan.success_metrics
             ]
             assert len(found_elements) >= 1
 
@@ -404,7 +408,9 @@ class TestStrategicPlanner:
         )
 
         # Review progress
-        review_result = await strategic_planner.review_plan_progress(plan.plan_id)
+        review_result = await strategic_planner.review_plan_progress(
+            plan.plan_id
+        )
 
         assert isinstance(review_result, dict)
         assert "plan_id" in review_result
@@ -437,7 +443,9 @@ class TestStrategicPlanner:
             "timeline": {"review_frequency": "monthly"},
         }
 
-        updated_plan = await strategic_planner.update_plan(plan.plan_id, updates)
+        updated_plan = await strategic_planner.update_plan(
+            plan.plan_id, updates
+        )
 
         assert updated_plan.plan_id == plan.plan_id
         assert updated_plan.last_updated > original_update_time
@@ -553,7 +561,9 @@ class TestStrategicPlanner:
 
         # Test creating objectives with different types
         sample_objectives = []
-        for i, obj_type in enumerate(objective_types[:3]):  # Test first 3 types
+        for i, obj_type in enumerate(
+            objective_types[:3]
+        ):  # Test first 3 types
             objective = StrategicObjective(
                 objective_id=f"test_obj_{i}",
                 name=f"Test {obj_type.value}",
@@ -610,7 +620,9 @@ class TestStrategicPlanner:
         assert isinstance(sample_planning_context.competitive_landscape, dict)
         assert isinstance(sample_planning_context.technology_trends, list)
         assert isinstance(sample_planning_context.regulatory_environment, dict)
-        assert isinstance(sample_planning_context.organizational_constraints, dict)
+        assert isinstance(
+            sample_planning_context.organizational_constraints, dict
+        )
         assert isinstance(sample_planning_context.stakeholder_priorities, dict)
 
     @pytest.mark.asyncio
@@ -680,9 +692,15 @@ class TestStrategicPlanner:
         assert strategic_planner.review_frequency_weeks > 0
 
         # Test configuration limits
-        assert strategic_planner.max_concurrent_plans <= 10  # Reasonable upper limit
-        assert strategic_planner.planning_cycle_months <= 24  # Reasonable upper limit
-        assert strategic_planner.review_frequency_weeks <= 52  # Reasonable upper limit
+        assert (
+            strategic_planner.max_concurrent_plans <= 10
+        )  # Reasonable upper limit
+        assert (
+            strategic_planner.planning_cycle_months <= 24
+        )  # Reasonable upper limit
+        assert (
+            strategic_planner.review_frequency_weeks <= 52
+        )  # Reasonable upper limit
 
     @pytest.mark.asyncio
     async def test_plan_complexity_handling(
@@ -694,8 +712,12 @@ class TestStrategicPlanner:
         """Test handling of complex planning scenarios."""
         # Create complex planning context
         complex_context = PlanningContext(
-            current_capabilities={f"capability_{i}": float(i * 10) for i in range(10)},
-            available_resources={f"resource_{i}": float(i * 1000) for i in range(8)},
+            current_capabilities={
+                f"capability_{i}": float(i * 10) for i in range(10)
+            },
+            available_resources={
+                f"resource_{i}": float(i * 1000) for i in range(8)
+            },
             market_conditions={"complexity": "high", "volatility": "extreme"},
             competitive_landscape={"competitors": list(range(50))},
             technology_trends=[f"trend_{i}" for i in range(20)],

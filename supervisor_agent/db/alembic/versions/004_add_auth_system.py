@@ -19,14 +19,22 @@ depends_on = None
 def upgrade():
     # Add authentication fields to users table using batch mode for SQLite
     with op.batch_alter_table("users") as batch_op:
-        batch_op.add_column(sa.Column("password_hash", sa.String(), nullable=True))
         batch_op.add_column(
-            sa.Column("is_superuser", sa.Boolean(), nullable=True, default=False)
+            sa.Column("password_hash", sa.String(), nullable=True)
         )
         batch_op.add_column(
-            sa.Column("is_verified", sa.Boolean(), nullable=True, default=False)
+            sa.Column(
+                "is_superuser", sa.Boolean(), nullable=True, default=False
+            )
         )
-        batch_op.add_column(sa.Column("disabled_at", sa.DateTime(), nullable=True))
+        batch_op.add_column(
+            sa.Column(
+                "is_verified", sa.Boolean(), nullable=True, default=False
+            )
+        )
+        batch_op.add_column(
+            sa.Column("disabled_at", sa.DateTime(), nullable=True)
+        )
 
     # Create user_sessions table
     op.create_table(
@@ -51,7 +59,9 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_user_sessions_id"), "user_sessions", ["id"], unique=False)
+    op.create_index(
+        op.f("ix_user_sessions_id"), "user_sessions", ["id"], unique=False
+    )
     op.create_index(
         op.f("ix_user_sessions_token_hash"),
         "user_sessions",
@@ -83,7 +93,9 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_api_keys_id"), "api_keys", ["id"], unique=False)
-    op.create_index(op.f("ix_api_keys_key_hash"), "api_keys", ["key_hash"], unique=True)
+    op.create_index(
+        op.f("ix_api_keys_key_hash"), "api_keys", ["key_hash"], unique=True
+    )
 
 
 def downgrade():

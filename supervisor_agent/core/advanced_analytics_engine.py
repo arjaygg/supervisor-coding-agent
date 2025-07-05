@@ -123,7 +123,11 @@ class TimeSeries:
         if not end_time:
             end_time = datetime.max.replace(tzinfo=timezone.utc)
 
-        return [p.value for p in self.points if start_time <= p.timestamp <= end_time]
+        return [
+            p.value
+            for p in self.points
+            if start_time <= p.timestamp <= end_time
+        ]
 
     def get_latest_value(self) -> Optional[float]:
         """Get the most recent metric value"""
@@ -220,22 +224,30 @@ class MetricsCollector(MetricsCollectorInterface):
             # Task completion metrics
             total_tasks = self.db_session.query(Task).count()
             completed_tasks = (
-                self.db_session.query(Task).filter(Task.status == "completed").count()
+                self.db_session.query(Task)
+                .filter(Task.status == "completed")
+                .count()
             )
             failed_tasks = (
-                self.db_session.query(Task).filter(Task.status == "failed").count()
+                self.db_session.query(Task)
+                .filter(Task.status == "failed")
+                .count()
             )
 
             # Calculate rates
             success_rate = (
                 (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
             )
-            failure_rate = (failed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+            failure_rate = (
+                (failed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+            )
 
             # Task throughput (last 24 hours)
             last_24h = datetime.now(timezone.utc) - timedelta(hours=24)
             recent_tasks = (
-                self.db_session.query(Task).filter(Task.created_at >= last_24h).count()
+                self.db_session.query(Task)
+                .filter(Task.created_at >= last_24h)
+                .count()
             )
             tasks_per_hour = recent_tasks / 24
 
@@ -253,7 +265,9 @@ class MetricsCollector(MetricsCollectorInterface):
             execution_times = []
             for task in completed_tasks_with_times[-100:]:  # Last 100 tasks
                 if task.completed_at and task.started_at:
-                    duration = (task.completed_at - task.started_at).total_seconds()
+                    duration = (
+                        task.completed_at - task.started_at
+                    ).total_seconds()
                     execution_times.append(duration)
 
             avg_execution_time = (
@@ -265,10 +279,14 @@ class MetricsCollector(MetricsCollectorInterface):
 
             # Queue depth and processing metrics
             pending_tasks = (
-                self.db_session.query(Task).filter(Task.status == "pending").count()
+                self.db_session.query(Task)
+                .filter(Task.status == "pending")
+                .count()
             )
             running_tasks = (
-                self.db_session.query(Task).filter(Task.status == "running").count()
+                self.db_session.query(Task)
+                .filter(Task.status == "running")
+                .count()
             )
 
             return {
@@ -299,7 +317,9 @@ class MetricsCollector(MetricsCollectorInterface):
             cpu_percent = psutil.cpu_percent(interval=1)
             cpu_count = psutil.cpu_count()
             load_avg = (
-                psutil.getloadavg() if hasattr(psutil, "getloadavg") else [0, 0, 0]
+                psutil.getloadavg()
+                if hasattr(psutil, "getloadavg")
+                else [0, 0, 0]
             )
 
             # Memory metrics
@@ -339,7 +359,9 @@ class MetricsCollector(MetricsCollectorInterface):
             }
 
         except ImportError:
-            logger.warning("psutil not available, returning basic system metrics")
+            logger.warning(
+                "psutil not available, returning basic system metrics"
+            )
             return {
                 "cpu_percent": 0,
                 "memory_percent": 0,
@@ -355,7 +377,9 @@ class MetricsCollector(MetricsCollectorInterface):
             # Active users
             last_24h = datetime.now(timezone.utc) - timedelta(hours=24)
             active_users_24h = (
-                self.db_session.query(User).filter(User.last_login >= last_24h).count()
+                self.db_session.query(User)
+                .filter(User.last_login >= last_24h)
+                .count()
                 if hasattr(User, "last_login")
                 else 0
             )
@@ -369,7 +393,9 @@ class MetricsCollector(MetricsCollectorInterface):
                 "total_users": total_users,
                 "active_users_24h": active_users_24h,
                 "user_retention_rate": (
-                    (active_users_24h / total_users * 100) if total_users > 0 else 0
+                    (active_users_24h / total_users * 100)
+                    if total_users > 0
+                    else 0
                 ),
                 "timestamp": datetime.now(timezone.utc),
             }
@@ -411,7 +437,9 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
 
         # Z-score based detection
         anomalies.extend(
-            self._detect_zscore_anomalies(time_series.metric_name, values, timestamps)
+            self._detect_zscore_anomalies(
+                time_series.metric_name, values, timestamps
+            )
         )
 
         # Moving average with bounds
@@ -430,7 +458,9 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
 
         # Trend change detection
         anomalies.extend(
-            self._detect_trend_changes(time_series.metric_name, values, timestamps)
+            self._detect_trend_changes(
+                time_series.metric_name, values, timestamps
+            )
         )
 
         return anomalies
@@ -454,7 +484,9 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
 
             if z_score > self.z_threshold:
                 severity = (
-                    AlertSeverity.CRITICAL if z_score > 4 else AlertSeverity.WARNING
+                    AlertSeverity.CRITICAL
+                    if z_score > 4
+                    else AlertSeverity.WARNING
                 )
                 anomaly_type = (
                     AnomalyType.SPIKE if value > mean_val else AnomalyType.DROP
@@ -495,7 +527,9 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
 
             window_mean = statistics.mean(window_values)
             window_std = (
-                statistics.stdev(window_values) if len(window_values) > 1 else 0
+                statistics.stdev(window_values)
+                if len(window_values) > 1
+                else 0
             )
 
             if window_std == 0:
@@ -549,7 +583,10 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
         anomalies = []
 
         for value, timestamp in zip(values, timestamps):
-            if "critical_high" in thresholds and value > thresholds["critical_high"]:
+            if (
+                "critical_high" in thresholds
+                and value > thresholds["critical_high"]
+            ):
                 anomalies.append(
                     Anomaly(
                         metric_name=metric_name,
@@ -570,7 +607,10 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
                     )
                 )
 
-            elif "warning_high" in thresholds and value > thresholds["warning_high"]:
+            elif (
+                "warning_high" in thresholds
+                and value > thresholds["warning_high"]
+            ):
                 anomalies.append(
                     Anomaly(
                         metric_name=metric_name,
@@ -616,7 +656,9 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
             previous_trend = self._calculate_trend_slope(previous_values)
 
             # Detect significant trend change
-            if abs(recent_trend - previous_trend) > 0.5:  # Configurable threshold
+            if (
+                abs(recent_trend - previous_trend) > 0.5
+            ):  # Configurable threshold
                 anomalies.append(
                     Anomaly(
                         metric_name=metric_name,
@@ -651,7 +693,9 @@ class StatisticalAnomalyDetector(AnomalyDetectorInterface):
         x_mean = sum(x_vals) / n
         y_mean = sum(values) / n
 
-        numerator = sum((x - x_mean) * (y - y_mean) for x, y in zip(x_vals, values))
+        numerator = sum(
+            (x - x_mean) * (y - y_mean) for x, y in zip(x_vals, values)
+        )
         denominator = sum((x - x_mean) ** 2 for x in x_vals)
 
         return numerator / denominator if denominator != 0 else 0
@@ -751,18 +795,24 @@ class TimeSeriesPredictor(PredictorInterface):
                 # Calculate ensemble prediction
                 ensemble_value = statistics.mean(model_values)
                 ensemble_std = (
-                    statistics.stdev(model_values) if len(model_values) > 1 else 0
+                    statistics.stdev(model_values)
+                    if len(model_values) > 1
+                    else 0
                 )
 
                 # Calculate confidence interval
-                confidence_interval = 1.96 * ensemble_std  # 95% confidence interval
+                confidence_interval = (
+                    1.96 * ensemble_std
+                )  # 95% confidence interval
 
                 prediction = Prediction(
                     metric_name=time_series.metric_name,
                     timestamp=future_time,
                     predicted_value=ensemble_value,
-                    confidence_interval_lower=ensemble_value - confidence_interval,
-                    confidence_interval_upper=ensemble_value + confidence_interval,
+                    confidence_interval_lower=ensemble_value
+                    - confidence_interval,
+                    confidence_interval_upper=ensemble_value
+                    + confidence_interval,
                     confidence=(
                         max(0.5, 1.0 - (ensemble_std / abs(ensemble_value)))
                         if ensemble_value != 0
@@ -850,7 +900,9 @@ class TimeSeriesPredictor(PredictorInterface):
             # Find corresponding seasonal index
             seasonal_index = i % season_length
             lookback_indices = [
-                j for j in range(len(values)) if j % season_length == seasonal_index
+                j
+                for j in range(len(values))
+                if j % season_length == seasonal_index
             ]
 
             if lookback_indices:
@@ -865,7 +917,9 @@ class TimeSeriesPredictor(PredictorInterface):
 
         return predictions
 
-    def _calculate_slope(self, x_vals: List[float], y_vals: List[float]) -> float:
+    def _calculate_slope(
+        self, x_vals: List[float], y_vals: List[float]
+    ) -> float:
         """Calculate linear regression slope"""
         n = len(x_vals)
         if n < 2:
@@ -874,7 +928,9 @@ class TimeSeriesPredictor(PredictorInterface):
         x_mean = sum(x_vals) / n
         y_mean = sum(y_vals) / n
 
-        numerator = sum((x - x_mean) * (y - y_mean) for x, y in zip(x_vals, y_vals))
+        numerator = sum(
+            (x - x_mean) * (y - y_mean) for x, y in zip(x_vals, y_vals)
+        )
         denominator = sum((x - x_mean) ** 2 for x in x_vals)
 
         return numerator / denominator if denominator != 0 else 0

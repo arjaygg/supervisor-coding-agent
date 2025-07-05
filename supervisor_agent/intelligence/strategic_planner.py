@@ -116,8 +116,12 @@ class StrategicPlan:
     risk_management: Dict[str, Any]
     success_metrics: Dict[str, Any]
     status: PlanStatus
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+    last_updated: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     created_by: str = ""
     approved_by: Optional[str] = None
 
@@ -415,14 +419,22 @@ class StrategicPlanner:
                     name=obj_data.get("objective_name", "Strategic Objective"),
                     description=obj_data.get("description", ""),
                     objective_type=StrategicObjectiveType(
-                        obj_data.get("objective_type", "performance_optimization")
+                        obj_data.get(
+                            "objective_type", "performance_optimization"
+                        )
                     ),
                     target_value=float(obj_data.get("target_value", 100)),
                     current_value=float(obj_data.get("current_value", 0)),
-                    measurement_unit=obj_data.get("measurement_unit", "points"),
+                    measurement_unit=obj_data.get(
+                        "measurement_unit", "points"
+                    ),
                     target_date=datetime.now(timezone.utc)
                     + timedelta(
-                        days=(365 if horizon == PlanningHorizon.STRATEGIC else 180)
+                        days=(
+                            365
+                            if horizon == PlanningHorizon.STRATEGIC
+                            else 180
+                        )
                     ),
                     priority=int(obj_data.get("priority", 5)),
                     dependencies=obj_data.get("dependencies", []),
@@ -489,7 +501,9 @@ class StrategicPlanner:
 
         result = await self.claude_agent.execute_task(
             {"type": "initiative_generation", "prompt": initiatives_prompt},
-            shared_memory={"objectives_context": [obj.__dict__ for obj in objectives]},
+            shared_memory={
+                "objectives_context": [obj.__dict__ for obj in objectives]
+            },
         )
 
         try:
@@ -499,17 +513,27 @@ class StrategicPlanner:
             for init_data in initiatives_data.get("initiatives", []):
                 initiative = StrategicInitiative(
                     initiative_id=str(uuid.uuid4()),
-                    name=init_data.get("initiative_name", "Strategic Initiative"),
+                    name=init_data.get(
+                        "initiative_name", "Strategic Initiative"
+                    ),
                     description=init_data.get("description", ""),
-                    objectives_addressed=init_data.get("objectives_addressed", []),
-                    resource_requirements=init_data.get("resource_requirements", {}),
+                    objectives_addressed=init_data.get(
+                        "objectives_addressed", []
+                    ),
+                    resource_requirements=init_data.get(
+                        "resource_requirements", {}
+                    ),
                     estimated_duration_months=int(
                         init_data.get("estimated_duration_months", 6)
                     ),
-                    estimated_cost=float(init_data.get("estimated_cost", 100000)),
+                    estimated_cost=float(
+                        init_data.get("estimated_cost", 100000)
+                    ),
                     expected_benefits=init_data.get("expected_benefits", {}),
                     risk_assessment=init_data.get("risk_assessment", {}),
-                    implementation_phases=init_data.get("implementation_phases", []),
+                    implementation_phases=init_data.get(
+                        "implementation_phases", []
+                    ),
                     success_metrics=init_data.get("success_metrics", []),
                 )
                 initiatives.append(initiative)
@@ -655,7 +679,9 @@ class StrategicPlanner:
         try:
             return json.loads(result["result"])
         except (json.JSONDecodeError, KeyError):
-            return self._create_basic_timeline(objectives, initiatives, horizon)
+            return self._create_basic_timeline(
+                objectives, initiatives, horizon
+            )
 
     async def _develop_risk_management_strategy(
         self,
@@ -821,7 +847,9 @@ class StrategicPlanner:
             "plan_id": plan_id,
             "review_date": datetime.now(timezone.utc).isoformat(),
             "overall_progress": progress_analysis.get("overall_progress", 0),
-            "objective_progress": progress_analysis.get("objective_details", {}),
+            "objective_progress": progress_analysis.get(
+                "objective_details", {}
+            ),
             "initiative_performance": initiative_performance,
             "recommendations": recommendations,
             "risk_status": await self._assess_current_risks(plan),
@@ -833,7 +861,9 @@ class StrategicPlanner:
 
         return review_result
 
-    async def update_plan(self, plan_id: str, updates: Dict[str, Any]) -> StrategicPlan:
+    async def update_plan(
+        self, plan_id: str, updates: Dict[str, Any]
+    ) -> StrategicPlan:
         """Update a strategic plan based on new information or changing conditions."""
 
         if plan_id not in self.active_plans:
@@ -934,7 +964,9 @@ class StrategicPlanner:
         """Create default initiatives as fallback."""
         initiatives = []
 
-        for i, objective in enumerate(objectives[:3]):  # Limit to 3 initiatives
+        for i, objective in enumerate(
+            objectives[:3]
+        ):  # Limit to 3 initiatives
             initiative = StrategicInitiative(
                 initiative_id=str(uuid.uuid4()),
                 name=f"Initiative for {objective.name}",
@@ -972,13 +1004,17 @@ class StrategicPlanner:
         if objectives:
             budget_per_objective = total_budget / len(objectives)
             for obj in objectives:
-                allocation["by_objective"][obj.objective_id] = budget_per_objective
+                allocation["by_objective"][
+                    obj.objective_id
+                ] = budget_per_objective
 
         # Equal allocation among initiatives
         if initiatives:
             budget_per_initiative = total_budget / len(initiatives)
             for init in initiatives:
-                allocation["by_initiative"][init.initiative_id] = budget_per_initiative
+                allocation["by_initiative"][
+                    init.initiative_id
+                ] = budget_per_initiative
 
         return allocation
 
@@ -1077,7 +1113,9 @@ class StrategicPlanner:
             ],
         }
 
-    async def _collect_current_metrics(self, plan: StrategicPlan) -> Dict[str, Any]:
+    async def _collect_current_metrics(
+        self, plan: StrategicPlan
+    ) -> Dict[str, Any]:
         """Collect current performance metrics for the plan."""
         # Placeholder - would integrate with actual monitoring systems
         return {
@@ -1129,7 +1167,9 @@ class StrategicPlanner:
             },
         ]
 
-    async def _assess_current_risks(self, plan: StrategicPlan) -> Dict[str, Any]:
+    async def _assess_current_risks(
+        self, plan: StrategicPlan
+    ) -> Dict[str, Any]:
         """Assess current risk status of the plan."""
         return {
             "overall_risk_level": "medium",

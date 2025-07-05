@@ -109,7 +109,9 @@ class WorkflowDefinition:
     recovery_strategy: Dict[str, Any] = field(default_factory=dict)
     quality_gates: List[Dict[str, Any]] = field(default_factory=list)
     monitoring_config: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 @dataclass
@@ -127,7 +129,9 @@ class WorkflowExecution:
     performance_metrics: Dict[str, Any] = field(default_factory=dict)
     resource_usage: Dict[str, Any] = field(default_factory=dict)
     quality_metrics: Dict[str, Any] = field(default_factory=dict)
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     completed_at: Optional[datetime] = None
     estimated_completion: Optional[datetime] = None
 
@@ -183,11 +187,17 @@ class AdvancedWorkflowEngine:
         # Configuration
         self.max_concurrent_executions = 20
         self.default_optimization_strategy = OptimizationStrategy.BALANCED
-        self.adaptation_threshold = 0.3  # Trigger adaptation when performance drops 30%
+        self.adaptation_threshold = (
+            0.3  # Trigger adaptation when performance drops 30%
+        )
 
-        self.logger = structured_logger.bind(component="advanced_workflow_engine")
+        self.logger = structured_logger.bind(
+            component="advanced_workflow_engine"
+        )
 
-    async def register_workflow(self, workflow_definition: WorkflowDefinition) -> str:
+    async def register_workflow(
+        self, workflow_definition: WorkflowDefinition
+    ) -> str:
         """Register a new workflow definition."""
 
         try:
@@ -465,10 +475,14 @@ class AdvancedWorkflowEngine:
             ]
 
         if "timeout_hours" in performance_tuning:
-            optimized_workflow.timeout_hours = performance_tuning["timeout_hours"]
+            optimized_workflow.timeout_hours = performance_tuning[
+                "timeout_hours"
+            ]
 
         # Apply monitoring enhancements
-        monitoring_enhancements = optimizations.get("monitoring_enhancements", {})
+        monitoring_enhancements = optimizations.get(
+            "monitoring_enhancements", {}
+        )
         optimized_workflow.monitoring_config.update(monitoring_enhancements)
 
         # Apply quality gate recommendations
@@ -563,7 +577,9 @@ class AdvancedWorkflowEngine:
                 risk_assessment=plan_data.get("risk_assessment", {}),
                 quality_expectations=plan_data.get("quality_expectations", {}),
                 contingency_plans=plan_data.get("contingency_plans", []),
-                monitoring_checkpoints=plan_data.get("monitoring_checkpoints", []),
+                monitoring_checkpoints=plan_data.get(
+                    "monitoring_checkpoints", []
+                ),
             )
 
         except (json.JSONDecodeError, KeyError):
@@ -610,7 +626,9 @@ class AdvancedWorkflowEngine:
             execution_sequence=execution_sequence,
             resource_allocation={"strategy": "default"},
             optimization_rationale="Fallback dependency-based execution plan",
-            estimated_duration=sum(task.estimated_duration for task in workflow.tasks),
+            estimated_duration=sum(
+                task.estimated_duration for task in workflow.tasks
+            ),
             estimated_cost=0.0,
             risk_assessment={"level": "medium", "fallback_plan": True},
             quality_expectations={"monitoring": "basic"},
@@ -620,7 +638,9 @@ class AdvancedWorkflowEngine:
                     "action": "retry_with_exponential_backoff",
                 }
             ],
-            monitoring_checkpoints=[{"type": "completion", "frequency": "per_task"}],
+            monitoring_checkpoints=[
+                {"type": "completion", "frequency": "per_task"}
+            ],
         )
 
     async def _orchestrate_execution(self, execution: WorkflowExecution):
@@ -637,8 +657,12 @@ class AdvancedWorkflowEngine:
             )
 
             # Execute tasks according to plan
-            for phase_index, task_group in enumerate(execution_plan.execution_sequence):
-                await self._execute_task_group(execution, task_group, phase_index)
+            for phase_index, task_group in enumerate(
+                execution_plan.execution_sequence
+            ):
+                await self._execute_task_group(
+                    execution, task_group, phase_index
+                )
 
                 # Check for execution problems
                 if execution.state in [
@@ -777,7 +801,9 @@ class AdvancedWorkflowEngine:
             if task.retry_count < task.max_retry_attempts:
                 await self._retry_task(execution, task)
 
-    async def _retry_task(self, execution: WorkflowExecution, task: WorkflowTask):
+    async def _retry_task(
+        self, execution: WorkflowExecution, task: WorkflowTask
+    ):
         """Retry a failed task with exponential backoff."""
 
         task.retry_count += 1
@@ -804,13 +830,17 @@ class AdvancedWorkflowEngine:
 
         # Calculate current performance metrics
         current_performance = (
-            await self.performance_monitor.calculate_execution_metrics(execution)
+            await self.performance_monitor.calculate_execution_metrics(
+                execution
+            )
         )
         execution.performance_metrics.update(current_performance)
 
         # Check if adaptation is needed
-        adaptation_needed = await self.adaptation_engine.should_adapt_execution(
-            execution, current_performance
+        adaptation_needed = (
+            await self.adaptation_engine.should_adapt_execution(
+                execution, current_performance
+            )
         )
 
         if adaptation_needed:
@@ -825,7 +855,9 @@ class AdvancedWorkflowEngine:
         if execution.failed_tasks and not execution.completed_tasks:
             execution.state = WorkflowExecutionState.FAILED
         elif execution.failed_tasks:
-            execution.state = WorkflowExecutionState.COMPLETED  # Partial success
+            execution.state = (
+                WorkflowExecutionState.COMPLETED
+            )  # Partial success
         else:
             execution.state = WorkflowExecutionState.COMPLETED
 
@@ -843,7 +875,9 @@ class AdvancedWorkflowEngine:
             failed_tasks=len(execution.failed_tasks),
         )
 
-    async def _handle_execution_failure(self, execution: WorkflowExecution, error: str):
+    async def _handle_execution_failure(
+        self, execution: WorkflowExecution, error: str
+    ):
         """Handle workflow execution failure with recovery attempts."""
 
         self.logger.error(
@@ -871,7 +905,9 @@ class AdvancedWorkflowEngine:
         execution = self.active_executions[execution_id]
         return self._create_execution_status(execution)
 
-    def _create_execution_status(self, execution: WorkflowExecution) -> Dict[str, Any]:
+    def _create_execution_status(
+        self, execution: WorkflowExecution
+    ) -> Dict[str, Any]:
         """Create execution status summary."""
 
         return {
@@ -880,7 +916,9 @@ class AdvancedWorkflowEngine:
             "state": execution.state.value,
             "started_at": execution.started_at.isoformat(),
             "completed_at": (
-                execution.completed_at.isoformat() if execution.completed_at else None
+                execution.completed_at.isoformat()
+                if execution.completed_at
+                else None
             ),
             "total_tasks": len(execution.workflow_definition.tasks),
             "completed_tasks": len(execution.completed_tasks),
@@ -903,7 +941,9 @@ class AdvancedWorkflowEngine:
         execution = self.active_executions[execution_id]
         execution.state = WorkflowExecutionState.CANCELLED
 
-        self.logger.info("Workflow execution cancelled", execution_id=execution_id)
+        self.logger.info(
+            "Workflow execution cancelled", execution_id=execution_id
+        )
 
         return True
 
@@ -943,7 +983,9 @@ class WorkflowPerformanceMonitor:
     """Real-time workflow performance monitoring."""
 
     def __init__(self):
-        self.metrics_history: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        self.metrics_history: Dict[str, List[Dict[str, Any]]] = defaultdict(
+            list
+        )
 
     async def calculate_execution_metrics(
         self, execution: WorkflowExecution
@@ -951,7 +993,9 @@ class WorkflowPerformanceMonitor:
         """Calculate current execution performance metrics."""
 
         current_time = datetime.now(timezone.utc)
-        duration_minutes = (current_time - execution.started_at).total_seconds() / 60
+        duration_minutes = (
+            current_time - execution.started_at
+        ).total_seconds() / 60
 
         metrics = {
             "duration_minutes": duration_minutes,
@@ -994,7 +1038,9 @@ class WorkflowPerformanceMonitor:
             "quality_score": self._calculate_quality_score(execution),
         }
 
-    def _calculate_efficiency_score(self, execution: WorkflowExecution) -> float:
+    def _calculate_efficiency_score(
+        self, execution: WorkflowExecution
+    ) -> float:
         """Calculate workflow efficiency score."""
         # Placeholder implementation
         completion_rate = len(execution.completed_tasks) / len(
@@ -1068,4 +1114,6 @@ async def create_advanced_workflow_engine(
     """Factory function to create configured advanced workflow engine."""
 
     claude_agent = ClaudeAgentWrapper(api_key=claude_api_key)
-    return AdvancedWorkflowEngine(claude_agent, decision_engine, strategic_planner)
+    return AdvancedWorkflowEngine(
+        claude_agent, decision_engine, strategic_planner
+    )

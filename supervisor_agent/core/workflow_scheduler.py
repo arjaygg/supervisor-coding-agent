@@ -168,7 +168,9 @@ class WorkflowScheduler:
         logger.info(f"Creating schedule '{name}' for workflow {workflow_id}")
 
         # Validate cron expression
-        is_valid, error_msg = CronValidator.validate_expression(cron_expression)
+        is_valid, error_msg = CronValidator.validate_expression(
+            cron_expression
+        )
         if not is_valid:
             raise SchedulingError(f"Invalid cron expression: {error_msg}")
 
@@ -180,7 +182,9 @@ class WorkflowScheduler:
 
         # Check if workflow exists
         with SessionLocal() as db:
-            workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
+            workflow = (
+                db.query(Workflow).filter(Workflow.id == workflow_id).first()
+            )
             if not workflow:
                 raise SchedulingError(f"Workflow not found: {workflow_id}")
 
@@ -210,7 +214,9 @@ class WorkflowScheduler:
             db.add(schedule)
             db.commit()
 
-            logger.info(f"Schedule created: {schedule_id}, next run: {next_run_at}")
+            logger.info(
+                f"Schedule created: {schedule_id}, next run: {next_run_at}"
+            )
             return schedule_id
 
     async def update_schedule(self, schedule_id: str, **updates) -> bool:
@@ -234,13 +240,17 @@ class WorkflowScheduler:
                     updates["cron_expression"]
                 )
                 if not is_valid:
-                    raise SchedulingError(f"Invalid cron expression: {error_msg}")
+                    raise SchedulingError(
+                        f"Invalid cron expression: {error_msg}"
+                    )
 
             if "timezone" in updates:
                 try:
                     pytz.timezone(updates["timezone"])
                 except pytz.UnknownTimeZoneError:
-                    raise SchedulingError(f"Unknown timezone: {updates['timezone']}")
+                    raise SchedulingError(
+                        f"Unknown timezone: {updates['timezone']}"
+                    )
 
             # Apply updates
             for key, value in updates.items():
@@ -282,11 +292,15 @@ class WorkflowScheduler:
 
     async def pause_schedule(self, schedule_id: str) -> bool:
         """Pause a schedule"""
-        return await self.update_schedule(schedule_id, status=ScheduleStatus.PAUSED)
+        return await self.update_schedule(
+            schedule_id, status=ScheduleStatus.PAUSED
+        )
 
     async def resume_schedule(self, schedule_id: str) -> bool:
         """Resume a paused schedule"""
-        return await self.update_schedule(schedule_id, status=ScheduleStatus.ACTIVE)
+        return await self.update_schedule(
+            schedule_id, status=ScheduleStatus.ACTIVE
+        )
 
     async def get_schedule(self, schedule_id: str) -> Optional[Dict]:
         """Get schedule details"""
@@ -306,19 +320,27 @@ class WorkflowScheduler:
                 "workflow_id": schedule.workflow_id,
                 "name": schedule.name,
                 "cron_expression": schedule.cron_expression,
-                "description": CronValidator.get_description(schedule.cron_expression),
+                "description": CronValidator.get_description(
+                    schedule.cron_expression
+                ),
                 "timezone": schedule.timezone,
                 "status": schedule.status.value,
                 "next_run_at": (
-                    schedule.next_run_at.isoformat() if schedule.next_run_at else None
+                    schedule.next_run_at.isoformat()
+                    if schedule.next_run_at
+                    else None
                 ),
                 "last_run_at": (
-                    schedule.last_run_at.isoformat() if schedule.last_run_at else None
+                    schedule.last_run_at.isoformat()
+                    if schedule.last_run_at
+                    else None
                 ),
                 "created_by": schedule.created_by,
                 "created_at": schedule.created_at.isoformat(),
                 "updated_at": (
-                    schedule.updated_at.isoformat() if schedule.updated_at else None
+                    schedule.updated_at.isoformat()
+                    if schedule.updated_at
+                    else None
                 ),
             }
 
@@ -331,7 +353,9 @@ class WorkflowScheduler:
             query = db.query(WorkflowSchedule)
 
             if workflow_id:
-                query = query.filter(WorkflowSchedule.workflow_id == workflow_id)
+                query = query.filter(
+                    WorkflowSchedule.workflow_id == workflow_id
+                )
 
             if status:
                 query = query.filter(WorkflowSchedule.status == status)
@@ -497,5 +521,7 @@ class WorkflowScheduler:
                 triggered_by=f"manual_schedule:{schedule.id}",
             )
 
-            logger.info(f"Manually triggered workflow execution: {execution_id}")
+            logger.info(
+                f"Manually triggered workflow execution: {execution_id}"
+            )
             return execution_id

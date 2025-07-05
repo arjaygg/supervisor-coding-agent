@@ -176,7 +176,9 @@ class TestProviderCoordinator:
         assert selected_provider in mock_registry.providers
 
     @pytest.mark.asyncio
-    async def test_select_provider_with_preferences(self, mock_registry, sample_task):
+    async def test_select_provider_with_preferences(
+        self, mock_registry, sample_task
+    ):
         """Test provider selection with preferred providers"""
         context = ExecutionContext(
             preferred_providers=["provider-1"],
@@ -184,7 +186,9 @@ class TestProviderCoordinator:
         )
 
         coordinator = ProviderCoordinator(mock_registry)
-        selected_provider = await coordinator.select_provider(sample_task, context)
+        selected_provider = await coordinator.select_provider(
+            sample_task, context
+        )
 
         assert selected_provider == "provider-1"
 
@@ -250,7 +254,9 @@ class TestProviderCoordinator:
         coordinator = ProviderCoordinator(mock_registry)
 
         # Should still work but may log warnings
-        selected_provider = await coordinator.select_provider(sample_task, context)
+        selected_provider = await coordinator.select_provider(
+            sample_task, context
+        )
         assert selected_provider in mock_registry.providers
 
     @pytest.mark.asyncio
@@ -275,7 +281,9 @@ class TestProviderCoordinator:
             assert "recommendation_score" in rec
 
     @pytest.mark.asyncio
-    async def test_task_affinity(self, mock_registry, sample_task, execution_context):
+    async def test_task_affinity(
+        self, mock_registry, sample_task, execution_context
+    ):
         """Test task affinity functionality"""
         coordinator = ProviderCoordinator(
             mock_registry,
@@ -283,7 +291,9 @@ class TestProviderCoordinator:
         )
 
         # Record a previous assignment
-        coordinator.task_affinity_tracker.record_assignment(sample_task, "provider-1")
+        coordinator.task_affinity_tracker.record_assignment(
+            sample_task, "provider-1"
+        )
 
         # Should prefer the same provider for related tasks
         selected_provider = await coordinator.select_provider(
@@ -294,7 +304,9 @@ class TestProviderCoordinator:
         assert selected_provider in mock_registry.providers
 
     @pytest.mark.asyncio
-    async def test_health_caching(self, mock_registry, sample_task, execution_context):
+    async def test_health_caching(
+        self, mock_registry, sample_task, execution_context
+    ):
         """Test provider health status caching"""
         coordinator = ProviderCoordinator(mock_registry)
 
@@ -360,7 +372,9 @@ async def test_provider_coordinator_integration(mock_registry, sample_task):
         affinity_strategy=TaskAffinityStrategy.CAPABILITY_BASED,
     )
 
-    context = ExecutionContext(user_id="integration-test", priority=7, max_cost_usd=2.0)
+    context = ExecutionContext(
+        user_id="integration-test", priority=7, max_cost_usd=2.0
+    )
 
     # Test provider selection
     selected_provider = await coordinator.select_provider(sample_task, context)
@@ -376,11 +390,20 @@ async def test_provider_coordinator_integration(mock_registry, sample_task):
     backup_provider = await coordinator.select_backup_provider(
         sample_task, selected_provider, context
     )
-    assert backup_provider != selected_provider or len(mock_registry.providers) == 1
+    assert (
+        backup_provider != selected_provider
+        or len(mock_registry.providers) == 1
+    )
 
     # Test performance tracking
-    coordinator.task_affinity_tracker.record_assignment(sample_task, selected_provider)
-    coordinator.task_affinity_tracker.record_performance(selected_provider, True, 3.5)
+    coordinator.task_affinity_tracker.record_assignment(
+        sample_task, selected_provider
+    )
+    coordinator.task_affinity_tracker.record_performance(
+        selected_provider, True, 3.5
+    )
 
-    score = coordinator.task_affinity_tracker.get_provider_score(selected_provider)
+    score = coordinator.task_affinity_tracker.get_provider_score(
+        selected_provider
+    )
     assert 0.0 <= score <= 1.0

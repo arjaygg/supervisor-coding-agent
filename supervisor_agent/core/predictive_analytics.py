@@ -110,7 +110,9 @@ class PredictiveAnalyticsEngine:
         )
         self.prediction_cache: Dict[str, Any] = {}
         self.model_performance: Dict[str, Dict[str, float]] = defaultdict(dict)
-        self.feature_importance: Dict[str, Dict[str, float]] = defaultdict(dict)
+        self.feature_importance: Dict[str, Dict[str, float]] = defaultdict(
+            dict
+        )
 
         # Performance thresholds
         self.failure_indicators = {
@@ -137,15 +139,21 @@ class PredictiveAnalyticsEngine:
             risk_assessments = {}
 
             # Resource exhaustion risk
-            resource_risk = await self._assess_resource_exhaustion_risk(features)
+            resource_risk = await self._assess_resource_exhaustion_risk(
+                features
+            )
             risk_assessments["resource_exhaustion"] = resource_risk
 
             # Performance degradation risk
-            performance_risk = await self._assess_performance_degradation_risk(features)
+            performance_risk = await self._assess_performance_degradation_risk(
+                features
+            )
             risk_assessments["performance_degradation"] = performance_risk
 
             # Dependency failure risk
-            dependency_risk = await self._assess_dependency_failure_risk(features)
+            dependency_risk = await self._assess_dependency_failure_risk(
+                features
+            )
             risk_assessments["dependency_failure"] = dependency_risk
 
             # Cascade failure risk
@@ -156,8 +164,10 @@ class PredictiveAnalyticsEngine:
             overall_risk = self._calculate_overall_risk(risk_assessments)
 
             # Generate recommendations
-            recommendations = self._generate_failure_prevention_recommendations(
-                risk_assessments, overall_risk
+            recommendations = (
+                self._generate_failure_prevention_recommendations(
+                    risk_assessments, overall_risk
+                )
             )
 
             return {
@@ -190,7 +200,9 @@ class PredictiveAnalyticsEngine:
                 "prediction": "error",
             }
 
-    def _extract_workflow_features(self, workflow_data: Dict) -> Dict[str, float]:
+    def _extract_workflow_features(
+        self, workflow_data: Dict
+    ) -> Dict[str, float]:
         """Extract numerical features from workflow data."""
         features = {}
 
@@ -201,21 +213,31 @@ class PredictiveAnalyticsEngine:
         features["network_usage"] = workflow_data.get("network_usage", 0.0)
 
         # Performance features
-        features["avg_response_time"] = workflow_data.get("avg_response_time", 0.0)
+        features["avg_response_time"] = workflow_data.get(
+            "avg_response_time", 0.0
+        )
         features["throughput"] = workflow_data.get("throughput", 0.0)
         features["error_rate"] = workflow_data.get("error_rate", 0.0)
         features["queue_depth"] = workflow_data.get("queue_depth", 0.0)
 
         # Workflow complexity features
         features["task_count"] = workflow_data.get("task_count", 0.0)
-        features["dependency_count"] = workflow_data.get("dependency_count", 0.0)
+        features["dependency_count"] = workflow_data.get(
+            "dependency_count", 0.0
+        )
         features["parallel_stages"] = workflow_data.get("parallel_stages", 0.0)
         features["execution_time"] = workflow_data.get("execution_time", 0.0)
 
         # Historical performance features
-        features["recent_failure_rate"] = workflow_data.get("recent_failure_rate", 0.0)
-        features["avg_execution_time"] = workflow_data.get("avg_execution_time", 0.0)
-        features["resource_variance"] = workflow_data.get("resource_variance", 0.0)
+        features["recent_failure_rate"] = workflow_data.get(
+            "recent_failure_rate", 0.0
+        )
+        features["avg_execution_time"] = workflow_data.get(
+            "avg_execution_time", 0.0
+        )
+        features["resource_variance"] = workflow_data.get(
+            "resource_variance", 0.0
+        )
 
         return features
 
@@ -228,22 +250,30 @@ class PredictiveAnalyticsEngine:
 
         # CPU exhaustion risk
         if features.get("cpu_usage", 0) > 85:
-            risk_factors.append(f"High CPU usage: {features['cpu_usage']:.1f}%")
+            risk_factors.append(
+                f"High CPU usage: {features['cpu_usage']:.1f}%"
+            )
             risk_score += 30
 
         # Memory exhaustion risk
         if features.get("memory_usage", 0) > 90:
-            risk_factors.append(f"High memory usage: {features['memory_usage']:.1f}%")
+            risk_factors.append(
+                f"High memory usage: {features['memory_usage']:.1f}%"
+            )
             risk_score += 35
 
         # Disk space risk
         if features.get("disk_usage", 0) > 85:
-            risk_factors.append(f"High disk usage: {features['disk_usage']:.1f}%")
+            risk_factors.append(
+                f"High disk usage: {features['disk_usage']:.1f}%"
+            )
             risk_score += 20
 
         # Queue depth risk
         if features.get("queue_depth", 0) > 50:
-            risk_factors.append(f"High queue depth: {features['queue_depth']:.0f}")
+            risk_factors.append(
+                f"High queue depth: {features['queue_depth']:.0f}"
+            )
             risk_score += 15
 
         # Determine risk level
@@ -276,7 +306,9 @@ class PredictiveAnalyticsEngine:
             mitigation_strategies=mitigation_strategies,
             confidence=0.8,
             time_to_event=(
-                max(30, 180 - int(risk_score * 1.5)) if risk_score > 20 else None
+                max(30, 180 - int(risk_score * 1.5))
+                if risk_score > 20
+                else None
             ),
             impact_severity="high" if risk_score > 60 else "medium",
         )
@@ -297,7 +329,9 @@ class PredictiveAnalyticsEngine:
 
         # Low throughput
         if features.get("throughput", 0) < 100:
-            risk_factors.append(f"Low throughput: {features['throughput']:.1f}/min")
+            risk_factors.append(
+                f"Low throughput: {features['throughput']:.1f}/min"
+            )
             risk_score += 20
 
         # High error rate
@@ -308,7 +342,9 @@ class PredictiveAnalyticsEngine:
 
         # Resource variance (instability)
         if features.get("resource_variance", 0) > 0.5:
-            risk_factors.append("High resource usage variance indicating instability")
+            risk_factors.append(
+                "High resource usage variance indicating instability"
+            )
             risk_score += 15
 
         # Historical failure rate
@@ -364,7 +400,9 @@ class PredictiveAnalyticsEngine:
         # High dependency count increases risk
         dependency_count = features.get("dependency_count", 0)
         if dependency_count > 10:
-            risk_factors.append(f"High dependency count: {dependency_count:.0f}")
+            risk_factors.append(
+                f"High dependency count: {dependency_count:.0f}"
+            )
             risk_score += 20
         elif dependency_count > 5:
             risk_score += 10
@@ -414,7 +452,9 @@ class PredictiveAnalyticsEngine:
             mitigation_strategies=mitigation_strategies,
             confidence=0.7,
             time_to_event=(
-                max(120, 300 - int(risk_score * 2)) if risk_score > 20 else None
+                max(120, 300 - int(risk_score * 2))
+                if risk_score > 20
+                else None
             ),
             impact_severity="medium",
         )
@@ -442,7 +482,9 @@ class PredictiveAnalyticsEngine:
         ) / 3
 
         if resource_pressure > 80:
-            risk_factors.append(f"High resource pressure: {resource_pressure:.1f}%")
+            risk_factors.append(
+                f"High resource pressure: {resource_pressure:.1f}%"
+            )
             risk_score += 30
 
         # High error rate indicates system stress
@@ -534,7 +576,8 @@ class PredictiveAnalyticsEngine:
             if assessment.impact_severity == "high":
                 max_impact_severity = "high"
             elif (
-                assessment.impact_severity == "medium" and max_impact_severity == "low"
+                assessment.impact_severity == "medium"
+                and max_impact_severity == "low"
             ):
                 max_impact_severity = "medium"
 
@@ -673,7 +716,9 @@ class PredictiveAnalyticsEngine:
                 "forecasts": forecasts,
                 "capacity_recommendations": capacity_recommendations,
                 "forecast_timestamp": datetime.now().isoformat(),
-                "forecast_confidence": self._calculate_forecast_confidence(forecasts),
+                "forecast_confidence": self._calculate_forecast_confidence(
+                    forecasts
+                ),
                 "model_performance": self._get_forecast_model_performance(),
             }
 
@@ -727,10 +772,16 @@ class PredictiveAnalyticsEngine:
 
         # Calculate forecast statistics
         current_value = values[-1]
-        peak_forecast = max(ensemble_values) if ensemble_values else current_value
-        min_forecast = min(ensemble_values) if ensemble_values else current_value
+        peak_forecast = (
+            max(ensemble_values) if ensemble_values else current_value
+        )
+        min_forecast = (
+            min(ensemble_values) if ensemble_values else current_value
+        )
         avg_forecast = (
-            statistics.mean(ensemble_values) if ensemble_values else current_value
+            statistics.mean(ensemble_values)
+            if ensemble_values
+            else current_value
         )
 
         # Calculate growth rate
@@ -751,14 +802,20 @@ class PredictiveAnalyticsEngine:
                 )
             ):
                 hour_predictions = [
-                    pred[i] for pred in method_results.values() if i < len(pred)
+                    pred[i]
+                    for pred in method_results.values()
+                    if i < len(pred)
                 ]
                 if len(hour_predictions) > 1:
                     variance = statistics.variance(hour_predictions)
                     method_variances.append(variance)
 
-            avg_variance = statistics.mean(method_variances) if method_variances else 0
-            confidence = max(0.3, 1.0 - (avg_variance / max(0.1, avg_forecast)))
+            avg_variance = (
+                statistics.mean(method_variances) if method_variances else 0
+            )
+            confidence = max(
+                0.3, 1.0 - (avg_variance / max(0.1, avg_forecast))
+            )
         else:
             confidence = 0.6  # Default confidence for fewer methods
 
@@ -777,7 +834,9 @@ class PredictiveAnalyticsEngine:
             ),
         }
 
-    def _forecast_linear_trend(self, values: List[float], horizon: int) -> List[float]:
+    def _forecast_linear_trend(
+        self, values: List[float], horizon: int
+    ) -> List[float]:
         """Linear trend forecasting."""
         if len(values) < 2:
             return [values[-1]] * horizon if values else []
@@ -789,7 +848,9 @@ class PredictiveAnalyticsEngine:
         x_mean = sum(x) / n
         y_mean = sum(values) / n
 
-        numerator = sum((x[i] - x_mean) * (values[i] - y_mean) for i in range(n))
+        numerator = sum(
+            (x[i] - x_mean) * (values[i] - y_mean) for i in range(n)
+        )
         denominator = sum((x[i] - x_mean) ** 2 for i in range(n))
 
         slope = numerator / denominator if denominator != 0 else 0
@@ -977,7 +1038,9 @@ class PredictiveAnalyticsEngine:
             "ensemble": 0.82,
         }
 
-    async def predict_performance_trends(self, performance_history: Dict) -> Dict:
+    async def predict_performance_trends(
+        self, performance_history: Dict
+    ) -> Dict:
         """Predict performance trends using advanced time series analysis."""
         try:
             trends = {}
@@ -1047,7 +1110,9 @@ class PredictiveAnalyticsEngine:
             )
 
         # Calculate trend direction and strength
-        trend_direction, trend_strength = self._calculate_trend_direction(values)
+        trend_direction, trend_strength = self._calculate_trend_direction(
+            values
+        )
 
         # Calculate rate of change
         rate_of_change = self._calculate_rate_of_change(values, timestamps)
@@ -1087,7 +1152,9 @@ class PredictiveAnalyticsEngine:
         x_mean = sum(x) / n
         y_mean = sum(values) / n
 
-        numerator = sum((x[i] - x_mean) * (values[i] - y_mean) for i in range(n))
+        numerator = sum(
+            (x[i] - x_mean) * (values[i] - y_mean) for i in range(n)
+        )
         denominator = sum((x[i] - x_mean) ** 2 for i in range(n))
 
         slope = numerator / denominator if denominator != 0 else 0
@@ -1117,7 +1184,9 @@ class PredictiveAnalyticsEngine:
             trend_direction = TrendDirection.STABLE
 
         # Check for volatility
-        recent_volatility = statistics.stdev(values[-10:]) if len(values) >= 10 else 0
+        recent_volatility = (
+            statistics.stdev(values[-10:]) if len(values) >= 10 else 0
+        )
         overall_volatility = statistics.stdev(values)
 
         if recent_volatility > overall_volatility * 1.5:
@@ -1133,7 +1202,9 @@ class PredictiveAnalyticsEngine:
             return 0.0
 
         # Calculate change over the full time period
-        time_span = (timestamps[-1] - timestamps[0]).total_seconds() / 3600  # hours
+        time_span = (
+            timestamps[-1] - timestamps[0]
+        ).total_seconds() / 3600  # hours
         value_change = values[-1] - values[0]
 
         return (value_change / time_span) if time_span > 0 else 0.0
@@ -1150,7 +1221,9 @@ class PredictiveAnalyticsEngine:
         x_mean = sum(x) / n
         y_mean = sum(values) / n
 
-        numerator = sum((x[i] - x_mean) * (values[i] - y_mean) for i in range(n))
+        numerator = sum(
+            (x[i] - x_mean) * (values[i] - y_mean) for i in range(n)
+        )
         denominator = sum((x[i] - x_mean) ** 2 for i in range(n))
 
         slope = numerator / denominator if denominator != 0 else 0
@@ -1162,7 +1235,9 @@ class PredictiveAnalyticsEngine:
 
         return max(0, projected_value)  # Ensure non-negative
 
-    def _detect_seasonal_component(self, values: List[float]) -> Optional[float]:
+    def _detect_seasonal_component(
+        self, values: List[float]
+    ) -> Optional[float]:
         """Detect seasonal component in the data."""
         if len(values) < 14:  # Need at least 2 weeks of data
             return None
@@ -1175,14 +1250,18 @@ class PredictiveAnalyticsEngine:
 
         for season_length in season_lengths:
             if len(values) >= season_length * 2:
-                correlation = self._calculate_autocorrelation(values, season_length)
+                correlation = self._calculate_autocorrelation(
+                    values, season_length
+                )
                 if correlation > best_correlation:
                     best_correlation = correlation
                     best_seasonal_strength = correlation
 
         return best_seasonal_strength if best_seasonal_strength > 0.3 else None
 
-    def _calculate_autocorrelation(self, values: List[float], lag: int) -> float:
+    def _calculate_autocorrelation(
+        self, values: List[float], lag: int
+    ) -> float:
         """Calculate autocorrelation at specific lag."""
         if len(values) <= lag:
             return 0.0
@@ -1220,7 +1299,9 @@ class PredictiveAnalyticsEngine:
 
         mean_historical = statistics.mean(historical_values)
         std_historical = (
-            statistics.stdev(historical_values) if len(historical_values) > 1 else 0
+            statistics.stdev(historical_values)
+            if len(historical_values) > 1
+            else 0
         )
 
         if std_historical == 0:
@@ -1272,7 +1353,8 @@ class PredictiveAnalyticsEngine:
         seasonal_metrics = [
             name
             for name, analysis in trends.items()
-            if analysis.seasonal_component and analysis.seasonal_component > 0.4
+            if analysis.seasonal_component
+            and analysis.seasonal_component > 0.4
         ]
 
         if seasonal_metrics:
@@ -1294,7 +1376,9 @@ class PredictiveAnalyticsEngine:
 
         # Detect anomalies
         anomalous_metrics = [
-            name for name, analysis in trends.items() if analysis.anomaly_score > 0.7
+            name
+            for name, analysis in trends.items()
+            if analysis.anomaly_score > 0.7
         ]
 
         if anomalous_metrics:
@@ -1356,7 +1440,9 @@ class PredictiveAnalyticsEngine:
                         }
                     )
 
-            elif "cpu" in metric_name.lower() or "memory" in metric_name.lower():
+            elif (
+                "cpu" in metric_name.lower() or "memory" in metric_name.lower()
+            ):
                 if analysis.projection_24h > 90:  # 90%
                     issues.append(
                         {
@@ -1386,7 +1472,9 @@ class PredictiveAnalyticsEngine:
 
         return predicted_issues
 
-    def _calculate_trend_confidence(self, trends: Dict[str, TrendAnalysis]) -> float:
+    def _calculate_trend_confidence(
+        self, trends: Dict[str, TrendAnalysis]
+    ) -> float:
         """Calculate overall confidence in trend analysis."""
         if not trends:
             return 0.0
@@ -1403,7 +1491,9 @@ class PredictiveAnalyticsEngine:
 
             # Analyze system state for optimization potential
             opportunities.extend(
-                await self._identify_resource_optimization_opportunities(system_state)
+                await self._identify_resource_optimization_opportunities(
+                    system_state
+                )
             )
             opportunities.extend(
                 await self._identify_performance_optimization_opportunities(
@@ -1411,7 +1501,9 @@ class PredictiveAnalyticsEngine:
                 )
             )
             opportunities.extend(
-                await self._identify_cost_optimization_opportunities(system_state)
+                await self._identify_cost_optimization_opportunities(
+                    system_state
+                )
             )
             opportunities.extend(
                 await self._identify_reliability_optimization_opportunities(

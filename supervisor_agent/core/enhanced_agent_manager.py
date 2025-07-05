@@ -100,7 +100,9 @@ class EnhancedAgentManager:
                 )
             else:
                 logger.info("Falling back to legacy agent system")
-                return await self._execute_with_legacy_agent(task, None, shared_memory)
+                return await self._execute_with_legacy_agent(
+                    task, None, shared_memory
+                )
 
     async def _execute_with_multi_provider(
         self,
@@ -118,7 +120,9 @@ class EnhancedAgentManager:
         # Create legacy agent processor for compatibility
         async def legacy_agent_processor(task, shared_memory):
             # This bridges the gap between new and old systems
-            return await self._execute_with_legacy_agent(task, None, shared_memory)
+            return await self._execute_with_legacy_agent(
+                task, None, shared_memory
+            )
 
         return await multi_provider_service.process_task(
             task=task,
@@ -173,7 +177,9 @@ class EnhancedAgentManager:
                     )
 
             except Exception as e:
-                logger.warning(f"Multi-provider system not available: {str(e)}")
+                logger.warning(
+                    f"Multi-provider system not available: {str(e)}"
+                )
 
         # Fallback to legacy system
         return await self._execute_with_legacy_agent(task, None, shared_memory)
@@ -217,8 +223,12 @@ class EnhancedAgentManager:
                             "health_status": provider_info.get(
                                 "health_status", "unknown"
                             ),
-                            "health_score": provider_info.get("health_score", 0.0),
-                            "capabilities": provider_info.get("capabilities", []),
+                            "health_score": provider_info.get(
+                                "health_score", 0.0
+                            ),
+                            "capabilities": provider_info.get(
+                                "capabilities", []
+                            ),
                         }
                     )
 
@@ -235,11 +245,17 @@ class EnhancedAgentManager:
         """Set provider preferences for a user"""
         try:
             self._provider_preferences[user_id] = {
-                "preferred_providers": preferences.get("preferred_providers", []),
+                "preferred_providers": preferences.get(
+                    "preferred_providers", []
+                ),
                 "exclude_providers": preferences.get("exclude_providers", []),
-                "routing_strategy": preferences.get("routing_strategy", "optimal"),
+                "routing_strategy": preferences.get(
+                    "routing_strategy", "optimal"
+                ),
                 "max_cost_usd": preferences.get("max_cost_usd"),
-                "prefer_multi_provider": preferences.get("prefer_multi_provider", True),
+                "prefer_multi_provider": preferences.get(
+                    "prefer_multi_provider", True
+                ),
                 "updated_at": datetime.now(timezone.utc),
             }
 
@@ -250,11 +266,15 @@ class EnhancedAgentManager:
             logger.error(f"Error setting provider preferences: {str(e)}")
             return False
 
-    async def get_provider_preference(self, user_id: str) -> Optional[Dict[str, Any]]:
+    async def get_provider_preference(
+        self, user_id: str
+    ) -> Optional[Dict[str, Any]]:
         """Get provider preferences for a user"""
         return self._provider_preferences.get(user_id)
 
-    async def migrate_to_multi_provider(self, dry_run: bool = True) -> Dict[str, Any]:
+    async def migrate_to_multi_provider(
+        self, dry_run: bool = True
+    ) -> Dict[str, Any]:
         """
         Migrate from legacy agent system to multi-provider system
 
@@ -283,7 +303,9 @@ class EnhancedAgentManager:
                     {
                         "id": agent_id,
                         "api_key": (
-                            agent.api_key if hasattr(agent, "api_key") else "***"
+                            agent.api_key
+                            if hasattr(agent, "api_key")
+                            else "***"
                         ),
                         "status": "active",
                     }
@@ -296,11 +318,15 @@ class EnhancedAgentManager:
                     "provider_type": "claude_cli",
                     "config": {
                         "api_keys": (
-                            [agent.api_key] if hasattr(agent, "api_key") else []
+                            [agent.api_key]
+                            if hasattr(agent, "api_key")
+                            else []
                         ),
                         "rate_limit_per_day": 1000,
                         "priority": (
-                            int(agent_id.split("-")[-1]) if "-" in agent_id else 1
+                            int(agent_id.split("-")[-1])
+                            if "-" in agent_id
+                            else 1
                         ),
                     },
                 }
@@ -338,7 +364,9 @@ class EnhancedAgentManager:
                         mapping["migration_status"] = "failed"
 
                 migration_plan["migration_completed"] = True
-                migration_plan["migration_timestamp"] = datetime.now(timezone.utc)
+                migration_plan["migration_timestamp"] = datetime.now(
+                    timezone.utc
+                )
 
             return migration_plan
 
@@ -410,7 +438,10 @@ class EnhancedAgentManager:
                 "No execution methods available - configure agents or providers"
             )
 
-        elif health["legacy_system"]["agents"] > 0 and not self.enable_multi_provider:
+        elif (
+            health["legacy_system"]["agents"] > 0
+            and not self.enable_multi_provider
+        ):
             health["recommendations"].append(
                 "Consider enabling multi-provider system for improved reliability"
             )

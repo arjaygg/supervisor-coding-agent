@@ -69,20 +69,28 @@ class TestTokenEstimator:
             "project": "test-project",
         }
 
-        tokens_with_context = TokenEstimator.estimate_prompt_tokens(prompt, context)
-        tokens_without_context = TokenEstimator.estimate_prompt_tokens(prompt, None)
+        tokens_with_context = TokenEstimator.estimate_prompt_tokens(
+            prompt, context
+        )
+        tokens_without_context = TokenEstimator.estimate_prompt_tokens(
+            prompt, None
+        )
 
         # With context should have more tokens
         assert tokens_with_context > tokens_without_context
 
     def test_extract_model_from_cli_output(self):
         """Test model extraction from CLI output"""
-        output_with_model = "Response generated using claude-3-5-sonnet-20241022"
+        output_with_model = (
+            "Response generated using claude-3-5-sonnet-20241022"
+        )
         model = TokenEstimator.extract_model_from_cli_output(output_with_model)
         assert model == "claude-3-5-sonnet-20241022"
 
         output_without_model = "This is just a regular response"
-        model = TokenEstimator.extract_model_from_cli_output(output_without_model)
+        model = TokenEstimator.extract_model_from_cli_output(
+            output_without_model
+        )
         assert model is None
 
 
@@ -227,7 +235,9 @@ class TestCostTrackingCRUD:
             patch.object(test_db, "commit"),
             patch.object(test_db, "refresh"),
         ):
-            db_entry = crud.CostTrackingCRUD.create_cost_entry(test_db, cost_entry)
+            db_entry = crud.CostTrackingCRUD.create_cost_entry(
+                test_db, cost_entry
+            )
             # Just verify the method can be called without errors
             # In a real integration test, we'd verify the actual database operations
 
@@ -239,7 +249,9 @@ class TestCostTrackingCRUD:
             )
 
             # Test with task_id filter
-            entries = crud.CostTrackingCRUD.get_cost_entries(test_db, task_id=1)
+            entries = crud.CostTrackingCRUD.get_cost_entries(
+                test_db, task_id=1
+            )
             mock_query.assert_called()
 
             # Test with agent_id filter
@@ -292,7 +304,9 @@ class TestUsageMetricsCRUD:
         """Test upserting new metric"""
         with patch.object(test_db, "query") as mock_query:
             # Mock no existing metric
-            mock_query.return_value.filter.return_value.first.return_value = None
+            mock_query.return_value.filter.return_value.first.return_value = (
+                None
+            )
 
             with (
                 patch.object(test_db, "add"),

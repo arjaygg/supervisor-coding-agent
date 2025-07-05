@@ -11,7 +11,9 @@ class BusinessIntelligenceReporter:
         """Creates performance reports. Placeholder."""
         return {"report_data": {}}
 
-    async def analyze_cost_optimization_impact(self, optimizations: List) -> Dict:
+    async def analyze_cost_optimization_impact(
+        self, optimizations: List
+    ) -> Dict:
         """Analyzes the impact of cost optimizations. Placeholder."""
         return {"impact_analysis": {}}
 

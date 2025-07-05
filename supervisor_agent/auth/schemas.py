@@ -84,7 +84,9 @@ class RefreshTokenRequest(BaseModel):
 
 class OAuthTokenRequest(BaseModel):
     provider: str = Field(..., description="OAuth provider (google, github)")
-    code: str = Field(..., description="Authorization code from OAuth provider")
+    code: str = Field(
+        ..., description="Authorization code from OAuth provider"
+    )
     redirect_uri: Optional[str] = None
 
 

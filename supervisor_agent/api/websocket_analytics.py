@@ -97,7 +97,9 @@ class AnalyticsWebSocketManager:
                             "cost_today_usd": summary.cost_today_usd,
                         },
                         "metrics": {
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "timestamp": datetime.now(
+                                timezone.utc
+                            ).isoformat(),
                             "queue_depth": summary.current_queue_depth,
                             "active_workflows": summary.active_workflows,
                         },
@@ -148,7 +150,9 @@ async def analytics_websocket_endpoint(websocket: WebSocket):
 
         # Start streaming if not already running
         if not analytics_ws_manager.running:
-            asyncio.create_task(analytics_ws_manager.start_analytics_streaming())
+            asyncio.create_task(
+                analytics_ws_manager.start_analytics_streaming()
+            )
 
         # Keep connection alive and handle incoming messages
         while True:
@@ -166,7 +170,9 @@ async def analytics_websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "error",
                                 "message": "Invalid JSON format",
-                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                                "timestamp": datetime.now(
+                                    timezone.utc
+                                ).isoformat(),
                             }
                         )
                     )

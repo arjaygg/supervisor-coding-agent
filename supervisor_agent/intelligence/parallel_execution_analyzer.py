@@ -216,8 +216,10 @@ class ParallelExecutionAnalyzer:
             )
 
             # Predict performance improvements
-            performance_predictions = await self._predict_performance_improvements(
-                workflow, parallel_groups, historical_data
+            performance_predictions = (
+                await self._predict_performance_improvements(
+                    workflow, parallel_groups, historical_data
+                )
             )
 
             # Calculate optimization score
@@ -244,7 +246,9 @@ class ParallelExecutionAnalyzer:
             return analysis
 
         except Exception as e:
-            self.logger.error("Parallel execution analysis failed", error=str(e))
+            self.logger.error(
+                "Parallel execution analysis failed", error=str(e)
+            )
             return await self._create_fallback_analysis(workflow)
 
     async def identify_bottlenecks(
@@ -292,7 +296,9 @@ class ParallelExecutionAnalyzer:
         bottlenecks.extend(dependency_bottlenecks)
 
         # Check for scalability bottlenecks
-        scalability_bottlenecks = self._identify_scalability_bottlenecks(analysis)
+        scalability_bottlenecks = self._identify_scalability_bottlenecks(
+            analysis
+        )
         bottlenecks.extend(scalability_bottlenecks)
 
         self.logger.info(
@@ -409,7 +415,9 @@ class ParallelExecutionAnalyzer:
             reachable = self._get_reachable_tasks(task_id, dependency_graph)
 
             # Find all tasks that reach this task
-            reaching = self._get_reaching_tasks(task_id, dependency_graph, task_ids)
+            reaching = self._get_reaching_tasks(
+                task_id, dependency_graph, task_ids
+            )
 
             # Tasks in the same strongly connected component
             component = reachable.intersection(reaching)
@@ -487,9 +495,13 @@ class ParallelExecutionAnalyzer:
                         conflict_type="cpu",
                         conflicting_tasks=cpu_intensive_tasks,
                         severity=(
-                            "medium" if len(cpu_intensive_tasks) <= 4 else "high"
+                            "medium"
+                            if len(cpu_intensive_tasks) <= 4
+                            else "high"
                         ),
-                        estimated_impact=min(0.9, len(cpu_intensive_tasks) * 0.2),
+                        estimated_impact=min(
+                            0.9, len(cpu_intensive_tasks) * 0.2
+                        ),
                         mitigation_strategies=[
                             "distribute_across_workers",
                             "increase_cpu_allocation",
@@ -512,9 +524,13 @@ class ParallelExecutionAnalyzer:
                         conflict_type="memory",
                         conflicting_tasks=memory_intensive_tasks,
                         severity=(
-                            "high" if len(memory_intensive_tasks) > 2 else "medium"
+                            "high"
+                            if len(memory_intensive_tasks) > 2
+                            else "medium"
                         ),
-                        estimated_impact=min(0.8, len(memory_intensive_tasks) * 0.3),
+                        estimated_impact=min(
+                            0.8, len(memory_intensive_tasks) * 0.3
+                        ),
                         mitigation_strategies=[
                             "increase_memory_allocation",
                             "implement_memory_pooling",
@@ -537,7 +553,9 @@ class ParallelExecutionAnalyzer:
                         conflict_type="io",
                         conflicting_tasks=io_intensive_tasks,
                         severity="medium",
-                        estimated_impact=min(0.7, len(io_intensive_tasks) * 0.25),
+                        estimated_impact=min(
+                            0.7, len(io_intensive_tasks) * 0.25
+                        ),
                         mitigation_strategies=[
                             "implement_io_queuing",
                             "use_ssd_storage",
@@ -548,7 +566,9 @@ class ParallelExecutionAnalyzer:
 
         return conflicts
 
-    def _get_resource_intensity(self, task_type: str, resource_type: str) -> str:
+    def _get_resource_intensity(
+        self, task_type: str, resource_type: str
+    ) -> str:
         """Get resource intensity level for a task type"""
 
         # Convert TaskType enum to string if needed
@@ -622,7 +642,9 @@ class ParallelExecutionAnalyzer:
             return json.loads(result["result"])
 
         except Exception as e:
-            self.logger.error("AI parallelization analysis failed", error=str(e))
+            self.logger.error(
+                "AI parallelization analysis failed", error=str(e)
+            )
             return self._get_heuristic_parallelization_analysis(
                 workflow, dependency_graph, resource_conflicts
             )
@@ -640,8 +662,12 @@ class ParallelExecutionAnalyzer:
         conflict_count = len(resource_conflicts)
 
         # Estimate speedup based on task independence
-        independent_tasks = sum(1 for task in workflow.tasks if not task.dependencies)
-        potential_speedup = min(4.0, 1.0 + (independent_tasks / task_count) * 2.0)
+        independent_tasks = sum(
+            1 for task in workflow.tasks if not task.dependencies
+        )
+        potential_speedup = min(
+            4.0, 1.0 + (independent_tasks / task_count) * 2.0
+        )
 
         # Reduce speedup based on conflicts
         conflict_penalty = min(0.5, conflict_count * 0.1)
@@ -652,7 +678,9 @@ class ParallelExecutionAnalyzer:
                 {
                     "group_id": "independent_tasks",
                     "tasks": [
-                        task.id for task in workflow.tasks if not task.dependencies
+                        task.id
+                        for task in workflow.tasks
+                        if not task.dependencies
                     ],
                     "estimated_speedup": estimated_speedup,
                     "resource_requirements": {
@@ -698,7 +726,9 @@ class ParallelExecutionAnalyzer:
                 group_id=ai_group.get("group_id", f"ai_group_{i}"),
                 tasks=ai_group.get("tasks", []),
                 estimated_speedup=ai_group.get("estimated_speedup", 1.0),
-                resource_requirements=ai_group.get("resource_requirements", {}),
+                resource_requirements=ai_group.get(
+                    "resource_requirements", {}
+                ),
                 dependencies_satisfied=True,  # AI should ensure this
                 conflict_risk=ai_group.get("conflict_risk", 0.0),
                 priority_score=ai_group.get("priority_score", 0.5),
@@ -762,7 +792,9 @@ class ParallelExecutionAnalyzer:
     ) -> Dict[str, Any]:
         """Predict performance improvements from parallelization"""
 
-        baseline_time = len(workflow.tasks) * 10  # Assume 10 minutes per task baseline
+        baseline_time = (
+            len(workflow.tasks) * 10
+        )  # Assume 10 minutes per task baseline
 
         # Calculate parallelized time
         max_group_time = 0

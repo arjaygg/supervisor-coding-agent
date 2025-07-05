@@ -250,7 +250,9 @@ class TestUsagePredictor:
     def test_predict_daily_usage(self, usage_predictor):
         """Test daily usage prediction."""
         # Add usage data for different hours
-        base_time = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        base_time = datetime.now().replace(
+            hour=9, minute=0, second=0, microsecond=0
+        )
 
         for hour_offset in range(8):  # 9 AM to 5 PM
             usage_predictor.record_usage(
@@ -268,7 +270,9 @@ class TestUsagePredictor:
 
     def test_get_peak_hours(self, usage_predictor):
         """Test identification of peak usage hours."""
-        base_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        base_time = datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
         # Add more usage during "peak" hours (10 AM and 2 PM)
         peak_hours = [10, 14]
@@ -319,7 +323,9 @@ class TestSubscriptionIntelligence:
         request = {"type": "PR_REVIEW", "payload": {"pr_number": 123}}
 
         # First request
-        await subscription_intelligence.process_request(request, mock_processor)
+        await subscription_intelligence.process_request(
+            request, mock_processor
+        )
 
         # Second identical request
         result = await subscription_intelligence.process_request(
@@ -331,7 +337,9 @@ class TestSubscriptionIntelligence:
         mock_processor.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_process_request_quota_exceeded(self, subscription_intelligence):
+    async def test_process_request_quota_exceeded(
+        self, subscription_intelligence
+    ):
         """Test behavior when daily quota is exceeded."""
         subscription_intelligence.daily_limit = 100  # Low limit for testing
         subscription_intelligence.current_usage = 150  # Already exceeded
@@ -340,7 +348,9 @@ class TestSubscriptionIntelligence:
         request = {"type": "PR_REVIEW", "payload": {"pr_number": 123}}
 
         with pytest.raises(Exception) as exc_info:
-            await subscription_intelligence.process_request(request, mock_processor)
+            await subscription_intelligence.process_request(
+                request, mock_processor
+            )
 
         assert "quota exceeded" in str(exc_info.value).lower()
         mock_processor.assert_not_called()
@@ -359,7 +369,9 @@ class TestSubscriptionIntelligence:
             "type": "PR_REVIEW",
             "payload": {"pr_number": 123, "large_diff": "x" * 10000},
         }
-        assert not subscription_intelligence.should_batch_request(complex_request)
+        assert not subscription_intelligence.should_batch_request(
+            complex_request
+        )
 
     def test_estimate_token_usage(self, subscription_intelligence):
         """Test token usage estimation."""
@@ -396,7 +408,8 @@ class TestSubscriptionIntelligenceIntegration:
         # Mock processor
         async def mock_processor(requests):
             return [
-                {"status": "completed", "request_id": i} for i in range(len(requests))
+                {"status": "completed", "request_id": i}
+                for i in range(len(requests))
             ]
 
         # Process multiple requests
@@ -426,7 +439,9 @@ class TestSubscriptionIntelligenceIntegration:
         async def counting_processor(requests):
             nonlocal call_count
             call_count += 1
-            return [{"status": "completed", "call": call_count} for _ in requests]
+            return [
+                {"status": "completed", "call": call_count} for _ in requests
+            ]
 
         # Same request multiple times
         request = {"type": "PR_REVIEW", "payload": {"pr_number": 123}}

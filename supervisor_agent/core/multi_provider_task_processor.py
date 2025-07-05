@@ -187,16 +187,20 @@ class MultiProviderTaskProcessor:
                 return cached_result
 
             # Apply routing strategy to adjust context
-            context = await self._apply_routing_strategy(strategy, task, context)
+            context = await self._apply_routing_strategy(
+                strategy, task, context
+            )
 
             # Select optimal provider
-            selected_provider_id = await self.provider_coordinator.select_provider(
-                task, context
+            selected_provider_id = (
+                await self.provider_coordinator.select_provider(task, context)
             )
             if not selected_provider_id:
                 raise ProviderError("No suitable provider available for task")
 
-            logger.info(f"Selected provider {selected_provider_id} for task {task.id}")
+            logger.info(
+                f"Selected provider {selected_provider_id} for task {task.id}"
+            )
 
             # Execute task with provider
             result = await self._execute_task_with_provider(
@@ -266,7 +270,9 @@ class MultiProviderTaskProcessor:
 
         # Optimize batch if enabled
         if self.batch_optimization_enabled:
-            optimized_batches = await self._optimize_task_batch(task_batch, context)
+            optimized_batches = await self._optimize_task_batch(
+                task_batch, context
+            )
         else:
             optimized_batches = [task_batch]
 
@@ -279,7 +285,9 @@ class MultiProviderTaskProcessor:
 
             async def process_single_task(task: Task) -> Dict[str, Any]:
                 async with semaphore:
-                    return await self.process_task(task, agent_processor, context)
+                    return await self.process_task(
+                        task, agent_processor, context
+                    )
 
             # Execute tasks concurrently within batch
             batch_results = await asyncio.gather(
@@ -310,8 +318,12 @@ class MultiProviderTaskProcessor:
 
         # Add derived metrics
         if stats["total_tasks"] > 0:
-            stats["success_rate"] = stats["successful_tasks"] / stats["total_tasks"]
-            stats["cache_hit_rate"] = stats["cache_hits"] / stats["total_tasks"]
+            stats["success_rate"] = (
+                stats["successful_tasks"] / stats["total_tasks"]
+            )
+            stats["cache_hit_rate"] = (
+                stats["cache_hits"] / stats["total_tasks"]
+            )
         else:
             stats["success_rate"] = 0.0
             stats["cache_hit_rate"] = 0.0
@@ -320,7 +332,9 @@ class MultiProviderTaskProcessor:
         provider_stats = {}
         for provider_id in self.provider_registry.providers.keys():
             provider_stats[provider_id] = {
-                "usage_count": stats["provider_distribution"].get(provider_id, 0),
+                "usage_count": stats["provider_distribution"].get(
+                    provider_id, 0
+                ),
                 "quota_status": await self.subscription_intelligence.get_quota_status(
                     provider_id
                 ),
@@ -358,7 +372,9 @@ class MultiProviderTaskProcessor:
 
             # Check multi-provider cache
             optimal_provider = (
-                await self.subscription_intelligence.get_optimal_provider(request_data)
+                await self.subscription_intelligence.get_optimal_provider(
+                    request_data
+                )
             )
 
             if optimal_provider == "cache":
@@ -515,7 +531,9 @@ class MultiProviderTaskProcessor:
             # Get backup provider
             try:
                 failed_provider_id = (
-                    context.exclude_providers[-1] if context.exclude_providers else None
+                    context.exclude_providers[-1]
+                    if context.exclude_providers
+                    else None
                 )
                 backup_provider_id = (
                     await self.provider_coordinator.select_backup_provider(
@@ -538,7 +556,9 @@ class MultiProviderTaskProcessor:
                     )
 
             except Exception as retry_error:
-                logger.error(f"Retry failed for task {task.id}: {str(retry_error)}")
+                logger.error(
+                    f"Retry failed for task {task.id}: {str(retry_error)}"
+                )
 
         # All retries exhausted or no backup available
         self.processing_stats["failed_tasks"] += 1
@@ -572,7 +592,9 @@ class MultiProviderTaskProcessor:
                 batch_size = 5  # Configurable batch size
                 for i in range(0, len(tasks), batch_size):
                     batch_tasks = tasks[i : i + batch_size]
-                    optimized_batch = TaskBatch(batch_tasks, f"optimized_{task_type}")
+                    optimized_batch = TaskBatch(
+                        batch_tasks, f"optimized_{task_type}"
+                    )
                     optimized_batches.append(optimized_batch)
 
             logger.debug(
@@ -581,7 +603,9 @@ class MultiProviderTaskProcessor:
             return optimized_batches
 
         except Exception as e:
-            logger.warning(f"Batch optimization failed: {str(e)}, using original batch")
+            logger.warning(
+                f"Batch optimization failed: {str(e)}, using original batch"
+            )
             return [task_batch]
 
     def _determine_task_priority(self, task: Task) -> int:
@@ -629,8 +653,10 @@ class MultiProviderTaskProcessor:
     async def _is_provider_available(self, provider_id: str) -> bool:
         """Check if provider is currently available"""
         try:
-            quota_status = await self.subscription_intelligence.get_quota_status(
-                provider_id
+            quota_status = (
+                await self.subscription_intelligence.get_quota_status(
+                    provider_id
+                )
             )
             return bool(
                 quota_status

@@ -113,7 +113,9 @@ class PluginDependencyResolver:
                     )
 
         # Topological sort
-        queue = deque([name for name, degree in in_degree.items() if degree == 0])
+        queue = deque(
+            [name for name, degree in in_degree.items() if degree == 0]
+        )
         result = []
 
         while queue:
@@ -128,7 +130,9 @@ class PluginDependencyResolver:
         # Check for cycles
         if len(result) != len(plugins):
             remaining = [name for name in plugins.keys() if name not in result]
-            raise ValueError(f"Circular dependency detected among plugins: {remaining}")
+            raise ValueError(
+                f"Circular dependency detected among plugins: {remaining}"
+            )
 
         return result
 
@@ -155,7 +159,9 @@ class PluginEventBus:
     """Event bus for plugin communication"""
 
     def __init__(self):
-        self.subscribers: Dict[EventType, List[weakref.WeakMethod]] = defaultdict(list)
+        self.subscribers: Dict[EventType, List[weakref.WeakMethod]] = (
+            defaultdict(list)
+        )
         self.event_history: deque = deque(maxlen=1000)  # Keep last 1000 events
         self.metrics = {
             "events_published": 0,
@@ -175,7 +181,9 @@ class PluginEventBus:
             self.subscribers[event_type].append(weak_handler)
             logger.debug(f"Subscribed handler to {event_type}")
         except Exception as e:
-            logger.error(f"Failed to subscribe to event {event_type}: {str(e)}")
+            logger.error(
+                f"Failed to subscribe to event {event_type}: {str(e)}"
+            )
 
     def unsubscribe(self, event_type: EventType, handler: Callable):
         """Unsubscribe from events"""
@@ -183,11 +191,15 @@ class PluginEventBus:
             subscribers = self.subscribers.get(event_type, [])
             # Remove dead references and matching handlers
             self.subscribers[event_type] = [
-                ref for ref in subscribers if ref() is not None and ref() != handler
+                ref
+                for ref in subscribers
+                if ref() is not None and ref() != handler
             ]
             logger.debug(f"Unsubscribed handler from {event_type}")
         except Exception as e:
-            logger.error(f"Failed to unsubscribe from event {event_type}: {str(e)}")
+            logger.error(
+                f"Failed to unsubscribe from event {event_type}: {str(e)}"
+            )
 
     async def publish(self, event: PluginEvent):
         """Publish event to all subscribers"""
@@ -211,9 +223,13 @@ class PluginEventBus:
 
             # Deliver events concurrently
             if delivery_tasks:
-                results = await asyncio.gather(*delivery_tasks, return_exceptions=True)
+                results = await asyncio.gather(
+                    *delivery_tasks, return_exceptions=True
+                )
                 successful_deliveries = sum(
-                    1 for result in results if not isinstance(result, Exception)
+                    1
+                    for result in results
+                    if not isinstance(result, Exception)
                 )
                 self.metrics["events_delivered"] += successful_deliveries
                 self.metrics["delivery_failures"] += (
@@ -225,7 +241,9 @@ class PluginEventBus:
             )
 
         except Exception as e:
-            logger.error(f"Failed to publish event {event.event_type}: {str(e)}")
+            logger.error(
+                f"Failed to publish event {event.event_type}: {str(e)}"
+            )
             self.metrics["delivery_failures"] += 1
 
     async def _deliver_event(self, event: PluginEvent, handler: Callable):
@@ -264,11 +282,15 @@ class PluginManager:
     - Configuration management
     """
 
-    def __init__(self, plugin_directories: List[str] = None, config_file: str = None):
+    def __init__(
+        self, plugin_directories: List[str] = None, config_file: str = None
+    ):
         self.plugin_directories = plugin_directories or [
             "supervisor_agent/plugins/enabled"
         ]
-        self.config_file = config_file or "supervisor_agent/plugins/plugin_config.json"
+        self.config_file = (
+            config_file or "supervisor_agent/plugins/plugin_config.json"
+        )
 
         # Core components
         self.registry: Dict[str, PluginRegistry] = {}
@@ -305,13 +327,17 @@ class PluginManager:
                     config_data = json.load(f)
 
                 for plugin_name, config in config_data.items():
-                    self.configurations[plugin_name] = PluginConfiguration(**config)
+                    self.configurations[plugin_name] = PluginConfiguration(
+                        **config
+                    )
 
                 logger.info(
                     f"Loaded configurations for {len(self.configurations)} plugins"
                 )
             else:
-                logger.info("No plugin configuration file found, using defaults")
+                logger.info(
+                    "No plugin configuration file found, using defaults"
+                )
         except Exception as e:
             logger.error(f"Failed to load plugin configurations: {str(e)}")
 
@@ -363,7 +389,9 @@ class PluginManager:
             await self.event_bus.publish(startup_event)
 
             self.is_initialized = True
-            logger.info(f"Plugin manager initialized with {len(self.registry)} plugins")
+            logger.info(
+                f"Plugin manager initialized with {len(self.registry)} plugins"
+            )
 
         except Exception as e:
             logger.error(f"Failed to initialize plugin manager: {str(e)}")
@@ -404,7 +432,9 @@ class PluginManager:
                 return True
 
             # Load the plugin module
-            spec = importlib.util.spec_from_file_location(plugin_name, plugin_path)
+            spec = importlib.util.spec_from_file_location(
+                plugin_name, plugin_path
+            )
             if spec is None or spec.loader is None:
                 raise ValueError(f"Could not load spec for {plugin_name}")
 
@@ -426,7 +456,9 @@ class PluginManager:
                 raise ValueError(f"No plugin class found in {plugin_name}")
 
             # Get plugin configuration
-            config = self.configurations.get(plugin_name, PluginConfiguration())
+            config = self.configurations.get(
+                plugin_name, PluginConfiguration()
+            )
 
             # Instantiate plugin
             plugin_instance = plugin_class(config.configuration)
@@ -436,13 +468,17 @@ class PluginManager:
                 plugin_instance
             )
             if validation_issues:
-                raise ValueError(f"Plugin validation failed: {validation_issues}")
+                raise ValueError(
+                    f"Plugin validation failed: {validation_issues}"
+                )
 
             metadata_issues = PluginValidator.validate_metadata(
                 plugin_instance.metadata
             )
             if metadata_issues:
-                raise ValueError(f"Metadata validation failed: {metadata_issues}")
+                raise ValueError(
+                    f"Metadata validation failed: {metadata_issues}"
+                )
 
             # Register plugin
             registry_entry = PluginRegistry(
@@ -513,7 +549,9 @@ class PluginManager:
         # Filter enabled plugins
         enabled_plugins = {}
         for plugin_name, plugin_path in discovered.items():
-            config = self.configurations.get(plugin_name, PluginConfiguration())
+            config = self.configurations.get(
+                plugin_name, PluginConfiguration()
+            )
             if config.enabled:
                 enabled_plugins[plugin_name] = plugin_path
 
@@ -534,7 +572,9 @@ class PluginManager:
 
         # Resolve load order
         try:
-            load_order = self.dependency_resolver.resolve_load_order(plugin_metadata)
+            load_order = self.dependency_resolver.resolve_load_order(
+                plugin_metadata
+            )
         except ValueError as e:
             logger.error(f"Dependency resolution failed: {str(e)}")
             return
@@ -542,7 +582,9 @@ class PluginManager:
         # Load plugins in order
         for plugin_name in load_order:
             if plugin_name in enabled_plugins:
-                await self.load_plugin(plugin_name, enabled_plugins[plugin_name])
+                await self.load_plugin(
+                    plugin_name, enabled_plugins[plugin_name]
+                )
 
     async def activate_plugin(self, plugin_name: str) -> bool:
         """Activate a loaded plugin"""
@@ -743,7 +785,9 @@ class PluginManager:
                     result = await registry_entry.plugin.health_check()
                     results[plugin_name] = result
                 except Exception as e:
-                    results[plugin_name] = PluginResult(success=False, error=str(e))
+                    results[plugin_name] = PluginResult(
+                        success=False, error=str(e)
+                    )
                     registry_entry.error_count += 1
 
         return results
@@ -758,7 +802,9 @@ class PluginManager:
                     "error_count": entry.error_count,
                     "performance_metrics": entry.performance_metrics,
                     "last_activity": (
-                        entry.last_activity.isoformat() if entry.last_activity else None
+                        entry.last_activity.isoformat()
+                        if entry.last_activity
+                        else None
                     ),
                 }
                 for name, entry in self.registry.items()

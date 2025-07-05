@@ -13,8 +13,12 @@ from supervisor_agent.api.routes.providers import router as providers_router
 from supervisor_agent.api.routes.tasks import router as tasks_router
 from supervisor_agent.api.routes.workflows import router as workflows_router
 from supervisor_agent.api.websocket import websocket_endpoint
-from supervisor_agent.api.websocket_analytics import router as analytics_ws_router
-from supervisor_agent.api.websocket_providers import router as providers_ws_router
+from supervisor_agent.api.websocket_analytics import (
+    router as analytics_ws_router,
+)
+from supervisor_agent.api.websocket_providers import (
+    router as providers_ws_router,
+)
 from supervisor_agent.auth.routes import router as auth_router
 from supervisor_agent.config import settings
 from supervisor_agent.core.quota import quota_manager
@@ -68,7 +72,9 @@ async def lifespan(app: FastAPI):
         logger.info("Agents initialized in database")
     except Exception as e:
         logger.error(f"Failed to initialize agents: {str(e)}")
-        logger.warning("Application will start but some features may not work properly")
+        logger.warning(
+            "Application will start but some features may not work properly"
+        )
     finally:
         db.close()
 
@@ -82,7 +88,9 @@ async def lifespan(app: FastAPI):
             await multi_provider_service.initialize()
             logger.info("Multi-provider service initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize multi-provider service: {str(e)}")
+            logger.error(
+                f"Failed to initialize multi-provider service: {str(e)}"
+            )
             logger.warning("Multi-provider features will not be available")
 
     # Initialize authentication system
@@ -101,7 +109,9 @@ async def lifespan(app: FastAPI):
             finally:
                 db.close()
         except Exception as e:
-            logger.error(f"Failed to initialize authentication system: {str(e)}")
+            logger.error(
+                f"Failed to initialize authentication system: {str(e)}"
+            )
 
     # Start background tasks
     if settings.rate_limit_enabled:

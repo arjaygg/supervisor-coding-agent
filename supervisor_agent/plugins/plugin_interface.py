@@ -109,7 +109,9 @@ class PluginEvent:
     source_plugin: Optional[str]
     target_plugin: Optional[str] = None
     data: Dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -195,7 +197,9 @@ class PluginInterface(ABC):
                 metadata={"handlers_executed": len(handlers)},
             )
         except Exception as e:
-            logger.error(f"Plugin {self.metadata.name} event handling failed: {str(e)}")
+            logger.error(
+                f"Plugin {self.metadata.name} event handling failed: {str(e)}"
+            )
             self.metrics["errors_count"] += 1
             return PluginResult(success=False, error=str(e))
 
@@ -374,7 +378,9 @@ class PluginValidator:
             min_version = semver.VersionInfo.parse(metadata.min_api_version)
             max_version = semver.VersionInfo.parse(metadata.max_api_version)
             if min_version >= max_version:
-                issues.append("min_api_version must be less than max_api_version")
+                issues.append(
+                    "min_api_version must be less than max_api_version"
+                )
         except ValueError:
             issues.append("Invalid API version format")
 
@@ -419,11 +425,19 @@ class PluginValidator:
                 expected_type = spec.get("type")
                 actual_value = config[key]
 
-                if expected_type == "string" and not isinstance(actual_value, str):
+                if expected_type == "string" and not isinstance(
+                    actual_value, str
+                ):
                     issues.append(f"Configuration key {key} must be a string")
-                elif expected_type == "integer" and not isinstance(actual_value, int):
-                    issues.append(f"Configuration key {key} must be an integer")
-                elif expected_type == "boolean" and not isinstance(actual_value, bool):
+                elif expected_type == "integer" and not isinstance(
+                    actual_value, int
+                ):
+                    issues.append(
+                        f"Configuration key {key} must be an integer"
+                    )
+                elif expected_type == "boolean" and not isinstance(
+                    actual_value, bool
+                ):
                     issues.append(f"Configuration key {key} must be a boolean")
 
         return issues
@@ -442,7 +456,9 @@ class PluginPermissionManager:
 
         if permission not in self.granted_permissions[plugin_id]:
             self.granted_permissions[plugin_id].append(permission)
-            logger.info(f"Granted permission '{permission}' to plugin {plugin_id}")
+            logger.info(
+                f"Granted permission '{permission}' to plugin {plugin_id}"
+            )
 
     def revoke_permission(self, plugin_id: str, permission: str):
         """Revoke permission from plugin"""

@@ -35,7 +35,9 @@ class TaskAffinityStrategy(str, Enum):
     """Task affinity strategies for provider selection"""
 
     NONE = "none"  # No affinity preference
-    PROVIDER_STICKY = "provider_sticky"  # Prefer same provider for related tasks
+    PROVIDER_STICKY = (
+        "provider_sticky"  # Prefer same provider for related tasks
+    )
     CAPABILITY_BASED = "capability_based"  # Group by task capabilities
     COST_OPTIMIZED = "cost_optimized"  # Balance between affinity and cost
 
@@ -72,7 +74,9 @@ class TaskAffinityTracker:
         self.task_relationships: Dict[str, List[str]] = (
             {}
         )  # task_id -> related_task_ids
-        self.provider_assignments: Dict[str, str] = {}  # task_id -> provider_id
+        self.provider_assignments: Dict[str, str] = (
+            {}
+        )  # task_id -> provider_id
         self.provider_performance: Dict[str, List[float]] = (
             {}
         )  # provider_id -> success_rates
@@ -82,7 +86,9 @@ class TaskAffinityTracker:
         """Record a task-to-provider assignment"""
         task_key = f"{task.id}"
         self.provider_assignments[task_key] = provider_id
-        logger.debug(f"Recorded assignment: Task {task.id} -> Provider {provider_id}")
+        logger.debug(
+            f"Recorded assignment: Task {task.id} -> Provider {provider_id}"
+        )
 
     def record_performance(
         self, provider_id: str, success: bool, execution_time: float
@@ -119,7 +125,9 @@ class TaskAffinityTracker:
 
         # Weighted average with more weight on recent performance
         weights = [i + 1 for i in range(len(scores))]  # Linear weighting
-        weighted_sum = sum(score * weight for score, weight in zip(scores, weights))
+        weighted_sum = sum(
+            score * weight for score, weight in zip(scores, weights)
+        )
         weight_sum = sum(weights)
 
         return weighted_sum / weight_sum if weight_sum > 0 else 0.5
@@ -159,7 +167,9 @@ class ProviderCoordinator:
             f"Provider Coordinator initialized with strategy: {strategy}, affinity: {affinity_strategy}"
         )
 
-    async def select_provider(self, task: Task, context: ExecutionContext) -> str:
+    async def select_provider(
+        self, task: Task, context: ExecutionContext
+    ) -> str:
         """
         Select the optimal provider for a given task and context
 
@@ -170,12 +180,16 @@ class ProviderCoordinator:
             ProviderError: If no suitable provider is available
         """
         try:
-            logger.info(f"Selecting provider for task {task.id} (type: {task.type})")
+            logger.info(
+                f"Selecting provider for task {task.id} (type: {task.type})"
+            )
 
             # Step 1: Apply context filters (preferred/excluded providers)
             available_providers = await self._filter_by_context(context)
             if not available_providers:
-                raise ProviderError("No providers available after context filtering")
+                raise ProviderError(
+                    "No providers available after context filtering"
+                )
 
             logger.debug(
                 f"Available providers after context filtering: {available_providers}"
@@ -241,11 +255,15 @@ class ProviderCoordinator:
                 task, selected_provider, context, str(self.strategy)
             )
 
-            logger.info(f"Selected provider {selected_provider} for task {task.id}")
+            logger.info(
+                f"Selected provider {selected_provider} for task {task.id}"
+            )
             return selected_provider
 
         except Exception as e:
-            logger.error(f"Provider selection failed for task {task.id}: {str(e)}")
+            logger.error(
+                f"Provider selection failed for task {task.id}: {str(e)}"
+            )
             raise ProviderError(f"Provider selection failed: {str(e)}")
 
     async def select_backup_provider(
@@ -290,8 +308,8 @@ class ProviderCoordinator:
 
                 health = await provider.get_health_status()
                 cost_estimate = provider.estimate_cost(task)
-                performance_score = self.task_affinity_tracker.get_provider_score(
-                    provider_id
+                performance_score = (
+                    self.task_affinity_tracker.get_provider_score(provider_id)
                 )
 
                 recommendation = {
@@ -314,7 +332,9 @@ class ProviderCoordinator:
                 recommendations.append(recommendation)
 
             # Sort by recommendation score (highest first)
-            recommendations.sort(key=lambda x: x["recommendation_score"], reverse=True)
+            recommendations.sort(
+                key=lambda x: x["recommendation_score"], reverse=True
+            )
 
             return recommendations
 
@@ -340,7 +360,9 @@ class ProviderCoordinator:
 
         # Apply preferred providers filter
         if context.preferred_providers:
-            available = [p for p in context.preferred_providers if p in all_providers]
+            available = [
+                p for p in context.preferred_providers if p in all_providers
+            ]
             if available:
                 all_providers = available
 
@@ -404,7 +426,9 @@ class ProviderCoordinator:
         if self.affinity_strategy == TaskAffinityStrategy.NONE:
             return None
 
-        related_provider = self.task_affinity_tracker.find_related_provider(task)
+        related_provider = self.task_affinity_tracker.find_related_provider(
+            task
+        )
         if related_provider and related_provider in provider_ids:
             # Verify the related provider is still healthy
             if await self._is_provider_healthy(related_provider):
@@ -439,7 +463,9 @@ class ProviderCoordinator:
             self._round_robin_index = 0
 
         selected = provider_ids[self._round_robin_index % len(provider_ids)]
-        self._round_robin_index = (self._round_robin_index + 1) % len(provider_ids)
+        self._round_robin_index = (self._round_robin_index + 1) % len(
+            provider_ids
+        )
 
         return selected
 
@@ -462,7 +488,9 @@ class ProviderCoordinator:
 
         return selected_provider
 
-    async def _fastest_response_selection(self, provider_ids: List[str]) -> str:
+    async def _fastest_response_selection(
+        self, provider_ids: List[str]
+    ) -> str:
         """Select provider with fastest average response time"""
         best_score = 0.0
         selected_provider = provider_ids[0]
@@ -552,7 +580,9 @@ class ProviderCoordinator:
             return is_healthy
 
         except Exception as e:
-            logger.warning(f"Health check failed for provider {provider_id}: {str(e)}")
+            logger.warning(
+                f"Health check failed for provider {provider_id}: {str(e)}"
+            )
             return False
 
     async def _record_selection(

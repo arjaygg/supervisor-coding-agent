@@ -63,7 +63,9 @@ class TestDynamicResourceAllocator:
     @pytest.mark.asyncio
     async def test_monitor_resource_usage_fallback(self, allocator):
         """Test resource monitoring fallback when psutil fails."""
-        with patch("psutil.cpu_percent", side_effect=Exception("psutil error")):
+        with patch(
+            "psutil.cpu_percent", side_effect=Exception("psutil error")
+        ):
             metrics = await allocator.monitor_resource_usage()
 
             assert isinstance(metrics, ResourceMetrics)
@@ -160,7 +162,9 @@ class TestDynamicResourceAllocator:
         assert allocation.cost_estimate > 0
 
     @pytest.mark.asyncio
-    async def test_allocate_resources_cpu_optimized(self, allocator, sample_task):
+    async def test_allocate_resources_cpu_optimized(
+        self, allocator, sample_task
+    ):
         """Test CPU-optimized resource allocation."""
         allocation = await allocator.allocate_resources_for_task(
             sample_task, AllocationStrategy.CPU_OPTIMIZED
@@ -172,7 +176,10 @@ class TestDynamicResourceAllocator:
         )
 
         assert allocation.cpu_allocation > balanced_allocation.cpu_allocation
-        assert allocation.memory_allocation < balanced_allocation.memory_allocation
+        assert (
+            allocation.memory_allocation
+            < balanced_allocation.memory_allocation
+        )
 
     @pytest.mark.asyncio
     async def test_implement_cost_optimization(self, allocator):
@@ -189,10 +196,14 @@ class TestDynamicResourceAllocator:
             strategy=AllocationStrategy.BALANCED,
         )
 
-        optimized_plan = await allocator.implement_cost_optimization(original_plan)
+        optimized_plan = await allocator.implement_cost_optimization(
+            original_plan
+        )
 
         assert optimized_plan.cpu_allocation < original_plan.cpu_allocation
-        assert optimized_plan.memory_allocation < original_plan.memory_allocation
+        assert (
+            optimized_plan.memory_allocation < original_plan.memory_allocation
+        )
         assert optimized_plan.cost_estimate < original_plan.cost_estimate
         assert optimized_plan.strategy == AllocationStrategy.COST_OPTIMIZED
 
@@ -209,11 +220,17 @@ class TestDynamicResourceAllocator:
             time_horizon=60,
         )
 
-        recommendations = await allocator.scale_resources_dynamically(high_demand)
+        recommendations = await allocator.scale_resources_dynamically(
+            high_demand
+        )
 
         assert len(recommendations) > 0
         cpu_rec = next(
-            (r for r in recommendations if r.resource_type == ResourceType.CPU),
+            (
+                r
+                for r in recommendations
+                if r.resource_type == ResourceType.CPU
+            ),
             None,
         )
         assert cpu_rec is not None
@@ -221,7 +238,9 @@ class TestDynamicResourceAllocator:
         assert cpu_rec.urgency == "high"
 
     @pytest.mark.asyncio
-    async def test_get_resource_utilization_report(self, allocator, sample_task):
+    async def test_get_resource_utilization_report(
+        self, allocator, sample_task
+    ):
         """Test resource utilization report generation."""
         # Allocate some resources first
         await allocator.allocate_resources_for_task(sample_task)
@@ -293,12 +312,18 @@ class TestResourceConflictResolver:
         ]
 
     @pytest.mark.asyncio
-    async def test_detect_overallocation_conflicts(self, resolver, sample_allocations):
+    async def test_detect_overallocation_conflicts(
+        self, resolver, sample_allocations
+    ):
         """Test detection of resource overallocation conflicts."""
-        conflicts = await resolver._detect_overallocation_conflicts(sample_allocations)
+        conflicts = await resolver._detect_overallocation_conflicts(
+            sample_allocations
+        )
 
         # Should detect CPU overallocation (8 + 12 = 20 > 16 limit)
-        cpu_conflicts = [c for c in conflicts if c.resource_type == ResourceType.CPU]
+        cpu_conflicts = [
+            c for c in conflicts if c.resource_type == ResourceType.CPU
+        ]
         assert len(cpu_conflicts) > 0
 
         conflict = cpu_conflicts[0]
@@ -307,9 +332,13 @@ class TestResourceConflictResolver:
         assert conflict.severity in ["high", "critical"]
 
     @pytest.mark.asyncio
-    async def test_detect_priority_conflicts(self, resolver, sample_allocations):
+    async def test_detect_priority_conflicts(
+        self, resolver, sample_allocations
+    ):
         """Test detection of priority-based conflicts."""
-        conflicts = await resolver._detect_priority_conflicts(sample_allocations)
+        conflicts = await resolver._detect_priority_conflicts(
+            sample_allocations
+        )
 
         # Should detect priority conflict (high priority task starved)
         if conflicts:
@@ -335,7 +364,9 @@ class TestResourceConflictResolver:
             )
         ]
 
-        conflicts = await resolver._detect_quota_conflicts(high_cost_allocations)
+        conflicts = await resolver._detect_quota_conflicts(
+            high_cost_allocations
+        )
 
         assert len(conflicts) > 0
         conflict = conflicts[0]
@@ -347,7 +378,9 @@ class TestResourceConflictResolver:
         self, resolver, sample_allocations
     ):
         """Test comprehensive conflict detection."""
-        conflicts = await resolver.detect_resource_conflicts(sample_allocations)
+        conflicts = await resolver.detect_resource_conflicts(
+            sample_allocations
+        )
 
         assert isinstance(conflicts, list)
         # Should have stored conflicts in active_conflicts
@@ -368,7 +401,9 @@ class TestResourceConflictResolver:
             description="CPU overallocation test",
         )
 
-        resolution_plans = await resolver.implement_resolution_strategies([conflict])
+        resolution_plans = await resolver.implement_resolution_strategies(
+            [conflict]
+        )
 
         assert len(resolution_plans) == 1
         plan = resolution_plans[0]
@@ -392,7 +427,9 @@ class TestResourceConflictResolver:
             description="Critical overallocation",
         )
 
-        strategy = await resolver._select_resolution_strategy(overalloc_conflict)
+        strategy = await resolver._select_resolution_strategy(
+            overalloc_conflict
+        )
         assert strategy == ResolutionStrategy.SCALE_UP
 
         # Test priority conflict
@@ -407,7 +444,9 @@ class TestResourceConflictResolver:
             description="Priority conflict",
         )
 
-        strategy = await resolver._select_resolution_strategy(priority_conflict)
+        strategy = await resolver._select_resolution_strategy(
+            priority_conflict
+        )
         assert strategy == ResolutionStrategy.PREEMPT
 
     @pytest.mark.asyncio
@@ -463,7 +502,9 @@ class TestResourceConflictResolver:
             strategy=AllocationStrategy.BALANCED,
         )
 
-        result = await resolver.coordinate_resource_reservation(task, allocation_plan)
+        result = await resolver.coordinate_resource_reservation(
+            task, allocation_plan
+        )
 
         assert result["reservation_status"] == "success"
         assert "reservations" in result
@@ -522,7 +563,8 @@ class TestResourceConflictResolver:
 
         assert report["active_conflicts"]["count"] == 1
         assert (
-            ConflictType.OVERALLOCATION.value in report["active_conflicts"]["by_type"]
+            ConflictType.OVERALLOCATION.value
+            in report["active_conflicts"]["by_type"]
         )
 
     def test_calculate_task_complexity(self, resolver):
@@ -530,7 +572,9 @@ class TestResourceConflictResolver:
         simple_task = Task(id="simple", config={"description": "simple task"})
         complex_task = Task(
             id="complex",
-            config={"description": "analyze optimize process transform compute data"},
+            config={
+                "description": "analyze optimize process transform compute data"
+            },
         )
 
         simple_complexity = resolver._calculate_task_complexity(simple_task)
@@ -544,7 +588,11 @@ class TestResourceConflictResolver:
         high_priority_task = Task(id="high", priority=1)
         low_priority_task = Task(id="low", priority=8)
 
-        high_score = resolver._calculate_priority_score(high_priority_task, 1, 2.0)
-        low_score = resolver._calculate_priority_score(low_priority_task, 8, 1.0)
+        high_score = resolver._calculate_priority_score(
+            high_priority_task, 1, 2.0
+        )
+        low_score = resolver._calculate_priority_score(
+            low_priority_task, 8, 1.0
+        )
 
         assert high_score > low_score
