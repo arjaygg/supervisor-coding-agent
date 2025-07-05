@@ -16,6 +16,7 @@ logger = structlog.get_logger(__name__)
 
 class DistributionStrategy(Enum):
     """Task distribution strategies."""
+
     SEQUENTIAL = "sequential"
     PARALLEL = "parallel"
     DEPENDENCY_AWARE = "dependency_aware"
@@ -25,6 +26,7 @@ class DistributionStrategy(Enum):
 @dataclass
 class TaskSplit:
     """Represents a split task."""
+
     split_id: str
     original_task_id: str
     task_type: TaskCapability
@@ -36,6 +38,7 @@ class TaskSplit:
 @dataclass
 class DistributionResult:
     """Result of task distribution."""
+
     original_task_id: str
     strategy_used: DistributionStrategy
     task_splits: List[TaskSplit]
@@ -45,14 +48,14 @@ class DistributionResult:
 
 class TaskDistributionEngine:
     """Placeholder for Task Distribution Engine."""
-    
+
     def __init__(self):
         self.logger = logger.bind(component="task_distribution_engine")
-    
+
     async def distribute_task(
         self,
         task_id: str,
-        strategy: DistributionStrategy = DistributionStrategy.PARALLEL
+        strategy: DistributionStrategy = DistributionStrategy.PARALLEL,
     ) -> DistributionResult:
         """Distribute a task using the specified strategy."""
         # Placeholder implementation
@@ -60,7 +63,7 @@ class TaskDistributionEngine:
             original_task_id=task_id,
             strategy_used=strategy,
             task_splits=[],
-            success=True
+            success=True,
         )
 
 
