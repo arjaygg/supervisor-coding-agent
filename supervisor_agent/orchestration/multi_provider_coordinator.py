@@ -13,16 +13,31 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import structlog
 
-from supervisor_agent.core.multi_provider_service import MultiProviderService
-from supervisor_agent.orchestration.agent_specialization_engine import (
-    AgentSpecializationEngine,
-    AgentSpecialty,
-)
+<<<<<<< HEAD
+=======
 from supervisor_agent.providers.base_provider import (
     AIProvider,
     ProviderType,
     TaskCapability,
 )
+
+>>>>>>> feature/automated-pr-workflow
+from supervisor_agent.core.multi_provider_service import MultiProviderService
+from supervisor_agent.orchestration.agent_specialization_engine import (
+    AgentSpecializationEngine,
+    AgentSpecialty,
+)
+
+<<<<<<< HEAD
+from supervisor_agent.providers.base_provider import (
+    AIProvider,
+    ProviderType,
+    TaskCapability,
+)
+
+=======
+
+>>>>>>> feature/automated-pr-workflow
 
 logger = structlog.get_logger(__name__)
 
@@ -192,9 +207,13 @@ class MultiProviderCoordinator:
         return capacity_map.get(provider_type, 50)
 
     async def coordinate_task(
+<<<<<<< HEAD
         self,
         task: CoordinationTask,
         strategy: Optional[CoordinationStrategy] = None,
+=======
+        self, task: CoordinationTask, strategy: Optional[CoordinationStrategy] = None
+>>>>>>> feature/automated-pr-workflow
     ) -> ExecutionResult:
         """
         Coordinate execution of a task across providers.
@@ -286,9 +305,13 @@ class MultiProviderCoordinator:
             return [self._select_load_balanced(available_providers)]
 
         elif strategy == CoordinationStrategy.CAPABILITY_BASED:
+<<<<<<< HEAD
             return [
                 await self._select_capability_based(task, available_providers)
             ]
+=======
+            return [await self._select_capability_based(task, available_providers)]
+>>>>>>> feature/automated-pr-workflow
 
         elif strategy == CoordinationStrategy.COST_OPTIMIZED:
             return [self._select_cost_optimized(available_providers)]
@@ -333,18 +356,26 @@ class MultiProviderCoordinator:
 
         return available
 
+<<<<<<< HEAD
     async def _is_provider_available(
         self, provider_type: ProviderType
     ) -> bool:
+=======
+    async def _is_provider_available(self, provider_type: ProviderType) -> bool:
+>>>>>>> feature/automated-pr-workflow
         """Check if a provider is available."""
         metrics = self.provider_metrics.get(provider_type)
         if not metrics:
             return False
 
+<<<<<<< HEAD
         return metrics.status in [
             ProviderStatus.HEALTHY,
             ProviderStatus.DEGRADED,
         ]
+=======
+        return metrics.status in [ProviderStatus.HEALTHY, ProviderStatus.DEGRADED]
+>>>>>>> feature/automated-pr-workflow
 
     async def _supports_task_type(
         self, provider_type: ProviderType, task_type: TaskCapability
@@ -354,9 +385,13 @@ class MultiProviderCoordinator:
         # In a real implementation, this would check provider capabilities
         return True
 
+<<<<<<< HEAD
     def _select_round_robin(
         self, providers: List[ProviderType]
     ) -> ProviderType:
+=======
+    def _select_round_robin(self, providers: List[ProviderType]) -> ProviderType:
+>>>>>>> feature/automated-pr-workflow
         """Select provider using round-robin strategy."""
         if not providers:
             return ProviderType.LOCAL_MOCK
@@ -365,9 +400,13 @@ class MultiProviderCoordinator:
         self.round_robin_index += 1
         return provider
 
+<<<<<<< HEAD
     def _select_load_balanced(
         self, providers: List[ProviderType]
     ) -> ProviderType:
+=======
+    def _select_load_balanced(self, providers: List[ProviderType]) -> ProviderType:
+>>>>>>> feature/automated-pr-workflow
         """Select provider with lowest load."""
         if not providers:
             return ProviderType.LOCAL_MOCK
@@ -416,9 +455,13 @@ class MultiProviderCoordinator:
 
         return best_provider
 
+<<<<<<< HEAD
     def _select_cost_optimized(
         self, providers: List[ProviderType]
     ) -> ProviderType:
+=======
+    def _select_cost_optimized(self, providers: List[ProviderType]) -> ProviderType:
+>>>>>>> feature/automated-pr-workflow
         """Select provider with lowest cost."""
         if not providers:
             return ProviderType.LOCAL_MOCK
@@ -467,6 +510,7 @@ class MultiProviderCoordinator:
 
                 try:
                     # Execute task (mock implementation)
+<<<<<<< HEAD
                     result_data = await self._execute_on_provider(
                         provider, task
                     )
@@ -474,15 +518,24 @@ class MultiProviderCoordinator:
                     execution_time = (
                         datetime.now() - start_time
                     ).total_seconds()
+=======
+                    result_data = await self._execute_on_provider(provider, task)
+
+                    execution_time = (datetime.now() - start_time).total_seconds()
+>>>>>>> feature/automated-pr-workflow
 
                     return ExecutionResult(
                         task_id=task.task_id,
                         success=True,
                         provider_used=provider_type,
                         execution_time=execution_time,
+<<<<<<< HEAD
                         cost=self._calculate_cost(
                             provider_type, execution_time
                         ),
+=======
+                        cost=self._calculate_cost(provider_type, execution_time),
+>>>>>>> feature/automated-pr-workflow
                         result_data=result_data,
                     )
 
@@ -536,9 +589,13 @@ class MultiProviderCoordinator:
     ) -> ExecutionResult:
         """Execute task in parallel on multiple providers."""
         # Create tasks for parallel execution
+<<<<<<< HEAD
         tasks = [
             self._execute_single(task, provider) for provider in providers
         ]
+=======
+        tasks = [self._execute_single(task, provider) for provider in providers]
+>>>>>>> feature/automated-pr-workflow
 
         # Wait for first successful result
         try:
@@ -659,9 +716,13 @@ class MultiProviderCoordinator:
     def get_coordination_stats(self) -> Dict[str, Any]:
         """Get coordination statistics."""
         total_executions = len(self.execution_history)
+<<<<<<< HEAD
         successful_executions = sum(
             1 for r in self.execution_history if r.success
         )
+=======
+        successful_executions = sum(1 for r in self.execution_history if r.success)
+>>>>>>> feature/automated-pr-workflow
 
         provider_usage = defaultdict(int)
         for result in self.execution_history:
@@ -671,6 +732,7 @@ class MultiProviderCoordinator:
             "total_coordinated_tasks": total_executions,
             "successful_tasks": successful_executions,
             "success_rate": (
+<<<<<<< HEAD
                 successful_executions / total_executions
                 if total_executions > 0
                 else 0
@@ -679,6 +741,13 @@ class MultiProviderCoordinator:
             "average_execution_time": (
                 sum(r.execution_time for r in self.execution_history)
                 / total_executions
+=======
+                successful_executions / total_executions if total_executions > 0 else 0
+            ),
+            "provider_usage": dict(provider_usage),
+            "average_execution_time": (
+                sum(r.execution_time for r in self.execution_history) / total_executions
+>>>>>>> feature/automated-pr-workflow
                 if total_executions > 0
                 else 0
             ),

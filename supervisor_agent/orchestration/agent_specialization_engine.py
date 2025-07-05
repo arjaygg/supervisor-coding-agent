@@ -23,6 +23,16 @@ from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 import structlog
 
+<<<<<<< HEAD
+=======
+from supervisor_agent.providers.base_provider import (
+    AIProvider,
+    ProviderCapabilities,
+    ProviderType,
+    TaskCapability,
+)
+
+>>>>>>> feature/automated-pr-workflow
 from supervisor_agent.core.provider_coordinator import ExecutionContext
 from supervisor_agent.db.models import Task, TaskType
 from supervisor_agent.providers.base_provider import (
@@ -125,9 +135,13 @@ class CapabilityMatcher(ABC):
     async def match_capabilities(
         self,
         task_characteristics: Dict[str, Any],
+<<<<<<< HEAD
         available_capabilities: Dict[
             AgentSpecialty, List[SpecializationCapability]
         ],
+=======
+        available_capabilities: Dict[AgentSpecialty, List[SpecializationCapability]],
+>>>>>>> feature/automated-pr-workflow
     ) -> List[Tuple[AgentSpecialty, float]]:
         """Match task characteristics to agent capabilities"""
         pass
@@ -138,10 +152,14 @@ class PerformancePredictor(ABC):
 
     @abstractmethod
     async def predict_performance(
+<<<<<<< HEAD
         self,
         specialty: AgentSpecialty,
         task: Task,
         historical_data: Dict[str, Any],
+=======
+        self, specialty: AgentSpecialty, task: Task, historical_data: Dict[str, Any]
+>>>>>>> feature/automated-pr-workflow
     ) -> Dict[str, float]:
         """Predict performance metrics for specialty-task combination"""
         pass
@@ -185,10 +203,14 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
         if task.type in [TaskType.FEATURE_DEVELOPMENT, TaskType.SYSTEM_DESIGN]:
             complexity_indicators += 2
 
+<<<<<<< HEAD
         if (
             "complex" in str(config).lower()
             or "advanced" in str(config).lower()
         ):
+=======
+        if "complex" in str(config).lower() or "advanced" in str(config).lower():
+>>>>>>> feature/automated-pr-workflow
             complexity_indicators += 1
 
         if complexity_indicators <= 1:
@@ -277,11 +299,15 @@ class DefaultTaskAnalyzer(TaskAnalyzer):
 
         # Adjust based on complexity
         complexity = self._estimate_complexity(task)
+<<<<<<< HEAD
         complexity_multipliers = {
             "simple": 0.7,
             "moderate": 1.0,
             "complex": 1.8,
         }
+=======
+        complexity_multipliers = {"simple": 0.7, "moderate": 1.0, "complex": 1.8}
+>>>>>>> feature/automated-pr-workflow
 
         return base_effort * complexity_multipliers.get(complexity, 1.0)
 
@@ -295,9 +321,13 @@ class DefaultCapabilityMatcher(CapabilityMatcher):
     async def match_capabilities(
         self,
         task_characteristics: Dict[str, Any],
+<<<<<<< HEAD
         available_capabilities: Dict[
             AgentSpecialty, List[SpecializationCapability]
         ],
+=======
+        available_capabilities: Dict[AgentSpecialty, List[SpecializationCapability]],
+>>>>>>> feature/automated-pr-workflow
     ) -> List[Tuple[AgentSpecialty, float]]:
         """Match task characteristics to agent capabilities"""
         matches = []
@@ -382,10 +412,14 @@ class DefaultPerformancePredictor(PerformancePredictor):
         self.logger = structured_logger.bind(component="performance_predictor")
 
     async def predict_performance(
+<<<<<<< HEAD
         self,
         specialty: AgentSpecialty,
         task: Task,
         historical_data: Dict[str, Any],
+=======
+        self, specialty: AgentSpecialty, task: Task, historical_data: Dict[str, Any]
+>>>>>>> feature/automated-pr-workflow
     ) -> Dict[str, float]:
         """Predict performance metrics for specialty-task combination"""
 
@@ -399,9 +433,13 @@ class DefaultPerformancePredictor(PerformancePredictor):
                 "avg_execution_time", 300.0
             ),
             "quality_score": specialty_history.get("avg_quality_score", 0.8),
+<<<<<<< HEAD
             "cost_efficiency": specialty_history.get(
                 "avg_cost_efficiency", 0.75
             ),
+=======
+            "cost_efficiency": specialty_history.get("avg_cost_efficiency", 0.75),
+>>>>>>> feature/automated-pr-workflow
             "confidence": specialty_history.get("prediction_confidence", 0.6),
         }
 
@@ -433,9 +471,13 @@ class DefaultSpecializationStrategy:
     """Default strategy for calculating specialization scores"""
 
     def __init__(self):
+<<<<<<< HEAD
         self.logger = structured_logger.bind(
             component="specialization_strategy"
         )
+=======
+        self.logger = structured_logger.bind(component="specialization_strategy")
+>>>>>>> feature/automated-pr-workflow
 
     async def calculate_specialization_score(
         self,
@@ -509,9 +551,13 @@ class DefaultSpecializationStrategy:
         )
 
         confidence = min(
+<<<<<<< HEAD
             (capability_match + provider_availability + historical_performance)
             / 3,
             1.0,
+=======
+            (capability_match + provider_availability + historical_performance) / 3, 1.0
+>>>>>>> feature/automated-pr-workflow
         )
 
         return SpecializationScore(
@@ -577,9 +623,13 @@ class DefaultSpecializationStrategy:
                         total_availability += availability
                         provider_count += 1
 
+<<<<<<< HEAD
         return (
             total_availability / provider_count if provider_count > 0 else 0.0
         )
+=======
+        return total_availability / provider_count if provider_count > 0 else 0.0
+>>>>>>> feature/automated-pr-workflow
 
     async def _calculate_historical_performance(
         self, specialty: AgentSpecialty, task: Task
@@ -604,9 +654,13 @@ class DefaultSpecializationStrategy:
         return performance_defaults.get(specialty, 0.7)
 
     async def _calculate_context_match(
+<<<<<<< HEAD
         self,
         capabilities: List[SpecializationCapability],
         context: ExecutionContext,
+=======
+        self, capabilities: List[SpecializationCapability], context: ExecutionContext
+>>>>>>> feature/automated-pr-workflow
     ) -> float:
         """Calculate how well the context matches capability requirements"""
         if not capabilities:
@@ -697,9 +751,13 @@ class DefaultSpecializationStrategy:
 
         # Use performance metrics from best capability
         best_capability = max(capabilities, key=lambda c: c.proficiency_score)
+<<<<<<< HEAD
         base_time = best_capability.performance_metrics.get(
             "avg_execution_time", 300.0
         )
+=======
+        base_time = best_capability.performance_metrics.get("avg_execution_time", 300.0)
+>>>>>>> feature/automated-pr-workflow
 
         # Adjust based on proficiency (higher proficiency = faster execution)
         efficiency_factor = best_capability.proficiency_score
@@ -731,9 +789,13 @@ class AgentSpecializationEngine:
         specialization_strategy: Optional[SpecializationStrategy] = None,
     ):
         self.task_analyzer = task_analyzer or DefaultTaskAnalyzer()
+<<<<<<< HEAD
         self.capability_matcher = (
             capability_matcher or DefaultCapabilityMatcher()
         )
+=======
+        self.capability_matcher = capability_matcher or DefaultCapabilityMatcher()
+>>>>>>> feature/automated-pr-workflow
         self.performance_predictor = (
             performance_predictor or DefaultPerformancePredictor()
         )
@@ -741,9 +803,13 @@ class AgentSpecializationEngine:
             specialization_strategy or DefaultSpecializationStrategy()
         )
 
+<<<<<<< HEAD
         self.logger = structured_logger.bind(
             component="agent_specialization_engine"
         )
+=======
+        self.logger = structured_logger.bind(component="agent_specialization_engine")
+>>>>>>> feature/automated-pr-workflow
 
         # Initialize agent capabilities
         self.agent_capabilities = self._initialize_agent_capabilities()
@@ -778,6 +844,7 @@ class AgentSpecializationEngine:
             # Analyze task characteristics
             task_characteristics = (
                 await self.task_analyzer.analyze_task_characteristics(task)
+<<<<<<< HEAD
             )
 
             # Match capabilities
@@ -795,6 +862,25 @@ class AgentSpecializationEngine:
                     context,
                     self.agent_capabilities,
                     provider_status,
+=======
+            )
+
+            # Match capabilities
+            capability_matches = await self.capability_matcher.match_capabilities(
+                task_characteristics, self.agent_capabilities
+            )
+
+            if not capability_matches:
+                # Return general developer as fallback
+                return (
+                    await self.specialization_strategy.calculate_specialization_score(
+                        AgentSpecialty.GENERAL_DEVELOPER,
+                        task,
+                        context,
+                        self.agent_capabilities,
+                        provider_status,
+                    )
+>>>>>>> feature/automated-pr-workflow
                 )
 
             # Calculate specialization scores for top matches
@@ -802,6 +888,7 @@ class AgentSpecializationEngine:
             for specialty, capability_match in capability_matches[
                 :5
             ]:  # Top 5 candidates
+<<<<<<< HEAD
                 score = await self.specialization_strategy.calculate_specialization_score(
                     specialty,
                     task,
@@ -814,6 +901,19 @@ class AgentSpecializationEngine:
                     best_score is None
                     or score.overall_score > best_score.overall_score
                 ):
+=======
+                score = (
+                    await self.specialization_strategy.calculate_specialization_score(
+                        specialty,
+                        task,
+                        context,
+                        self.agent_capabilities,
+                        provider_status,
+                    )
+                )
+
+                if best_score is None or score.overall_score > best_score.overall_score:
+>>>>>>> feature/automated-pr-workflow
                     best_score = score
 
             self.logger.info(
@@ -828,9 +928,13 @@ class AgentSpecializationEngine:
 
         except Exception as e:
             self.logger.error(
+<<<<<<< HEAD
                 "Agent specialization selection failed",
                 task_id=task.id,
                 error=str(e),
+=======
+                "Agent specialization selection failed", task_id=task.id, error=str(e)
+>>>>>>> feature/automated-pr-workflow
             )
 
             # Return fallback general developer
@@ -873,9 +977,13 @@ class AgentSpecializationEngine:
         return scores
 
     async def update_agent_capabilities(
+<<<<<<< HEAD
         self,
         specialty: AgentSpecialty,
         capabilities: List[SpecializationCapability],
+=======
+        self, specialty: AgentSpecialty, capabilities: List[SpecializationCapability]
+>>>>>>> feature/automated-pr-workflow
     ):
         """Update capabilities for a specific agent specialty"""
         self.agent_capabilities[specialty] = capabilities

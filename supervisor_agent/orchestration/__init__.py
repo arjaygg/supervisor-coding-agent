@@ -13,17 +13,27 @@ from .agent_specialization_engine import (
     create_agent_specialization_engine,
 )
 from .multi_provider_coordinator import (
+    HEAD,
     CoordinationResult,
     MultiProviderCoordinator,
     ProviderOrchestrationStrategy,
+    <<<<<<<,
+    =======,
+    >>>>>>>,
     create_multi_provider_coordinator,
+    feature/automated-pr-workflow,
 )
 from .task_distribution_engine import (
+    HEAD,
     DistributionResult,
     DistributionStrategy,
     TaskDistributionEngine,
     TaskSplit,
+    <<<<<<<,
+    =======,
+    >>>>>>>,
     create_task_distribution_engine,
+    feature/automated-pr-workflow,
 )
 
 __all__ = [
