@@ -14,9 +14,7 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./test_chat.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine
-)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def override_get_db():
@@ -80,8 +78,7 @@ class TestChatIntegration:
         assert "total_count" in data
         assert len(data["threads"]) >= 1
         assert any(
-            thread["title"] == thread_data["title"]
-            for thread in data["threads"]
+            thread["title"] == thread_data["title"] for thread in data["threads"]
         )
 
     def test_send_message_to_thread(self, client):
@@ -118,9 +115,7 @@ class TestChatIntegration:
         thread_id = thread_response.json()["id"]
 
         message_data = {"content": "Test message"}
-        client.post(
-            f"/api/v1/chat/threads/{thread_id}/messages", json=message_data
-        )
+        client.post(f"/api/v1/chat/threads/{thread_id}/messages", json=message_data)
 
         # Get messages
         response = client.get(f"/api/v1/chat/threads/{thread_id}/messages")
@@ -148,9 +143,7 @@ class TestChatIntegration:
         thread_id = thread_data_response["id"]
 
         # Check that the initial message was created
-        messages_response = client.get(
-            f"/api/v1/chat/threads/{thread_id}/messages"
-        )
+        messages_response = client.get(f"/api/v1/chat/threads/{thread_id}/messages")
         assert messages_response.status_code == 200
 
         messages_data = messages_response.json()

@@ -114,9 +114,7 @@ class ResourceConflictResolver:
     def __init__(self):
         self.active_conflicts: Dict[str, ResourceConflict] = {}
         self.resolution_history: List[ResolutionPlan] = []
-        self.resource_reservations: Dict[str, List[TaskReservation]] = (
-            defaultdict(list)
-        )
+        self.resource_reservations: Dict[str, List[TaskReservation]] = defaultdict(list)
         self.priority_queues: Dict[QueueType, List[QueuedTask]] = {
             queue_type: [] for queue_type in QueueType
         }
@@ -151,9 +149,7 @@ class ResourceConflictResolver:
         conflicts = []
 
         # Check for overallocation conflicts
-        conflicts.extend(
-            await self._detect_overallocation_conflicts(allocations)
-        )
+        conflicts.extend(await self._detect_overallocation_conflicts(allocations))
 
         # Check for priority conflicts
         conflicts.extend(await self._detect_priority_conflicts(allocations))
@@ -184,9 +180,7 @@ class ResourceConflictResolver:
             resource_usage[ResourceType.CPU] += allocation.cpu_allocation
             resource_usage[ResourceType.MEMORY] += allocation.memory_allocation
             resource_usage[ResourceType.DISK] += allocation.disk_allocation
-            resource_usage[
-                ResourceType.NETWORK
-            ] += allocation.network_allocation
+            resource_usage[ResourceType.NETWORK] += allocation.network_allocation
 
             task_allocations[ResourceType.CPU].append(allocation.task_id)
             task_allocations[ResourceType.MEMORY].append(allocation.task_id)
@@ -232,8 +226,7 @@ class ResourceConflictResolver:
                     low_priority_total = sum(
                         a.cpu_allocation
                         for a in allocations
-                        if a.priority > priority
-                        and a.task_id != allocation.task_id
+                        if a.priority > priority and a.task_id != allocation.task_id
                     )
 
                     if low_priority_total > allocation.cpu_allocation * 2:
@@ -260,9 +253,7 @@ class ResourceConflictResolver:
         # Check reservations for overlapping time periods
         for resource_type, reservations in self.resource_reservations.items():
             # Sort reservations by start time
-            sorted_reservations = sorted(
-                reservations, key=lambda r: r.start_time
-            )
+            sorted_reservations = sorted(reservations, key=lambda r: r.start_time)
 
             for i in range(len(sorted_reservations) - 1):
                 current = sorted_reservations[i]
@@ -271,9 +262,7 @@ class ResourceConflictResolver:
                 # Check for overlap
                 if current.end_time > next_reservation.start_time:
                     # Calculate resource conflict amount
-                    overlap_amount = min(
-                        current.amount, next_reservation.amount
-                    )
+                    overlap_amount = min(current.amount, next_reservation.amount)
 
                     conflict = ResourceConflict(
                         conflict_id=f"temporal_{current.task_id}_{next_reservation.task_id}",
@@ -299,15 +288,11 @@ class ResourceConflictResolver:
         conflicts = []
 
         # Check if total estimated cost exceeds budget
-        total_cost = sum(
-            allocation.cost_estimate for allocation in allocations
-        )
+        total_cost = sum(allocation.cost_estimate for allocation in allocations)
         budget_limit = 100.0  # $100 budget limit
 
         if total_cost > budget_limit:
-            high_cost_tasks = [
-                a.task_id for a in allocations if a.cost_estimate > 10.0
-            ]
+            high_cost_tasks = [a.task_id for a in allocations if a.cost_estimate > 10.0]
 
             conflict = ResourceConflict(
                 conflict_id=f"quota_cost_{int(datetime.now().timestamp())}",
@@ -316,9 +301,7 @@ class ResourceConflictResolver:
                 resource_type=ResourceType.CPU,  # Generic
                 requested_amount=total_cost,
                 available_amount=budget_limit,
-                severity=(
-                    "high" if total_cost > budget_limit * 1.5 else "medium"
-                ),
+                severity=("high" if total_cost > budget_limit * 1.5 else "medium"),
                 description=f"Total cost ${total_cost:.2f} exceeds budget ${budget_limit:.2f}",
             )
             conflicts.append(conflict)
@@ -385,9 +368,7 @@ class ResourceConflictResolver:
                     "task_id": task_id,
                     "delay_minutes": 30,
                 }
-                for task_id in conflict.affected_tasks[
-                    1:
-                ]  # Reschedule all but first
+                for task_id in conflict.affected_tasks[1:]  # Reschedule all but first
             ]
             estimated_time = 10
             performance_impact = "low"
@@ -399,9 +380,7 @@ class ResourceConflictResolver:
                     "task_id": task_id,
                     "grace_period": 60,
                 }
-                for task_id in conflict.affected_tasks[
-                    1:
-                ]  # Preempt lower priority
+                for task_id in conflict.affected_tasks[1:]  # Preempt lower priority
             ]
             estimated_time = 2
             performance_impact = "medium"
@@ -437,9 +416,7 @@ class ResourceConflictResolver:
                     "task_id": task_id,
                     "queue_type": "normal_priority",
                 }
-                for task_id in conflict.affected_tasks[
-                    -2:
-                ]  # Queue last 2 tasks
+                for task_id in conflict.affected_tasks[-2:]  # Queue last 2 tasks
             ]
             estimated_time = 1
             performance_impact = "delayed_execution"
@@ -482,9 +459,7 @@ class ResourceConflictResolver:
 
             elif action["action"] == "queue_task":
                 # Simulate queuing
-                print(
-                    f"Queuing task {action['task_id']} in {action['queue_type']}"
-                )
+                print(f"Queuing task {action['task_id']} in {action['queue_type']}")
 
     async def manage_priority_queues(self, tasks: List[Task]) -> Dict:
         """Manage priority-based task queues."""
@@ -512,9 +487,7 @@ class ResourceConflictResolver:
                 queue_type = QueueType.LOW_PRIORITY
 
             # Calculate priority score for queue ordering
-            priority_score = self._calculate_priority_score(
-                task, priority, complexity
-            )
+            priority_score = self._calculate_priority_score(task, priority, complexity)
 
             # Create queued task
             queued_task = QueuedTask(
@@ -534,8 +507,7 @@ class ResourceConflictResolver:
             queue_type.value: {
                 "count": len(self.priority_queues[queue_type]),
                 "tasks": [
-                    qt.task.id
-                    for qt in list(self.priority_queues[queue_type])[:5]
+                    qt.task.id for qt in list(self.priority_queues[queue_type])[:5]
                 ],  # First 5
             }
             for queue_type in QueueType
@@ -590,9 +562,7 @@ class ResourceConflictResolver:
     ) -> Dict:
         """Coordinate resource reservation for a task."""
         start_time = datetime.now()
-        end_time = start_time + timedelta(
-            minutes=allocation_plan.estimated_duration
-        )
+        end_time = start_time + timedelta(minutes=allocation_plan.estimated_duration)
         priority = allocation_plan.priority
 
         reservations = []
@@ -609,9 +579,7 @@ class ResourceConflictResolver:
                 is_preemptible=priority > 2,
             )
             reservations.append(cpu_reservation)
-            self.resource_reservations[ResourceType.CPU.value].append(
-                cpu_reservation
-            )
+            self.resource_reservations[ResourceType.CPU.value].append(cpu_reservation)
 
         if allocation_plan.memory_allocation > 0:
             memory_reservation = TaskReservation(
@@ -642,9 +610,7 @@ class ResourceConflictResolver:
         """Handle resource preemption for high-priority tasks."""
         priority = getattr(high_priority_task, "priority", 5)
         priority_level = (
-            "urgent"
-            if priority <= 1
-            else "high" if priority <= 3 else "normal"
+            "urgent" if priority <= 1 else "high" if priority <= 3 else "normal"
         )
 
         policy = self.preemption_policies.get(
@@ -688,9 +654,7 @@ class ResourceConflictResolver:
                         }
                     )
 
-                    freed_resources[
-                        ResourceType(resource_type)
-                    ] += reservation.amount
+                    freed_resources[ResourceType(resource_type)] += reservation.amount
 
                     # Remove the reservation
                     reservations.remove(reservation)
@@ -738,19 +702,14 @@ class ResourceConflictResolver:
                 "total_resolutions": len(self.resolution_history),
                 "successful_strategies": {
                     strategy.value: len(
-                        [
-                            p
-                            for p in self.resolution_history
-                            if p.strategy == strategy
-                        ]
+                        [p for p in self.resolution_history if p.strategy == strategy]
                     )
                     for strategy in ResolutionStrategy
                 },
                 "average_resolution_time": (
                     (
                         sum(
-                            p.estimated_resolution_time
-                            for p in self.resolution_history
+                            p.estimated_resolution_time for p in self.resolution_history
                         )
                         / len(self.resolution_history)
                     )

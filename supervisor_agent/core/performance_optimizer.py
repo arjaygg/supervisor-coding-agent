@@ -198,9 +198,7 @@ class PerformanceOptimizer:
     async def analyze_performance_patterns(self, time_window: Dict) -> Dict:
         """Analyze performance patterns over specified time window."""
         start_time = datetime.fromisoformat(
-            time_window.get(
-                "start", (datetime.now() - timedelta(hours=24)).isoformat()
-            )
+            time_window.get("start", (datetime.now() - timedelta(hours=24)).isoformat())
         )
         end_time = datetime.fromisoformat(
             time_window.get("end", datetime.now().isoformat())
@@ -215,23 +213,18 @@ class PerformanceOptimizer:
                 start_time, end_time
             ),
             "cyclical_patterns": await self._detect_cyclical_patterns(),
-            "trend_patterns": await self._analyze_trend_patterns(
-                start_time, end_time
-            ),
+            "trend_patterns": await self._analyze_trend_patterns(start_time, end_time),
         }
 
         return {
             "analysis_period": {
                 "start": start_time.isoformat(),
                 "end": end_time.isoformat(),
-                "duration_hours": (end_time - start_time).total_seconds()
-                / 3600,
+                "duration_hours": (end_time - start_time).total_seconds() / 3600,
             },
             "patterns": patterns,
             "insights": await self._generate_pattern_insights(patterns),
-            "recommendations": await self._patterns_to_recommendations(
-                patterns
-            ),
+            "recommendations": await self._patterns_to_recommendations(patterns),
         }
 
     async def _analyze_time_based_patterns(
@@ -253,18 +246,16 @@ class PerformanceOptimizer:
 
         # Calculate averages for each hour/day
         hourly_averages = {
-            hour: statistics.mean(values)
-            for hour, values in hourly_patterns.items()
+            hour: statistics.mean(values) for hour, values in hourly_patterns.items()
         }
         daily_averages = {
-            day: statistics.mean(values)
-            for day, values in daily_patterns.items()
+            day: statistics.mean(values) for day, values in daily_patterns.items()
         }
 
         # Identify peak and low periods
-        peak_hours = sorted(
-            hourly_averages.items(), key=lambda x: x[1], reverse=True
-        )[:3]
+        peak_hours = sorted(hourly_averages.items(), key=lambda x: x[1], reverse=True)[
+            :3
+        ]
         low_hours = sorted(hourly_averages.items(), key=lambda x: x[1])[:3]
 
         return {
@@ -285,15 +276,12 @@ class PerformanceOptimizer:
         business_avg = statistics.mean(
             [hourly_averages.get(h, 0) for h in business_hours]
         )
-        off_hours_avg = statistics.mean(
-            [hourly_averages.get(h, 0) for h in off_hours]
-        )
+        off_hours_avg = statistics.mean([hourly_averages.get(h, 0) for h in off_hours])
 
         return {
             "business_hours_average": business_avg,
             "off_hours_average": off_hours_avg,
-            "business_hours_multiplier": business_avg
-            / max(0.1, off_hours_avg),
+            "business_hours_multiplier": business_avg / max(0.1, off_hours_avg),
             "recommendation": (
                 "Scale resources during business hours"
                 if business_avg > off_hours_avg * 1.5
@@ -315,9 +303,7 @@ class PerformanceOptimizer:
                         "strength": (
                             "strong" if abs(correlation) > 0.7 else "moderate"
                         ),
-                        "direction": (
-                            "positive" if correlation > 0 else "negative"
-                        ),
+                        "direction": ("positive" if correlation > 0 else "negative"),
                     }
 
         return {
@@ -336,9 +322,7 @@ class PerformanceOptimizer:
         values1 = [
             m.value for m in list(self.performance_metrics[metric1])[-50:]
         ]  # Last 50 values
-        values2 = [
-            m.value for m in list(self.performance_metrics[metric2])[-50:]
-        ]
+        values2 = [m.value for m in list(self.performance_metrics[metric2])[-50:]]
 
         if len(values1) < 10 or len(values2) < 10:
             return 0.0
@@ -400,9 +384,7 @@ class PerformanceOptimizer:
         for metric_name, metric_history in self.performance_metrics.items():
             # Filter metrics in time window
             window_metrics = [
-                m
-                for m in metric_history
-                if start_time <= m.timestamp <= end_time
+                m for m in metric_history if start_time <= m.timestamp <= end_time
             ]
 
             if len(window_metrics) < 10:
@@ -414,10 +396,7 @@ class PerformanceOptimizer:
 
             # Detect outliers (values beyond 2 standard deviations)
             for metric in window_metrics:
-                if (
-                    stdev_val > 0
-                    and abs(metric.value - mean_val) > 2 * stdev_val
-                ):
+                if stdev_val > 0 and abs(metric.value - mean_val) > 2 * stdev_val:
                     anomalies.append(
                         {
                             "metric": metric_name,
@@ -437,9 +416,7 @@ class PerformanceOptimizer:
             "high_severity_count": len(
                 [a for a in anomalies if a["severity"] == "high"]
             ),
-            "anomalies": sorted(
-                anomalies, key=lambda x: x["timestamp"], reverse=True
-            )[
+            "anomalies": sorted(anomalies, key=lambda x: x["timestamp"], reverse=True)[
                 :20
             ],  # Latest 20
         }
@@ -452,9 +429,7 @@ class PerformanceOptimizer:
             if len(metric_history) < 100:  # Need sufficient data
                 continue
 
-            values = [
-                m.value for m in list(metric_history)[-100:]
-            ]  # Last 100 values
+            values = [m.value for m in list(metric_history)[-100:]]  # Last 100 values
 
             # Simple cycle detection using autocorrelation
             cycle_detected = self._detect_cycle_in_series(values)
@@ -494,9 +469,7 @@ class PerformanceOptimizer:
 
         return None
 
-    def _test_cycle_length(
-        self, values: List[float], cycle_length: int
-    ) -> float:
+    def _test_cycle_length(self, values: List[float], cycle_length: int) -> float:
         """Test if a specific cycle length exists in the data."""
         if len(values) < cycle_length * 2:
             return 0.0
@@ -505,9 +478,7 @@ class PerformanceOptimizer:
         first_cycle = values[:cycle_length]
         correlations = []
 
-        for start in range(
-            cycle_length, len(values) - cycle_length, cycle_length
-        ):
+        for start in range(cycle_length, len(values) - cycle_length, cycle_length):
             cycle = values[start : start + cycle_length]
             if len(cycle) == cycle_length:
                 try:
@@ -549,14 +520,10 @@ class PerformanceOptimizer:
         for metric_name, metric_history in self.performance_metrics.items():
             # Filter metrics in time window
             window_metrics = [
-                m
-                for m in metric_history
-                if start_time <= m.timestamp <= end_time
+                m for m in metric_history if start_time <= m.timestamp <= end_time
             ]
 
-            if (
-                len(window_metrics) < 20
-            ):  # Need sufficient data for trend analysis
+            if len(window_metrics) < 20:  # Need sufficient data for trend analysis
                 continue
 
             values = [m.value for m in window_metrics]
@@ -566,9 +533,7 @@ class PerformanceOptimizer:
                 trends[metric_name] = {
                     "slope": trend,
                     "direction": "increasing" if trend > 0 else "decreasing",
-                    "significance": (
-                        "strong" if abs(trend) > 0.5 else "moderate"
-                    ),
+                    "significance": ("strong" if abs(trend) > 0.5 else "moderate"),
                     "projection": self._project_trend(values, trend),
                 }
 
@@ -622,26 +587,17 @@ class PerformanceOptimizer:
             direction = trend_data["direction"]
             projection = trend_data["projection"]
 
-            if (
-                "response_time" in metric_name.lower()
-                and direction == "increasing"
-            ):
+            if "response_time" in metric_name.lower() and direction == "increasing":
                 alerts.append(
                     f"WARNING: {metric_name} is trending upward - response times may degrade"
                 )
 
-            if (
-                "error_rate" in metric_name.lower()
-                and direction == "increasing"
-            ):
+            if "error_rate" in metric_name.lower() and direction == "increasing":
                 alerts.append(
                     f"CRITICAL: {metric_name} is increasing - investigate error sources"
                 )
 
-            if (
-                "throughput" in metric_name.lower()
-                and direction == "decreasing"
-            ):
+            if "throughput" in metric_name.lower() and direction == "decreasing":
                 alerts.append(
                     f"WARNING: {metric_name} is declining - capacity issues may develop"
                 )
@@ -734,9 +690,7 @@ class PerformanceOptimizer:
     ) -> List[OptimizationAction]:
         """Generate specific optimization recommendations based on analysis."""
         system_metrics = analysis.get("current_metrics", {})
-        bottlenecks = await self.analyze_performance_bottlenecks(
-            system_metrics
-        )
+        bottlenecks = await self.analyze_performance_bottlenecks(system_metrics)
 
         recommendations = []
 
@@ -754,16 +708,12 @@ class PerformanceOptimizer:
                     continue
 
         # Add pattern-based recommendations
-        pattern_recommendations = await self._pattern_based_recommendations(
-            analysis
-        )
+        pattern_recommendations = await self._pattern_based_recommendations(analysis)
         recommendations.extend(pattern_recommendations)
 
         return sorted(recommendations, key=lambda x: x.priority)
 
-    async def analyze_performance_bottlenecks(
-        self, system_metrics: Dict
-    ) -> List[Dict]:
+    async def analyze_performance_bottlenecks(self, system_metrics: Dict) -> List[Dict]:
         """Analyze system metrics to identify performance bottlenecks."""
         bottlenecks = []
 
@@ -771,9 +721,7 @@ class PerformanceOptimizer:
         for metric_name, value in system_metrics.items():
             if isinstance(value, (int, float)):
                 self.performance_metrics[metric_name].append(
-                    PerformanceMetric(
-                        name=metric_name, value=value, unit="units"
-                    )
+                    PerformanceMetric(name=metric_name, value=value, unit="units")
                 )
 
         # Analyze each metric against optimization rules
@@ -783,18 +731,12 @@ class PerformanceOptimizer:
                     {
                         "type": rule_name,
                         "priority": rule["priority"],
-                        "affected_metrics": self._get_affected_metrics(
-                            rule_name
-                        ),
+                        "affected_metrics": self._get_affected_metrics(rule_name),
                         "suggested_techniques": [
                             tech.value for tech in rule["techniques"]
                         ],
-                        "severity": self._calculate_bottleneck_severity(
-                            rule_name
-                        ),
-                        "impact_estimate": self._estimate_bottleneck_impact(
-                            rule_name
-                        ),
+                        "severity": self._calculate_bottleneck_severity(rule_name),
+                        "impact_estimate": self._estimate_bottleneck_impact(rule_name),
                     }
                 )
 
@@ -844,9 +786,7 @@ class PerformanceOptimizer:
         action_id = f"{technique.value}_{bottleneck['type']}_{index}_{int(datetime.now().timestamp())}"
 
         # Get technique-specific details
-        technique_details = self._get_technique_details(
-            technique, bottleneck, context
-        )
+        technique_details = self._get_technique_details(technique, bottleneck, context)
 
         return OptimizationAction(
             action_id=action_id,
@@ -914,9 +854,7 @@ class PerformanceOptimizer:
             },
         )
 
-    def _map_bottleneck_to_target(
-        self, bottleneck_type: str
-    ) -> OptimizationTarget:
+    def _map_bottleneck_to_target(self, bottleneck_type: str) -> OptimizationTarget:
         """Map bottleneck type to optimization target."""
         mapping = {
             "high_response_time": OptimizationTarget.RESPONSE_TIME,
@@ -1008,9 +946,7 @@ class PerformanceOptimizer:
 
         return implemented_adjustments
 
-    async def _simulate_implementation(
-        self, action: OptimizationAction
-    ) -> Dict:
+    async def _simulate_implementation(self, action: OptimizationAction) -> Dict:
         """Simulate implementation of an optimization action."""
         # Simulate implementation delay
         await asyncio.sleep(0.1)
@@ -1035,9 +971,7 @@ class PerformanceOptimizer:
                 "error": "Simulated implementation failure",
             }
 
-    async def detect_performance_regressions(
-        self, baseline: Dict
-    ) -> List[Dict]:
+    async def detect_performance_regressions(self, baseline: Dict) -> List[Dict]:
         """Detect performance regressions compared to baseline."""
         regressions = []
 
@@ -1074,11 +1008,7 @@ class PerformanceOptimizer:
                     severity = (
                         "critical"
                         if abs(regression_percent) > 25
-                        else (
-                            "high"
-                            if abs(regression_percent) > 15
-                            else "medium"
-                        )
+                        else ("high" if abs(regression_percent) > 15 else "medium")
                     )
 
                     regressions.append(
@@ -1110,7 +1040,9 @@ class PerformanceOptimizer:
         elif "throughput" in metric_name:
             return "Check system capacity, investigate blocking operations, scale resources"
         elif "error_rate" in metric_name:
-            return "Investigate error logs, check dependencies, verify recent deployments"
+            return (
+                "Investigate error logs, check dependencies, verify recent deployments"
+            )
         elif "cpu_usage" in metric_name:
             return "Profile CPU-intensive operations, check for inefficient algorithms"
         elif "memory_usage" in metric_name:
@@ -1205,10 +1137,7 @@ class PerformanceOptimizer:
         """Generate reasoning for provider selection."""
         reasons = []
 
-        if (
-            requirements.get("priority") == "high"
-            and metrics["response_time"] < 700
-        ):
+        if requirements.get("priority") == "high" and metrics["response_time"] < 700:
             reasons.append("Low response time meets high priority requirement")
 
         if metrics["cost_per_request"] <= requirements.get(
@@ -1219,15 +1148,10 @@ class PerformanceOptimizer:
         if metrics["reliability"] > 99.5:
             reasons.append("High reliability score ensures service stability")
 
-        if (
-            requirements.get("cpu_intensive")
-            and metrics["cpu_efficiency"] > 85
-        ):
+        if requirements.get("cpu_intensive") and metrics["cpu_efficiency"] > 85:
             reasons.append("High CPU efficiency for CPU-intensive tasks")
 
         if not reasons:
-            reasons.append(
-                "Best overall performance characteristics for this task"
-            )
+            reasons.append("Best overall performance characteristics for this task")
 
         return "; ".join(reasons)

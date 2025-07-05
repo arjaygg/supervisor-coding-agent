@@ -32,9 +32,7 @@ class RequestHash:
     def generate(request_data: Dict[str, Any]) -> str:
         """Generate a consistent hash for request deduplication."""
         # Create a canonical JSON representation
-        canonical_json = json.dumps(
-            request_data, sort_keys=True, separators=(",", ":")
-        )
+        canonical_json = json.dumps(request_data, sort_keys=True, separators=(",", ":"))
 
         # Generate SHA-256 hash
         hash_object = hashlib.sha256(canonical_json.encode("utf-8"))
@@ -84,9 +82,7 @@ class RequestDeduplicator:
             entry = self.cache[request_hash]
             if current_time - entry.timestamp < self.cache_ttl_seconds:
                 entry.hit_count += 1
-                logger.debug(
-                    f"Duplicate request detected: {request_hash[:8]}..."
-                )
+                logger.debug(f"Duplicate request detected: {request_hash[:8]}...")
                 return True
             else:
                 # Expired, remove from cache
@@ -133,9 +129,7 @@ class RequestDeduplicator:
         self._last_cleanup = current_time
 
         if expired_keys:
-            logger.debug(
-                f"Cleaned up {len(expired_keys)} expired cache entries"
-            )
+            logger.debug(f"Cleaned up {len(expired_keys)} expired cache entries")
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
@@ -158,9 +152,7 @@ class RequestDeduplicator:
 class BatchProcessor:
     """Handles intelligent batching of requests."""
 
-    def __init__(
-        self, batch_size: int = 5, batch_timeout_seconds: float = 2.0
-    ):
+    def __init__(self, batch_size: int = 5, batch_timeout_seconds: float = 2.0):
         self.batch_size = batch_size
         self.batch_timeout_seconds = batch_timeout_seconds
         self.current_batch: List[Dict[str, Any]] = []
@@ -226,9 +218,7 @@ class BatchProcessor:
             self._timeout_task = None
 
         if self.process_callback:
-            logger.info(
-                f"Processing batch of {len(batch_to_process)} requests"
-            )
+            logger.info(f"Processing batch of {len(batch_to_process)} requests")
             await self.process_callback(batch_to_process)
 
     def get_batch_stats(self) -> Dict[str, Any]:
@@ -236,9 +226,7 @@ class BatchProcessor:
         return {
             "current_batch_size": len(self.current_batch),
             "batch_age_seconds": (
-                time.time() - self.batch_start_time
-                if self.batch_start_time
-                else 0
+                time.time() - self.batch_start_time if self.batch_start_time else 0
             ),
             "configured_batch_size": self.batch_size,
             "configured_timeout": self.batch_timeout_seconds,
@@ -324,9 +312,7 @@ class UsagePredictor:
 
         # Calculate tokens per hour so far today
         hours_elapsed = (now - today_start).total_seconds() / 3600
-        total_tokens_today = sum(
-            record.tokens_used for record in today_records
-        )
+        total_tokens_today = sum(record.tokens_used for record in today_records)
 
         if hours_elapsed == 0:
             return float(total_tokens_today)
@@ -357,9 +343,7 @@ class UsagePredictor:
             hourly_usage[hour] += record.tokens_used
 
         # Find top 3 peak hours
-        sorted_hours = sorted(
-            hourly_usage.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_hours = sorted(hourly_usage.items(), key=lambda x: x[1], reverse=True)
 
         return [hour for hour, _ in sorted_hours[:3]]
 
@@ -404,9 +388,7 @@ class SubscriptionIntelligence:
 
         # Components
         self.deduplicator = RequestDeduplicator(cache_ttl_seconds)
-        self.batch_processor = BatchProcessor(
-            batch_size, batch_timeout_seconds
-        )
+        self.batch_processor = BatchProcessor(batch_size, batch_timeout_seconds)
         self.usage_predictor = UsagePredictor()
 
         # Configuration
@@ -566,8 +548,7 @@ class SubscriptionIntelligence:
                         self.usage_predictor.record_usage(
                             task_type=request.get("type", "unknown"),
                             tokens_used=actual_tokens,
-                            processing_time=(time.time() - start_time)
-                            / len(requests),
+                            processing_time=(time.time() - start_time) / len(requests),
                             success=True,
                         )
 
@@ -578,9 +559,7 @@ class SubscriptionIntelligence:
 
                         # Resolve future
                         if request_id in self._pending_batch_requests:
-                            self._pending_batch_requests[
-                                request_id
-                            ].set_result(result)
+                            self._pending_batch_requests[request_id].set_result(result)
 
                 except Exception as e:
                     # Mark all requests in this group as failed
@@ -588,15 +567,12 @@ class SubscriptionIntelligence:
                         self.usage_predictor.record_usage(
                             task_type=request.get("type", "unknown"),
                             tokens_used=0,
-                            processing_time=(time.time() - start_time)
-                            / len(requests),
+                            processing_time=(time.time() - start_time) / len(requests),
                             success=False,
                         )
 
                         if request_id in self._pending_batch_requests:
-                            self._pending_batch_requests[
-                                request_id
-                            ].set_exception(e)
+                            self._pending_batch_requests[request_id].set_exception(e)
 
             logger.info(f"Processed batch of {len(batch_requests)} requests")
 
@@ -638,9 +614,7 @@ class SubscriptionIntelligence:
 
         # Adjust based on payload size
         payload_size = len(str(request.get("payload", "")))
-        size_multiplier = max(
-            1.0, payload_size / 1000
-        )  # 1 token per ~1000 chars
+        size_multiplier = max(1.0, payload_size / 1000)  # 1 token per ~1000 chars
 
         estimated = int(predicted * size_multiplier)
 
@@ -675,9 +649,9 @@ class SubscriptionIntelligence:
     def _get_next_reset_time(self) -> datetime:
         """Get next quota reset time (midnight)."""
         now = datetime.now()
-        tomorrow = now.replace(
-            hour=0, minute=0, second=0, microsecond=0
-        ) + timedelta(days=1)
+        tomorrow = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(
+            days=1
+        )
         return tomorrow
 
     def get_usage_stats(self) -> Dict[str, Any]:
@@ -685,9 +659,7 @@ class SubscriptionIntelligence:
         self._check_and_reset_quota()
 
         usage_percentage = (self.current_usage / self.daily_limit) * 100
-        time_until_reset = (
-            self.usage_reset_time - datetime.now()
-        ).total_seconds()
+        time_until_reset = (self.usage_reset_time - datetime.now()).total_seconds()
 
         return {
             "current_usage": self.current_usage,

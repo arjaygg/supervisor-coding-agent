@@ -50,12 +50,8 @@ class ClaudeCliProvider(AIProvider):
         self.api_keys: List[str] = config.get("api_keys", [])
         self.cli_path: str = config.get("cli_path", settings.claude_cli_path)
         self.current_key_index: int = 0
-        self.max_tokens_per_request: int = config.get(
-            "max_tokens_per_request", 4000
-        )
-        self.rate_limit_per_minute: int = config.get(
-            "rate_limit_per_minute", 60
-        )
+        self.max_tokens_per_request: int = config.get("max_tokens_per_request", 4000)
+        self.rate_limit_per_minute: int = config.get("rate_limit_per_minute", 60)
         self.rate_limit_per_hour: int = config.get("rate_limit_per_hour", 1000)
         self.rate_limit_per_day: int = config.get("rate_limit_per_day", 10000)
         self.mock_mode: bool = config.get("mock_mode", False)
@@ -109,8 +105,7 @@ class ClaudeCliProvider(AIProvider):
 
             # Calculate execution time
             execution_time_ms = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds()
-                * 1000
+                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
 
             # Estimate tokens (reuse existing logic)
@@ -138,15 +133,12 @@ class ClaudeCliProvider(AIProvider):
 
         except Exception as e:
             execution_time_ms = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds()
-                * 1000
+                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
             self._consecutive_failures += 1
             self._last_error = str(e)
 
-            logger.error(
-                f"Claude CLI execution failed for task {task.id}: {str(e)}"
-            )
+            logger.error(f"Claude CLI execution failed for task {task.id}: {str(e)}")
 
             return ProviderResponse(
                 success=False,
@@ -179,9 +171,7 @@ class ClaudeCliProvider(AIProvider):
                     await asyncio.sleep(0.1)
 
             except Exception as e:
-                logger.error(
-                    f"Batch execution failed for task {task.id}: {str(e)}"
-                )
+                logger.error(f"Batch execution failed for task {task.id}: {str(e)}")
                 responses.append(
                     ProviderResponse(
                         success=False,
@@ -225,9 +215,7 @@ class ClaudeCliProvider(AIProvider):
             rate_limit_per_day=self.rate_limit_per_day,
         )
 
-    async def get_health_status(
-        self, use_cache: bool = True
-    ) -> ProviderHealth:
+    async def get_health_status(self, use_cache: bool = True) -> ProviderHealth:
         """Get the current health status of the provider."""
         if use_cache and self._should_cache_health():
             return self._health_cache
@@ -242,9 +230,7 @@ class ClaudeCliProvider(AIProvider):
             status = ProviderStatus.DEGRADED
         elif not await self._validate_claude_cli():
             status = (
-                ProviderStatus.MAINTENANCE
-                if self.mock_mode
-                else ProviderStatus.ERROR
+                ProviderStatus.MAINTENANCE if self.mock_mode else ProviderStatus.ERROR
             )
 
         # Calculate success rate based on recent usage
@@ -321,9 +307,7 @@ class ClaudeCliProvider(AIProvider):
         elif task_type == "FEATURE":
             return base_prompt + self._build_feature_prompt(payload)
         else:
-            return (
-                base_prompt + f"Task Details: {json.dumps(payload, indent=2)}"
-            )
+            return base_prompt + f"Task Details: {json.dumps(payload, indent=2)}"
 
     def _build_pr_review_prompt(self, payload: Dict[str, Any]) -> str:
         """Build PR review prompt (reuse existing logic)."""
@@ -455,9 +439,7 @@ Please provide:
 
             if process.returncode != 0:
                 error_msg = (
-                    process.stderr.strip()
-                    if process.stderr
-                    else "Unknown error"
+                    process.stderr.strip() if process.stderr else "Unknown error"
                 )
                 logger.warning(
                     f"Claude CLI failed, falling back to mock response: {error_msg}"
@@ -467,9 +449,7 @@ Please provide:
             return process.stdout.strip()
 
         except subprocess.TimeoutExpired:
-            logger.warning(
-                "Claude CLI execution timed out, using mock response"
-            )
+            logger.warning("Claude CLI execution timed out, using mock response")
             return self._generate_mock_response(prompt)
         except FileNotFoundError:
             logger.warning(
@@ -493,9 +473,7 @@ Please provide:
                 return False
 
             # Check if file exists
-            if not shutil.which(self.cli_path) and not os.path.isfile(
-                self.cli_path
-            ):
+            if not shutil.which(self.cli_path) and not os.path.isfile(self.cli_path):
                 return False
 
             # Try to run a simple help command
@@ -653,9 +631,7 @@ I've analyzed your request and here's my response:
             raise ProviderError("No API keys available", self.provider_id)
 
         api_key = self.api_keys[self.current_key_index]
-        self.current_key_index = (self.current_key_index + 1) % len(
-            self.api_keys
-        )
+        self.current_key_index = (self.current_key_index + 1) % len(self.api_keys)
         return api_key
 
     async def _check_rate_limits(self):

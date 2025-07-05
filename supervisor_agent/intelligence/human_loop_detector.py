@@ -104,9 +104,7 @@ class HumanInvolvementAnalysis:
             "requirements": self.requirements.to_dict(),
             "team_context": self.team_context.to_dict(),
             "risk_assessment": [asdict(risk) for risk in self.risk_assessment],
-            "involvement_points": [
-                asdict(point) for point in self.involvement_points
-            ],
+            "involvement_points": [asdict(point) for point in self.involvement_points],
             "autonomous_capabilities": self.autonomous_capabilities,
             "recommendations": self.recommendations,
             "confidence_score": self.confidence_score,
@@ -129,13 +127,9 @@ class HumanInvolvementAnalysis:
             for risk_data in data.get("risk_assessment", []):
                 risk_factor = RiskFactor(
                     factor_name=risk_data.get("factor_name", "unknown"),
-                    risk_level=RiskLevel(
-                        risk_data.get("risk_level", "medium")
-                    ),
+                    risk_level=RiskLevel(risk_data.get("risk_level", "medium")),
                     description=risk_data.get("description", ""),
-                    mitigation_possible=risk_data.get(
-                        "mitigation_possible", True
-                    ),
+                    mitigation_possible=risk_data.get("mitigation_possible", True),
                     human_expertise_required=risk_data.get(
                         "human_expertise_required", False
                     ),
@@ -147,27 +141,17 @@ class HumanInvolvementAnalysis:
             involvement_points = []
             for point_data in data.get("involvement_points", []):
                 involvement_point = HumanInvolvementPoint(
-                    checkpoint_id=point_data.get(
-                        "checkpoint_id", str(uuid.uuid4())
-                    ),
+                    checkpoint_id=point_data.get("checkpoint_id", str(uuid.uuid4())),
                     involvement_type=HumanInvolvementType(
                         point_data.get("involvement_type", "review")
                     ),
-                    urgency=ApprovalUrgency(
-                        point_data.get("urgency", "normal")
-                    ),
+                    urgency=ApprovalUrgency(point_data.get("urgency", "normal")),
                     required_roles=point_data.get("required_roles", []),
                     context=point_data.get("context", {}),
-                    can_be_parallelized=point_data.get(
-                        "can_be_parallelized", False
-                    ),
+                    can_be_parallelized=point_data.get("can_be_parallelized", False),
                     bypass_conditions=point_data.get("bypass_conditions", {}),
-                    escalation_triggers=point_data.get(
-                        "escalation_triggers", []
-                    ),
-                    estimated_time_hours=point_data.get(
-                        "estimated_time_hours", 1.0
-                    ),
+                    escalation_triggers=point_data.get("escalation_triggers", []),
+                    estimated_time_hours=point_data.get("estimated_time_hours", 1.0),
                     confidence_score=point_data.get("confidence_score", 0.5),
                 )
                 involvement_points.append(involvement_point)
@@ -178,9 +162,7 @@ class HumanInvolvementAnalysis:
                 team_context=team_context,
                 risk_assessment=risk_assessment,
                 involvement_points=involvement_points,
-                autonomous_capabilities=data.get(
-                    "autonomous_capabilities", {}
-                ),
+                autonomous_capabilities=data.get("autonomous_capabilities", {}),
                 recommendations=data.get("recommendations", {}),
                 confidence_score=data.get("confidence_score", 0.5),
                 analysis_timestamp=datetime.now(timezone.utc),
@@ -188,9 +170,7 @@ class HumanInvolvementAnalysis:
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             # Return fallback analysis
-            return cls._create_fallback_analysis(
-                requirements, team_context, str(e)
-            )
+            return cls._create_fallback_analysis(requirements, team_context, str(e))
 
     @classmethod
     def _create_fallback_analysis(
@@ -286,9 +266,7 @@ class ApprovalWorkflow:
                 description=data.get("description", ""),
                 steps=steps,
                 parallel_groups=data.get("parallel_groups", []),
-                total_estimated_time_hours=data.get(
-                    "total_estimated_time_hours", 8.0
-                ),
+                total_estimated_time_hours=data.get("total_estimated_time_hours", 8.0),
                 bypass_conditions=data.get("bypass_conditions", {}),
                 emergency_override=data.get("emergency_override", {}),
             )
@@ -355,9 +333,7 @@ class RiskAnalyzer:
             "regulatory_impact": 0.95,
         }
 
-    async def assess_risks(
-        self, requirements: RequirementAnalysis
-    ) -> Dict[str, Any]:
+    async def assess_risks(self, requirements: RequirementAnalysis) -> Dict[str, Any]:
         """Assess various risk factors"""
 
         risks = {
@@ -370,9 +346,7 @@ class RiskAnalyzer:
 
         # Calculate overall risk score
         risk_scores = [risk.get("score", 0.0) for risk in risks.values()]
-        overall_risk = (
-            sum(risk_scores) / len(risk_scores) if risk_scores else 0.0
-        )
+        overall_risk = sum(risk_scores) / len(risk_scores) if risk_scores else 0.0
 
         risks["overall_risk"] = {
             "score": overall_risk,
@@ -419,8 +393,7 @@ class RiskAnalyzer:
         ]
 
         has_security_aspects = any(
-            keyword in requirements.description.lower()
-            for keyword in security_keywords
+            keyword in requirements.description.lower() for keyword in security_keywords
         )
 
         score = 0.8 if has_security_aspects else 0.3
@@ -445,8 +418,7 @@ class RiskAnalyzer:
         ]
 
         has_business_impact = any(
-            keyword in requirements.description.lower()
-            for keyword in business_keywords
+            keyword in requirements.description.lower() for keyword in business_keywords
         )
 
         score = 0.7 if has_business_impact else 0.4
@@ -489,9 +461,7 @@ class RiskAnalyzer:
     ) -> Dict[str, Any]:
         """Assess timeline-related risk"""
         # Higher duration increases risk due to uncertainty
-        duration_score = min(
-            requirements.estimated_duration_hours / 100.0, 1.0
-        )
+        duration_score = min(requirements.estimated_duration_hours / 100.0, 1.0)
 
         return {
             "score": duration_score,
@@ -543,22 +513,18 @@ class HumanLoopIntelligenceDetector:
 
         try:
             # Assess risks comprehensively
-            risk_assessment = await self.risk_analyzer.assess_risks(
-                requirements
-            )
+            risk_assessment = await self.risk_analyzer.assess_risks(requirements)
 
             # Get historical context
-            historical_projects = (
-                await self.decision_history.get_similar_projects(requirements)
+            historical_projects = await self.decision_history.get_similar_projects(
+                requirements
             )
 
             # Build analysis context
             analysis_context = {
                 "requirements": requirements.to_dict(),
                 "team_context": team_context.to_dict(),
-                "risk_assessment": self._serialize_risk_assessment(
-                    risk_assessment
-                ),
+                "risk_assessment": self._serialize_risk_assessment(risk_assessment),
                 "historical_projects": historical_projects,
                 "organizational_policies": team_context.approval_policies,
             }
@@ -581,9 +547,7 @@ class HumanLoopIntelligenceDetector:
             return analysis
 
         except Exception as e:
-            self.logger.error(
-                "Human involvement analysis failed", error=str(e)
-            )
+            self.logger.error("Human involvement analysis failed", error=str(e))
             return HumanInvolvementAnalysis._create_fallback_analysis(
                 requirements, team_context, str(e)
             )
@@ -616,9 +580,7 @@ class HumanLoopIntelligenceDetector:
             workflow_result = await self._get_workflow_design(workflow_context)
 
             # Parse and create workflow
-            workflow = ApprovalWorkflow.from_claude_response(
-                workflow_result["result"]
-            )
+            workflow = ApprovalWorkflow.from_claude_response(workflow_result["result"])
 
             self.logger.info(
                 "Dynamic approval workflow generated",
@@ -630,9 +592,7 @@ class HumanLoopIntelligenceDetector:
             return workflow
 
         except Exception as e:
-            self.logger.error(
-                "Approval workflow generation failed", error=str(e)
-            )
+            self.logger.error("Approval workflow generation failed", error=str(e))
             return ApprovalWorkflow._create_fallback_workflow(str(e))
 
     async def evaluate_bypass_conditions(
@@ -645,9 +605,7 @@ class HumanLoopIntelligenceDetector:
         bypass_results = {}
 
         for point in analysis.involvement_points:
-            can_bypass = await self._evaluate_point_bypass(
-                point, current_context
-            )
+            can_bypass = await self._evaluate_point_bypass(point, current_context)
             bypass_results[point.checkpoint_id] = can_bypass
 
         return bypass_results
@@ -689,9 +647,7 @@ class HumanLoopIntelligenceDetector:
 
         return triggers
 
-    async def _get_claude_analysis(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _get_claude_analysis(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Get human involvement analysis from Claude"""
 
         analysis_prompt = f"""
@@ -739,9 +695,7 @@ class HumanLoopIntelligenceDetector:
             shared_memory=context,
         )
 
-    async def _get_workflow_design(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _get_workflow_design(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Get approval workflow design from Claude"""
 
         workflow_prompt = f"""

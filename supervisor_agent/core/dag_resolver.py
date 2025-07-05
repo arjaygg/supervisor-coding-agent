@@ -61,9 +61,7 @@ class DependencyResolverInterface(ABC):
     """Abstract interface for dependency resolution"""
 
     @abstractmethod
-    def resolve_dependencies(
-        self, tasks: List[TaskDefinition]
-    ) -> "ExecutionPlan":
+    def resolve_dependencies(self, tasks: List[TaskDefinition]) -> "ExecutionPlan":
         """Resolve task dependencies and create execution plan"""
         pass
 
@@ -88,9 +86,7 @@ class DAGResolver(DependencyResolverInterface):
     def __init__(self):
         self.logger = get_logger(__name__)
 
-    def resolve_dependencies(
-        self, tasks: List[TaskDefinition]
-    ) -> ExecutionPlan:
+    def resolve_dependencies(self, tasks: List[TaskDefinition]) -> ExecutionPlan:
         """
         Resolve task dependencies using topological sorting and create execution plan.
 
@@ -113,9 +109,7 @@ class DAGResolver(DependencyResolverInterface):
 
         # Validate for cycles
         if self._has_cycles(graph):
-            raise CircularDependencyError(
-                "Circular dependency detected in task graph"
-            )
+            raise CircularDependencyError("Circular dependency detected in task graph")
 
         # Perform topological sort
         task_order = self._topological_sort(graph)
@@ -133,9 +127,7 @@ class DAGResolver(DependencyResolverInterface):
             execution_graph=graph,
             metadata={
                 "total_tasks": len(tasks),
-                "max_parallel_level": len(
-                    max(parallel_levels, key=len, default=[])
-                ),
+                "max_parallel_level": len(max(parallel_levels, key=len, default=[])),
                 "critical_path_length": len(critical_path),
                 "estimated_duration": self._estimate_execution_time(
                     critical_path, tasks
@@ -399,9 +391,7 @@ class DAGResolver(DependencyResolverInterface):
             task.id: getattr(task, "estimated_duration", 1.0) for task in tasks
         }
 
-        return sum(
-            task_durations.get(task_id, 1.0) for task_id in critical_path
-        )
+        return sum(task_durations.get(task_id, 1.0) for task_id in critical_path)
 
     def analyze_parallelization_potential(
         self, workflow: WorkflowDefinition
@@ -438,9 +428,7 @@ class DAGResolver(DependencyResolverInterface):
         speedup_potential = (
             sequential_time / parallel_time if parallel_time > 0 else 1.0
         )
-        efficiency = (
-            speedup_potential / max_parallel if max_parallel > 0 else 0.0
-        )
+        efficiency = speedup_potential / max_parallel if max_parallel > 0 else 0.0
 
         return {
             "total_tasks": total_tasks,
@@ -498,23 +486,17 @@ class StandardDependencyChecker(DependencyChecker):
                 "success", False
             )
         elif condition == DependencyCondition.FAILURE:
-            return task_status == "FAILED" or not dependency_result.get(
-                "success", True
-            )
+            return task_status == "FAILED" or not dependency_result.get("success", True)
         elif condition == DependencyCondition.COMPLETION:
             return task_status in ["COMPLETED", "FAILED"]
         elif condition == DependencyCondition.CUSTOM:
             # Simple expression evaluation for custom conditions
             # In production, you might want a more sophisticated expression evaluator
-            return self._evaluate_custom_condition(
-                dependency_result, condition_value
-            )
+            return self._evaluate_custom_condition(dependency_result, condition_value)
 
         return False
 
-    def _evaluate_custom_condition(
-        self, result: dict, condition_expr: str
-    ) -> bool:
+    def _evaluate_custom_condition(self, result: dict, condition_expr: str) -> bool:
         """Evaluate custom condition expression"""
         if not condition_expr:
             return True
@@ -555,21 +537,15 @@ class DAGResolver:
     """
 
     def __init__(self, dependency_checker: DependencyChecker = None):
-        self.dependency_checker = (
-            dependency_checker or StandardDependencyChecker()
-        )
+        self.dependency_checker = dependency_checker or StandardDependencyChecker()
 
-    def create_execution_plan(
-        self, workflow_def: WorkflowDefinition
-    ) -> ExecutionPlan:
+    def create_execution_plan(self, workflow_def: WorkflowDefinition) -> ExecutionPlan:
         """
         Create execution plan from workflow definition.
 
         Returns an ExecutionPlan with parallel execution groups.
         """
-        logger.info(
-            f"Creating execution plan for workflow: {workflow_def.name}"
-        )
+        logger.info(f"Creating execution plan for workflow: {workflow_def.name}")
 
         # Validate DAG structure first
         validation_result = self.validate_dag(workflow_def)
@@ -577,9 +553,7 @@ class DAGResolver:
             raise InvalidDAGError(validation_result.error_message)
 
         # Build task and dependency maps
-        task_map = {
-            task["id"]: TaskDefinition(**task) for task in workflow_def.tasks
-        }
+        task_map = {task["id"]: TaskDefinition(**task) for task in workflow_def.tasks}
         dependency_map = self._build_dependency_map(workflow_def.dependencies)
 
         # Perform topological sort with parallel group identification
@@ -597,9 +571,7 @@ class DAGResolver:
             dependency_map=dependency_map,
         )
 
-    def validate_dag(
-        self, workflow_def: WorkflowDefinition
-    ) -> ValidationResult:
+    def validate_dag(self, workflow_def: WorkflowDefinition) -> ValidationResult:
         """Validate DAG structure and dependencies"""
 
         warnings = []
@@ -641,9 +613,7 @@ class DAGResolver:
                     )
 
             # Check for circular dependencies
-            dependency_map = self._build_dependency_map(
-                workflow_def.dependencies
-            )
+            dependency_map = self._build_dependency_map(workflow_def.dependencies)
             self._detect_circular_dependencies(task_id_set, dependency_map)
 
             # Check for disconnected components
@@ -655,9 +625,7 @@ class DAGResolver:
                 task_warnings = self._validate_task_config(task)
                 warnings.extend(task_warnings)
 
-            logger.info(
-                f"DAG validation passed for workflow: {workflow_def.name}"
-            )
+            logger.info(f"DAG validation passed for workflow: {workflow_def.name}")
             return ValidationResult(True, warnings=warnings)
 
         except CircularDependencyError as e:
@@ -666,9 +634,7 @@ class DAGResolver:
             logger.error(f"DAG validation failed: {e}")
             return ValidationResult(False, f"Validation error: {str(e)}")
 
-    def _build_dependency_map(
-        self, dependencies: List[Dict]
-    ) -> Dict[str, List[str]]:
+    def _build_dependency_map(self, dependencies: List[Dict]) -> Dict[str, List[str]]:
         """Build dependency map from dependency definitions"""
         dep_map = defaultdict(list)
 
@@ -817,16 +783,12 @@ class DAGResolver:
         # Validate config structure
         config = task.get("config", {})
         if not isinstance(config, dict):
-            warnings.append(
-                f"Task {task.get('id')} config must be a dictionary"
-            )
+            warnings.append(f"Task {task.get('id')} config must be a dictionary")
 
         # Task type specific validation
         task_type = task.get("type", "")
         if task_type and not self._is_valid_task_type(task_type):
-            warnings.append(
-                f"Task {task.get('id')} has unknown type: {task_type}"
-            )
+            warnings.append(f"Task {task.get('id')} has unknown type: {task_type}")
 
         return warnings
 

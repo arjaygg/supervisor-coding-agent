@@ -112,9 +112,7 @@ class IntelligentTaskSplitter:
         if complexity == TaskComplexity.SIMPLE or steps <= 2:
             return SplittingStrategy.DEFAULT
         else:
-            return (
-                SplittingStrategy.DEFAULT
-            )  # For now, only DEFAULT is implemented
+            return SplittingStrategy.DEFAULT  # For now, only DEFAULT is implemented
 
     def analyze_task_complexity(self, task) -> ComplexityAnalysis:
         """

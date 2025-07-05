@@ -93,9 +93,7 @@ async def get_current_user(
     return await authenticate_jwt_token(request, credentials.credentials, db)
 
 
-async def authenticate_jwt_token(
-    request: Request, token: str, db: Session
-) -> User:
+async def authenticate_jwt_token(request: Request, token: str, db: Session) -> User:
     """Authenticate user with JWT token"""
     # Verify token
     payload = jwt_handler.verify_token(token, TokenType.ACCESS)
@@ -144,11 +142,7 @@ async def authenticate_jwt_token(
         raise AuthenticationError("Session not found or expired")
 
     # Get user
-    user = (
-        db.query(User)
-        .filter(User.id == user_id, User.is_active.is_(True))
-        .first()
-    )
+    user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
     if not user:
         log_security_event(
             db,
@@ -167,9 +161,7 @@ async def authenticate_jwt_token(
     return user
 
 
-async def authenticate_api_key(
-    request: Request, api_key: str, db: Session
-) -> User:
+async def authenticate_api_key(request: Request, api_key: str, db: Session) -> User:
     """Authenticate user with API key"""
     # Extract prefix for lookup
     if len(api_key) < 8:

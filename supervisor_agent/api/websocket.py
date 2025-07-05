@@ -66,9 +66,7 @@ class WebSocketManager:
         }
 
         await self.broadcast(json.dumps(message))
-        logger.debug(
-            f"Sent task update for task {task_data.get('id', 'unknown')}"
-        )
+        logger.debug(f"Sent task update for task {task_data.get('id', 'unknown')}")
 
     async def send_quota_update(self, quota_data: Dict[str, Any]):
         """Send a quota update to all connected clients."""
@@ -157,9 +155,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "error",
                                 "message": "Invalid JSON format",
-                                "timestamp": datetime.now(
-                                    timezone.utc
-                                ).isoformat()
+                                "timestamp": datetime.now(timezone.utc).isoformat()
                                 + "Z",
                             }
                         ),

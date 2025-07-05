@@ -44,13 +44,9 @@ class LocalMockProvider(AIProvider):
         # Configuration
         self.response_delay_min: float = config.get("response_delay_min", 0.5)
         self.response_delay_max: float = config.get("response_delay_max", 2.0)
-        self.failure_rate: float = config.get(
-            "failure_rate", 0.05
-        )  # 5% failure rate
+        self.failure_rate: float = config.get("failure_rate", 0.05)  # 5% failure rate
         self.deterministic: bool = config.get("deterministic", True)
-        self.custom_responses: Dict[str, str] = config.get(
-            "custom_responses", {}
-        )
+        self.custom_responses: Dict[str, str] = config.get("custom_responses", {})
 
         # State tracking
         self._request_count: int = 0
@@ -173,9 +169,7 @@ class LocalMockProvider(AIProvider):
             rate_limit_per_day=1000000,
         )
 
-    async def get_health_status(
-        self, use_cache: bool = True
-    ) -> ProviderHealth:
+    async def get_health_status(self, use_cache: bool = True) -> ProviderHealth:
         """Get the current health status of the provider."""
         if use_cache and self._should_cache_health():
             return self._health_cache
@@ -184,8 +178,7 @@ class LocalMockProvider(AIProvider):
         success_rate = 100.0
         if self._request_count > 0:
             success_rate = (
-                (self._request_count - self._failure_count)
-                / self._request_count
+                (self._request_count - self._failure_count) / self._request_count
             ) * 100
 
         avg_response_time = 0.0
@@ -282,9 +275,7 @@ class LocalMockProvider(AIProvider):
             return self.response_delay_min + (task_hash / 1000.0) * delay_range
         else:
             # Random delay
-            return random.uniform(
-                self.response_delay_min, self.response_delay_max
-            )
+            return random.uniform(self.response_delay_min, self.response_delay_max)
 
     def _should_fail(self) -> bool:
         """Determine if this request should fail."""
@@ -315,16 +306,12 @@ class LocalMockProvider(AIProvider):
 
         if self.deterministic:
             # Use hash to select consistent error type
-            error_index = abs(hash(f"{task.id}_{task.type}")) % len(
-                error_types
-            )
+            error_index = abs(hash(f"{task.id}_{task.type}")) % len(error_types)
             return f"{error_types[error_index]} for task {task.id}"
         else:
             return f"{random.choice(error_types)} for task {task.id}"
 
-    async def _generate_response(
-        self, task: Task, context: Dict[str, Any]
-    ) -> str:
+    async def _generate_response(self, task: Task, context: Dict[str, Any]) -> str:
         """Generate a mock response for the task."""
         # Check for custom responses first
         task_key = f"{task.type}_{self._get_response_hash(task)[:8]}"

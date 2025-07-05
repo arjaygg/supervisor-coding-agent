@@ -143,9 +143,7 @@ class SCCAnalyzer:
         try:
             repo_path = Path(repo_path).resolve()
             if not repo_path.exists():
-                raise ValueError(
-                    f"Repository path does not exist: {repo_path}"
-                )
+                raise ValueError(f"Repository path does not exist: {repo_path}")
 
             logger.info(f"Starting SCC analysis of {repo_path}")
 
@@ -273,9 +271,7 @@ class SCCAnalyzer:
             logger.error(f"File analysis error: {str(e)}")
             raise
 
-    def get_language_insights(
-        self, analysis_result: AnalysisResult
-    ) -> Dict[str, Any]:
+    def get_language_insights(self, analysis_result: AnalysisResult) -> Dict[str, Any]:
         """
         Extract language-specific insights from analysis.
 
@@ -298,9 +294,7 @@ class SCCAnalyzer:
                 return insights
 
             # Find dominant language
-            dominant = max(
-                analysis_result.language_breakdown, key=lambda x: x.lines
-            )
+            dominant = max(analysis_result.language_breakdown, key=lambda x: x.lines)
             insights["dominant_language"] = dominant.language
 
             # Calculate language diversity (number of languages with >5% of total lines)
@@ -316,20 +310,16 @@ class SCCAnalyzer:
             # Complexity analysis
             for lang_metrics in analysis_result.language_breakdown:
                 if lang_metrics.lines > 0:
-                    complexity_ratio = (
-                        lang_metrics.complexity / lang_metrics.lines
-                    )
-                    insights["complexity_distribution"][
-                        lang_metrics.language
-                    ] = {
+                    complexity_ratio = lang_metrics.complexity / lang_metrics.lines
+                    insights["complexity_distribution"][lang_metrics.language] = {
                         "total_complexity": lang_metrics.complexity,
                         "complexity_per_line": round(complexity_ratio, 3),
                         "lines": lang_metrics.lines,
                     }
 
             # Calculate maintainability score (0-100)
-            insights["maintainability_score"] = (
-                self._calculate_maintainability_score(analysis_result)
+            insights["maintainability_score"] = self._calculate_maintainability_score(
+                analysis_result
             )
 
             # Generate recommendations
@@ -430,9 +420,7 @@ class SCCAnalyzer:
             logger.error(f"Error processing SCC output: {str(e)}")
             raise
 
-    def _calculate_maintainability_score(
-        self, analysis_result: AnalysisResult
-    ) -> int:
+    def _calculate_maintainability_score(self, analysis_result: AnalysisResult) -> int:
         """Calculate maintainability score (0-100)."""
         try:
             score = 100
@@ -457,17 +445,13 @@ class SCCAnalyzer:
 
             # Penalize very large files
             if analysis_result.file_details:
-                large_files = [
-                    f for f in analysis_result.file_details if f.lines > 500
-                ]
+                large_files = [f for f in analysis_result.file_details if f.lines > 500]
                 if large_files:
                     score -= min(15, len(large_files) * 3)
 
             # Reward language consistency
             if len(analysis_result.language_breakdown) > 5:
-                score -= min(
-                    10, (len(analysis_result.language_breakdown) - 5) * 2
-                )
+                score -= min(10, (len(analysis_result.language_breakdown) - 5) * 2)
 
             return max(0, score)
 
@@ -508,9 +492,7 @@ class SCCAnalyzer:
 
             # Large file recommendations
             if analysis_result.file_details:
-                large_files = [
-                    f for f in analysis_result.file_details if f.lines > 500
-                ]
+                large_files = [f for f in analysis_result.file_details if f.lines > 500]
                 if large_files:
                     recommendations.append(
                         f"Found {len(large_files)} large files (>500 lines). "
@@ -542,9 +524,7 @@ class SCCAnalyzer:
 
         except Exception as e:
             logger.error(f"Error generating recommendations: {str(e)}")
-            return [
-                "Unable to generate recommendations due to analysis error."
-            ]
+            return ["Unable to generate recommendations due to analysis error."]
 
     def export_metrics_json(self, analysis_result: AnalysisResult) -> str:
         """Export analysis result as JSON string."""
@@ -555,9 +535,7 @@ class SCCAnalyzer:
                 "language_breakdown": [
                     asdict(lang) for lang in analysis_result.language_breakdown
                 ],
-                "file_details": [
-                    asdict(file) for file in analysis_result.file_details
-                ],
+                "file_details": [asdict(file) for file in analysis_result.file_details],
                 "repository_summary": analysis_result.repository_summary,
                 "analysis_timestamp": analysis_result.analysis_timestamp.isoformat(),
                 "execution_time_seconds": analysis_result.execution_time_seconds,

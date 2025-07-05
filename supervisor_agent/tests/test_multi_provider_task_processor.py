@@ -90,9 +90,7 @@ def sample_tasks():
     for i in range(3):
         task = Mock(spec=Task)
         task.id = i + 1
-        task.type = (
-            TaskType.PR_REVIEW if i % 2 == 0 else TaskType.CODE_ANALYSIS
-        )
+        task.type = TaskType.PR_REVIEW if i % 2 == 0 else TaskType.CODE_ANALYSIS
         task.payload = {"test": f"data_{i}"}
         task.retry_count = 0
         tasks.append(task)
@@ -147,9 +145,7 @@ class TestMultiProviderTaskProcessor:
         mock_agent_processor = AsyncMock(return_value={"result": "processed"})
 
         # Mock provider registry to return our mock provider
-        task_processor.provider_registry.get_provider = Mock(
-            return_value=mock_provider
-        )
+        task_processor.provider_registry.get_provider = Mock(return_value=mock_provider)
 
         result = await task_processor.process_task(task, mock_agent_processor)
 
@@ -165,18 +161,12 @@ class TestMultiProviderTaskProcessor:
     ):
         """Test task processing with execution context"""
         task = sample_tasks[0]
-        context = ExecutionContext(
-            user_id="test-user", max_cost_usd=1.0, priority=8
-        )
+        context = ExecutionContext(user_id="test-user", max_cost_usd=1.0, priority=8)
         mock_agent_processor = AsyncMock()
 
-        task_processor.provider_registry.get_provider = Mock(
-            return_value=mock_provider
-        )
+        task_processor.provider_registry.get_provider = Mock(return_value=mock_provider)
 
-        result = await task_processor.process_task(
-            task, mock_agent_processor, context
-        )
+        result = await task_processor.process_task(task, mock_agent_processor, context)
 
         assert result["success"] is True
         # Verify that provider coordinator was called with context
@@ -189,9 +179,7 @@ class TestMultiProviderTaskProcessor:
         """Test task processing with different routing strategies"""
         task = sample_tasks[0]
         mock_agent_processor = AsyncMock()
-        task_processor.provider_registry.get_provider = Mock(
-            return_value=mock_provider
-        )
+        task_processor.provider_registry.get_provider = Mock(return_value=mock_provider)
 
         strategies = [
             RoutingStrategy.FASTEST,
@@ -223,9 +211,7 @@ class TestMultiProviderTaskProcessor:
                 "execution_time": 0.001,
             },
         ):
-            result = await task_processor.process_task(
-                task, mock_agent_processor
-            )
+            result = await task_processor.process_task(task, mock_agent_processor)
 
         assert result["success"] is True
         assert result["cached"] is True
@@ -269,9 +255,7 @@ class TestMultiProviderTaskProcessor:
     ):
         """Test batch processing of multiple tasks"""
         mock_agent_processor = AsyncMock()
-        task_processor.provider_registry.get_provider = Mock(
-            return_value=mock_provider
-        )
+        task_processor.provider_registry.get_provider = Mock(return_value=mock_provider)
 
         results = await task_processor.process_task_batch(
             sample_tasks, mock_agent_processor, max_concurrent=2
@@ -286,9 +270,7 @@ class TestMultiProviderTaskProcessor:
         """Test task batch optimization"""
         batch = TaskBatch(sample_tasks, "test_batch")
 
-        optimized_batches = await task_processor._optimize_task_batch(
-            batch, None
-        )
+        optimized_batches = await task_processor._optimize_task_batch(batch, None)
 
         assert isinstance(optimized_batches, list)
         assert len(optimized_batches) >= 1
@@ -311,14 +293,10 @@ class TestMultiProviderTaskProcessor:
             assert priorities[TaskType.BUG_FIX] > priorities[TaskType.FEATURE]
 
     @pytest.mark.asyncio
-    async def test_processing_stats(
-        self, task_processor, sample_tasks, mock_provider
-    ):
+    async def test_processing_stats(self, task_processor, sample_tasks, mock_provider):
         """Test processing statistics tracking"""
         mock_agent_processor = AsyncMock()
-        task_processor.provider_registry.get_provider = Mock(
-            return_value=mock_provider
-        )
+        task_processor.provider_registry.get_provider = Mock(return_value=mock_provider)
 
         # Process a few tasks
         for task in sample_tasks[:2]:
@@ -334,9 +312,7 @@ class TestMultiProviderTaskProcessor:
         assert stats["total_tasks"] >= 2
 
     @pytest.mark.asyncio
-    async def test_routing_strategy_application(
-        self, task_processor, sample_tasks
-    ):
+    async def test_routing_strategy_application(self, task_processor, sample_tasks):
         """Test routing strategy application logic"""
         task = sample_tasks[0]
         base_context = ExecutionContext(priority=5)
@@ -368,9 +344,7 @@ class TestMultiProviderTaskProcessor:
             return_value={"provider-1": Mock(is_available=True)}
         )
 
-        is_available = await task_processor._is_provider_available(
-            "provider-1"
-        )
+        is_available = await task_processor._is_provider_available("provider-1")
         assert is_available is True
 
         # Test unavailable provider
@@ -378,9 +352,7 @@ class TestMultiProviderTaskProcessor:
             return_value={"provider-2": Mock(is_available=False)}
         )
 
-        is_available = await task_processor._is_provider_available(
-            "provider-2"
-        )
+        is_available = await task_processor._is_provider_available("provider-2")
         assert is_available is False
 
     @pytest.mark.asyncio
@@ -389,17 +361,11 @@ class TestMultiProviderTaskProcessor:
         initial_stats = task_processor.processing_stats.copy()
 
         result = {"success": True, "cost_usd": 0.15}
-        await task_processor._update_processing_stats(
-            "provider-1", result, 2.5
-        )
+        await task_processor._update_processing_stats("provider-1", result, 2.5)
 
         stats = task_processor.processing_stats
-        assert (
-            stats["successful_tasks"] == initial_stats["successful_tasks"] + 1
-        )
-        assert (
-            stats["total_cost_usd"] == initial_stats["total_cost_usd"] + 0.15
-        )
+        assert stats["successful_tasks"] == initial_stats["successful_tasks"] + 1
+        assert stats["total_cost_usd"] == initial_stats["total_cost_usd"] + 0.15
         assert "provider-1" in stats["provider_distribution"]
         assert stats["provider_distribution"]["provider-1"] >= 1
 

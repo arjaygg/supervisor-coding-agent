@@ -140,9 +140,7 @@ def process_single_task(self, task_id: int):
                     )
                 )
 
-                logger.error(
-                    f"Task {task_id} failed after {task.retry_count} retries"
-                )
+                logger.error(f"Task {task_id} failed after {task.retry_count} retries")
             else:
                 update_data = schemas.TaskUpdate(
                     status=TaskStatus.RETRY, error_message=error_message
@@ -150,9 +148,7 @@ def process_single_task(self, task_id: int):
                 crud.TaskCRUD.update_task(db, task_id, update_data)
 
                 # Retry the task
-                raise self.retry(
-                    countdown=60 * task.retry_count
-                )  # Exponential backoff
+                raise self.retry(countdown=60 * task.retry_count)  # Exponential backoff
 
             # Create audit log
             audit_data = schemas.AuditLogCreate(
@@ -174,14 +170,10 @@ def process_single_task(self, task_id: int):
             }
 
     except Exception as e:
-        logger.error(
-            f"Error processing task {task_id}: {str(e)}", exc_info=True
-        )
+        logger.error(f"Error processing task {task_id}: {str(e)}", exc_info=True)
 
         # Update task status to failed
-        update_data = schemas.TaskUpdate(
-            status=TaskStatus.FAILED, error_message=str(e)
-        )
+        update_data = schemas.TaskUpdate(status=TaskStatus.FAILED, error_message=str(e))
         crud.TaskCRUD.update_task(db, task_id, update_data)
 
         # Create audit log
@@ -315,9 +307,7 @@ def process_task_batch(self, task_ids: List[int]):
                     )
                     crud.TaskSessionCRUD.create_session(db, session_data)
 
-                    update_data = schemas.TaskUpdate(
-                        status=TaskStatus.COMPLETED
-                    )
+                    update_data = schemas.TaskUpdate(status=TaskStatus.COMPLETED)
                     crud.TaskCRUD.update_task(db, task.id, update_data)
 
                     shared_memory.store_task_result(task, result)
@@ -333,27 +323,19 @@ def process_task_batch(self, task_ids: List[int]):
 
                 # Count task types
                 task_types[task.type] = task_types.get(task.type, 0) + 1
-                results.append(
-                    {"task_id": task.id, "success": result["success"]}
-                )
+                results.append({"task_id": task.id, "success": result["success"]})
 
             except Exception as e:
-                logger.error(
-                    f"Error processing task {task.id} in batch: {str(e)}"
-                )
+                logger.error(f"Error processing task {task.id} in batch: {str(e)}")
                 update_data = schemas.TaskUpdate(
                     status=TaskStatus.FAILED, error_message=str(e)
                 )
                 crud.TaskCRUD.update_task(db, task.id, update_data)
                 failed_count += 1
-                results.append(
-                    {"task_id": task.id, "success": False, "error": str(e)}
-                )
+                results.append({"task_id": task.id, "success": False, "error": str(e)})
 
         # Calculate processing time
-        processing_time = int(
-            (datetime.now(timezone.utc) - start_time).total_seconds()
-        )
+        processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds())
 
         # Send batch completion notification
         batch_summary = {
@@ -365,9 +347,7 @@ def process_task_batch(self, task_ids: List[int]):
             "task_types": task_types,
         }
 
-        asyncio.run(
-            notification_manager.send_batch_completion_alert(batch_summary)
-        )
+        asyncio.run(notification_manager.send_batch_completion_alert(batch_summary))
 
         logger.info(
             f"Batch processing completed: {successful_count} successful, {failed_count} failed"
@@ -437,9 +417,7 @@ def health_check_task():
                 "issues": health_issues,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            asyncio.run(
-                notification_manager.send_system_health_alert(health_status)
-            )
+            asyncio.run(notification_manager.send_system_health_alert(health_status))
 
         return {
             "status": "healthy" if not health_issues else "degraded",

@@ -77,12 +77,8 @@ class TestPredictiveAnalyticsEngine:
             metrics.append(
                 {
                     "timestamp": timestamp.isoformat(),
-                    "response_time": 1000
-                    + (seasonal * business_multiplier)
-                    + noise,
-                    "throughput": 100
-                    + (seasonal * business_multiplier)
-                    + noise,
+                    "response_time": 1000 + (seasonal * business_multiplier) + noise,
+                    "throughput": 100 + (seasonal * business_multiplier) + noise,
                     "cpu_usage": 50 + (seasonal * business_multiplier) + noise,
                     "error_rate": 1.0 + (seasonal * 0.1) + (noise * 0.1),
                 }
@@ -162,9 +158,7 @@ class TestPredictiveAnalyticsEngine:
             "dependencies": ["unstable_service"] * 5,  # Many dependencies
         }
 
-        prediction = await analytics_engine.predict_workflow_failures(
-            high_risk_data
-        )
+        prediction = await analytics_engine.predict_workflow_failures(high_risk_data)
 
         # Should predict high or critical risk
         risk_level = prediction["overall_risk"]["level"]
@@ -283,10 +277,8 @@ class TestPredictiveAnalyticsEngine:
             "task_count": 150,
         }
 
-        opportunities = (
-            await analytics_engine.identify_optimization_opportunities(
-                system_state
-            )
+        opportunities = await analytics_engine.identify_optimization_opportunities(
+            system_state
         )
 
         assert len(opportunities) > 0
@@ -325,10 +317,8 @@ class TestPredictiveAnalyticsEngine:
             "cost_per_hour": 100.0,
         }
 
-        opportunities = (
-            await analytics_engine.identify_optimization_opportunities(
-                high_resource_state
-            )
+        opportunities = await analytics_engine.identify_optimization_opportunities(
+            high_resource_state
         )
 
         # Should identify resource and performance optimizations
@@ -343,10 +333,8 @@ class TestPredictiveAnalyticsEngine:
             "throughput": 50.0,
         }
 
-        cost_opportunities = (
-            await analytics_engine.identify_optimization_opportunities(
-                high_cost_state
-            )
+        cost_opportunities = await analytics_engine.identify_optimization_opportunities(
+            high_cost_state
         )
         cost_types = [opp.opportunity_type for opp in cost_opportunities]
         assert "cost_optimization" in cost_types
@@ -360,9 +348,7 @@ class TestPredictiveAnalyticsEngine:
             "invalid_field": "should_cause_error",
         }
 
-        prediction = await analytics_engine.predict_workflow_failures(
-            invalid_data
-        )
+        prediction = await analytics_engine.predict_workflow_failures(invalid_data)
 
         # Should handle gracefully
         assert "workflow_id" in prediction
@@ -392,9 +378,7 @@ class TestPredictiveAnalyticsEngine:
         assert all(isinstance(val, (int, float)) for val in exp_forecast)
 
         # Test moving average
-        ma_forecast = analytics_engine._forecast_moving_average(
-            time_series_data, 3
-        )
+        ma_forecast = analytics_engine._forecast_moving_average(time_series_data, 3)
         assert len(ma_forecast) == 3
         assert all(isinstance(val, (int, float)) for val in ma_forecast)
 
@@ -403,13 +387,11 @@ class TestPredictiveAnalyticsEngine:
         self, analytics_engine, sample_workflow_data
     ):
         """Test risk assessment calculation methods."""
-        features = analytics_engine._extract_workflow_features(
-            sample_workflow_data
-        )
+        features = analytics_engine._extract_workflow_features(sample_workflow_data)
 
         # Test resource exhaustion risk
-        resource_risk = (
-            await analytics_engine._assess_resource_exhaustion_risk(features)
+        resource_risk = await analytics_engine._assess_resource_exhaustion_risk(
+            features
         )
         assert isinstance(resource_risk, RiskAssessment)
         assert resource_risk.risk_level in [level for level in RiskLevel]
@@ -419,26 +401,20 @@ class TestPredictiveAnalyticsEngine:
         assert isinstance(resource_risk.mitigation_strategies, list)
 
         # Test performance degradation risk
-        perf_risk = (
-            await analytics_engine._assess_performance_degradation_risk(
-                features
-            )
+        perf_risk = await analytics_engine._assess_performance_degradation_risk(
+            features
         )
         assert isinstance(perf_risk, RiskAssessment)
         assert perf_risk.risk_level in [level for level in RiskLevel]
 
         # Test dependency failure risk
-        dep_risk = await analytics_engine._assess_dependency_failure_risk(
-            features
-        )
+        dep_risk = await analytics_engine._assess_dependency_failure_risk(features)
         assert isinstance(dep_risk, RiskAssessment)
         assert dep_risk.risk_level in [level for level in RiskLevel]
 
     def test_feature_extraction(self, analytics_engine, sample_workflow_data):
         """Test workflow feature extraction."""
-        features = analytics_engine._extract_workflow_features(
-            sample_workflow_data
-        )
+        features = analytics_engine._extract_workflow_features(sample_workflow_data)
 
         # Test basic features
         expected_features = [
@@ -471,26 +447,18 @@ class TestPredictiveAnalyticsEngine:
         """Test trend strength calculation."""
         # Strong increasing trend
         increasing_data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        trend_strength = analytics_engine._calculate_trend_strength(
-            increasing_data
-        )
+        trend_strength = analytics_engine._calculate_trend_strength(increasing_data)
         assert trend_strength > 0.8  # Should detect strong trend
 
         # No trend (stable)
         stable_data = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
-        stable_strength = analytics_engine._calculate_trend_strength(
-            stable_data
-        )
+        stable_strength = analytics_engine._calculate_trend_strength(stable_data)
         assert stable_strength < 0.2  # Should detect weak/no trend
 
         # Volatile data
         volatile_data = [1, 5, 2, 8, 3, 7, 4, 6, 1, 9]
-        volatile_strength = analytics_engine._calculate_trend_strength(
-            volatile_data
-        )
-        assert (
-            volatile_strength < 0.5
-        )  # Should detect weak trend due to volatility
+        volatile_strength = analytics_engine._calculate_trend_strength(volatile_data)
+        assert volatile_strength < 0.5  # Should detect weak trend due to volatility
 
     @pytest.mark.asyncio
     async def test_autocorrelation_analysis(
@@ -499,18 +467,13 @@ class TestPredictiveAnalyticsEngine:
         """Test autocorrelation analysis for seasonality detection."""
         # Extract response time values
         response_times = [
-            float(metric["response_time"])
-            for metric in sample_historical_metrics
+            float(metric["response_time"]) for metric in sample_historical_metrics
         ]
 
         # Test different lag periods
         lag_1h = analytics_engine._calculate_autocorrelation(response_times, 1)
-        lag_24h = analytics_engine._calculate_autocorrelation(
-            response_times, 24
-        )
-        lag_168h = analytics_engine._calculate_autocorrelation(
-            response_times, 168
-        )
+        lag_24h = analytics_engine._calculate_autocorrelation(response_times, 24)
+        lag_168h = analytics_engine._calculate_autocorrelation(response_times, 168)
 
         # All should be valid correlation values
         assert -1 <= lag_1h <= 1
@@ -588,9 +551,7 @@ class TestPredictiveAnalyticsEngine:
             assert rec["implementation_effort"] in ["low", "medium", "high"]
 
     @pytest.mark.asyncio
-    async def test_prediction_caching(
-        self, analytics_engine, sample_workflow_data
-    ):
+    async def test_prediction_caching(self, analytics_engine, sample_workflow_data):
         """Test prediction result caching."""
         # First prediction
         prediction1 = await analytics_engine.predict_workflow_failures(
@@ -609,8 +570,7 @@ class TestPredictiveAnalyticsEngine:
         # Results should be consistent
         assert prediction1["workflow_id"] == prediction2["workflow_id"]
         assert (
-            prediction1["overall_risk"]["level"]
-            == prediction2["overall_risk"]["level"]
+            prediction1["overall_risk"]["level"] == prediction2["overall_risk"]["level"]
         )
 
     @pytest.mark.asyncio
@@ -691,9 +651,7 @@ class TestPredictiveAnalyticsEngine:
             },
         }
 
-        prediction = await analytics_engine.predict_workflow_failures(
-            complex_workflow
-        )
+        prediction = await analytics_engine.predict_workflow_failures(complex_workflow)
 
         # Should identify multiple risk factors
         assert len(prediction["specific_risks"]) == 4
@@ -710,8 +668,7 @@ class TestPredictiveAnalyticsEngine:
     ):
         """Test seasonal decomposition functionality."""
         response_times = [
-            float(metric["response_time"])
-            for metric in sample_historical_metrics
+            float(metric["response_time"]) for metric in sample_historical_metrics
         ]
 
         decomposition = analytics_engine._seasonal_decomposition(

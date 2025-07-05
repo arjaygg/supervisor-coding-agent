@@ -91,9 +91,7 @@ class WorkflowExecution(Base):
     context = Column(JSON, default=dict)  # Workflow variables and context
     result = Column(JSON, nullable=True)  # Final execution result
     error_message = Column(Text, nullable=True)
-    triggered_by = Column(
-        String(255), nullable=True
-    )  # User, schedule, or system
+    triggered_by = Column(String(255), nullable=True)  # User, schedule, or system
 
     # Relationships
     workflow = relationship("Workflow", back_populates="executions")
@@ -114,9 +112,7 @@ class WorkflowTaskExecution(Base):
         String, ForeignKey("workflow_executions.id"), nullable=False
     )
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
-    task_name = Column(
-        String(255), nullable=False
-    )  # Task name within workflow
+    task_name = Column(String(255), nullable=False)  # Task name within workflow
     status = Column(SQLEnum(WorkflowStatus), default=WorkflowStatus.PENDING)
     started_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
@@ -138,15 +134,11 @@ class TaskDependency(Base):
 
     id = Column(String, primary_key=True, index=True)  # UUID
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
-    depends_on_task_id = Column(
-        Integer, ForeignKey("tasks.id"), nullable=False
-    )
+    depends_on_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     condition_type = Column(
         SQLEnum(DependencyCondition), default=DependencyCondition.SUCCESS
     )
-    condition_value = Column(
-        Text, nullable=True
-    )  # Custom condition expression
+    condition_value = Column(Text, nullable=True)  # Custom condition expression
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
@@ -258,9 +250,7 @@ class WorkflowContext:
 class ExecutionPlan:
     """DAG execution plan"""
 
-    execution_order: List[
-        List[str]
-    ]  # Groups of tasks that can run in parallel
+    execution_order: List[List[str]]  # Groups of tasks that can run in parallel
     task_map: Dict[str, TaskDefinition]
     dependency_map: Dict[str, List[str]]
 

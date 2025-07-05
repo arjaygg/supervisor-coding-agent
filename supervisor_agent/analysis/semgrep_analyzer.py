@@ -234,9 +234,7 @@ class SemgrepAnalyzer:
             }
 
             # Write custom rules file
-            custom_rules_file = (
-                self.custom_rules_dir / "sveltekit-security.yaml"
-            )
+            custom_rules_file = self.custom_rules_dir / "sveltekit-security.yaml"
             with open(custom_rules_file, "w") as f:
                 yaml.dump(sveltekit_rules, f, default_flow_style=False)
 
@@ -271,9 +269,7 @@ class SemgrepAnalyzer:
         try:
             repo_path = Path(repo_path).resolve()
             if not repo_path.exists():
-                raise ValueError(
-                    f"Repository path does not exist: {repo_path}"
-                )
+                raise ValueError(f"Repository path does not exist: {repo_path}")
 
             logger.info(f"Starting Semgrep analysis of {repo_path}")
 
@@ -471,9 +467,7 @@ class SemgrepAnalyzer:
             return unique_rulesets
 
         except Exception as e:
-            logger.warning(
-                f"Language detection failed: {e}, using default rulesets"
-            )
+            logger.warning(f"Language detection failed: {e}, using default rulesets")
             return ["p/security-audit", "p/javascript", "p/python"]
 
     def _process_semgrep_output(
@@ -540,36 +534,20 @@ class SemgrepAnalyzer:
                 "total_findings": len(findings),
                 "by_severity": {
                     "ERROR": len(
-                        [
-                            f
-                            for f in findings
-                            if f.severity == SeverityLevel.ERROR
-                        ]
+                        [f for f in findings if f.severity == SeverityLevel.ERROR]
                     ),
                     "WARNING": len(
-                        [
-                            f
-                            for f in findings
-                            if f.severity == SeverityLevel.WARNING
-                        ]
+                        [f for f in findings if f.severity == SeverityLevel.WARNING]
                     ),
                     "INFO": len(
-                        [
-                            f
-                            for f in findings
-                            if f.severity == SeverityLevel.INFO
-                        ]
+                        [f for f in findings if f.severity == SeverityLevel.INFO]
                     ),
                 },
                 "by_category": {
-                    category.value: len(
-                        [f for f in findings if f.category == category]
-                    )
+                    category.value: len([f for f in findings if f.category == category])
                     for category in FindingCategory
                 },
-                "unique_rules_triggered": len(
-                    set(f.rule_id for f in findings)
-                ),
+                "unique_rules_triggered": len(set(f.rule_id for f in findings)),
                 "files_with_issues": len(set(f.file_path for f in findings)),
                 "rulesets_used": rulesets,
             }
@@ -637,9 +615,7 @@ class SemgrepAnalyzer:
             logger.error(f"Error calculating ruleset stats: {e}")
             return []
 
-    def get_security_insights(
-        self, analysis_result: AnalysisResult
-    ) -> Dict[str, Any]:
+    def get_security_insights(self, analysis_result: AnalysisResult) -> Dict[str, Any]:
         """
         Extract security-focused insights from analysis.
 
@@ -685,9 +661,7 @@ class SemgrepAnalyzer:
 
             # Identify critical issues (ERROR severity)
             critical_findings = [
-                f
-                for f in analysis_result.findings
-                if f.severity == SeverityLevel.ERROR
+                f for f in analysis_result.findings if f.severity == SeverityLevel.ERROR
             ]
 
             insights["critical_issues"] = [
@@ -708,8 +682,7 @@ class SemgrepAnalyzer:
                 category_counts[finding.category] += 1
 
             insights["vulnerability_categories"] = {
-                category.value: count
-                for category, count in category_counts.items()
+                category.value: count for category, count in category_counts.items()
             }
 
             # Prioritize remediation
@@ -743,9 +716,7 @@ class SemgrepAnalyzer:
                     }
                 )
 
-            priority_rules.sort(
-                key=lambda x: x["priority_score"], reverse=True
-            )
+            priority_rules.sort(key=lambda x: x["priority_score"], reverse=True)
             insights["remediation_priority"] = priority_rules[:5]
 
             return insights
@@ -801,9 +772,7 @@ class SemgrepAnalyzer:
                             "description": {"text": "Suggested fix"},
                             "artifactChanges": [
                                 {
-                                    "artifactLocation": {
-                                        "uri": finding.file_path
-                                    },
+                                    "artifactLocation": {"uri": finding.file_path},
                                     "replacements": [
                                         {
                                             "deletedRegion": {
