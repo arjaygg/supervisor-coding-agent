@@ -50,12 +50,8 @@ class ClaudeCliProvider(AIProvider):
         self.api_keys: List[str] = config.get("api_keys", [])
         self.cli_path: str = config.get("cli_path", settings.claude_cli_path)
         self.current_key_index: int = 0
-        self.max_tokens_per_request: int = config.get(
-            "max_tokens_per_request", 4000
-        )
-        self.rate_limit_per_minute: int = config.get(
-            "rate_limit_per_minute", 60
-        )
+        self.max_tokens_per_request: int = config.get("max_tokens_per_request", 4000)
+        self.rate_limit_per_minute: int = config.get("rate_limit_per_minute", 60)
         self.rate_limit_per_hour: int = config.get("rate_limit_per_hour", 1000)
         self.rate_limit_per_day: int = config.get("rate_limit_per_day", 10000)
         self.mock_mode: bool = config.get("mock_mode", False)
@@ -109,8 +105,7 @@ class ClaudeCliProvider(AIProvider):
 
             # Calculate execution time
             execution_time_ms = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds()
-                * 1000
+                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
 
             # Estimate tokens (reuse existing logic)
@@ -138,15 +133,12 @@ class ClaudeCliProvider(AIProvider):
 
         except Exception as e:
             execution_time_ms = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds()
-                * 1000
+                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
             self._consecutive_failures += 1
             self._last_error = str(e)
 
-            logger.error(
-                f"Claude CLI execution failed for task {task.id}: {str(e)}"
-            )
+            logger.error(f"Claude CLI execution failed for task {task.id}: {str(e)}")
 
             return ProviderResponse(
                 success=False,
@@ -179,9 +171,7 @@ class ClaudeCliProvider(AIProvider):
                     await asyncio.sleep(0.1)
 
             except Exception as e:
-                logger.error(
-                    f"Batch execution failed for task {task.id}: {str(e)}"
-                )
+                logger.error(f"Batch execution failed for task {task.id}: {str(e)}")
                 responses.append(
                     ProviderResponse(
                         success=False,
@@ -225,9 +215,7 @@ class ClaudeCliProvider(AIProvider):
             rate_limit_per_day=self.rate_limit_per_day,
         )
 
-    async def get_health_status(
-        self, use_cache: bool = True
-    ) -> ProviderHealth:
+    async def get_health_status(self, use_cache: bool = True) -> ProviderHealth:
         """Get the current health status of the provider."""
         if use_cache and self._should_cache_health():
             return self._health_cache
@@ -242,9 +230,7 @@ class ClaudeCliProvider(AIProvider):
             status = ProviderStatus.DEGRADED
         elif not await self._validate_claude_cli():
             status = (
-                ProviderStatus.MAINTENANCE
-                if self.mock_mode
-                else ProviderStatus.ERROR
+                ProviderStatus.MAINTENANCE if self.mock_mode else ProviderStatus.ERROR
             )
 
         # Calculate success rate based on recent usage
@@ -321,9 +307,7 @@ class ClaudeCliProvider(AIProvider):
         elif task_type == "FEATURE":
             return base_prompt + self._build_feature_prompt(payload)
         else:
-            return (
-                base_prompt + f"Task Details: {json.dumps(payload, indent=2)}"
-            )
+            return base_prompt + f"Task Details: {json.dumps(payload, indent=2)}"
 
     def _build_pr_review_prompt(self, payload: Dict[str, Any]) -> str:
         """Build PR review prompt (reuse existing logic)."""
@@ -433,31 +417,45 @@ Please provide:
 
             # Check for existing Claude Code CLI Pro authentication first
             import os
+
             env = os.environ.copy()
-            
+
             # Check configuration preference and available auth methods
             from supervisor_agent.config import get_config
+
             config = get_config()
-            
+
             # Try to detect if user has Claude Code CLI Pro subscription
             has_pro_auth = self._has_claude_cli_pro_auth()
-            
+
             if config.claude_prefer_pro_auth and has_pro_auth:
-                logger.info("Using Claude Code CLI Pro subscription authentication (preferred)")
+                logger.info(
+                    "Using Claude Code CLI Pro subscription authentication (preferred)"
+                )
                 # Don't set ANTHROPIC_API_KEY - let CLI use its own auth
             elif not config.claude_prefer_pro_auth or not has_pro_auth:
                 # Fallback to API key authentication
                 api_key = self._get_next_api_key()
                 if api_key:
-                    logger.info("Using API key authentication" + 
-                               (" (Pro auth not preferred)" if has_pro_auth else " (Pro auth not available)"))
+                    logger.info(
+                        "Using API key authentication"
+                        + (
+                            " (Pro auth not preferred)"
+                            if has_pro_auth
+                            else " (Pro auth not available)"
+                        )
+                    )
                     env["ANTHROPIC_API_KEY"] = api_key
                 else:
                     if has_pro_auth:
-                        logger.info("No API key available, falling back to Claude CLI Pro auth")
+                        logger.info(
+                            "No API key available, falling back to Claude CLI Pro auth"
+                        )
                         # Don't set ANTHROPIC_API_KEY - let CLI use its own auth
                     else:
-                        logger.warning("No API key available and no Claude CLI Pro auth detected")
+                        logger.warning(
+                            "No API key available and no Claude CLI Pro auth detected"
+                        )
                         return self._generate_mock_response(prompt)
 
             # Construct Claude CLI command
@@ -475,9 +473,7 @@ Please provide:
 
             if process.returncode != 0:
                 error_msg = (
-                    process.stderr.strip()
-                    if process.stderr
-                    else "Unknown error"
+                    process.stderr.strip() if process.stderr else "Unknown error"
                 )
                 logger.warning(
                     f"Claude CLI failed, falling back to mock response: {error_msg}"
@@ -487,9 +483,7 @@ Please provide:
             return process.stdout.strip()
 
         except subprocess.TimeoutExpired:
-            logger.warning(
-                "Claude CLI execution timed out, using mock response"
-            )
+            logger.warning("Claude CLI execution timed out, using mock response")
             return self._generate_mock_response(prompt)
         except FileNotFoundError:
             logger.warning(
@@ -513,9 +507,7 @@ Please provide:
                 return False
 
             # Check if file exists
-            if not shutil.which(self.cli_path) and not os.path.isfile(
-                self.cli_path
-            ):
+            if not shutil.which(self.cli_path) and not os.path.isfile(self.cli_path):
                 return False
 
             # Try to run a simple help command
@@ -673,9 +665,7 @@ I've analyzed your request and here's my response:
             return ""  # Allow empty API key for Pro auth fallback
 
         api_key = self.api_keys[self.current_key_index]
-        self.current_key_index = (self.current_key_index + 1) % len(
-            self.api_keys
-        )
+        self.current_key_index = (self.current_key_index + 1) % len(self.api_keys)
         return api_key
 
     def _has_claude_cli_pro_auth(self) -> bool:
@@ -684,14 +674,14 @@ I've analyzed your request and here's my response:
         Returns True if CLI can authenticate without API keys.
         """
         try:
-            import subprocess
             import os
-            
+            import subprocess
+
             # Test if Claude CLI can authenticate without API key
             env = os.environ.copy()
             # Remove any existing API key to test Pro auth
             env.pop("ANTHROPIC_API_KEY", None)
-            
+
             # Try a simple command to check authentication
             # Using --help to avoid actual API calls during detection
             result = subprocess.run(
@@ -699,9 +689,9 @@ I've analyzed your request and here's my response:
                 capture_output=True,
                 text=True,
                 env=env,
-                timeout=10
+                timeout=10,
             )
-            
+
             # If CLI runs successfully without API key, likely has Pro auth
             # Additional check: look for authentication status in output
             if result.returncode == 0:
@@ -711,12 +701,12 @@ I've analyzed your request and here's my response:
                     capture_output=True,
                     text=True,
                     env=env,
-                    timeout=10
+                    timeout=10,
                 )
                 return auth_check.returncode == 0
-            
+
             return False
-            
+
         except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
             logger.debug(f"Claude CLI Pro auth detection failed: {e}")
             return False

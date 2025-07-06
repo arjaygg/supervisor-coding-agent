@@ -20,9 +20,7 @@ class TaskBatcher:
         self.deduplication_window_hours = 24
 
     def get_batchable_tasks(self, db: Session) -> List[List[Task]]:
-        pending_tasks = TaskCRUD.get_pending_tasks(
-            db, limit=self.batch_size * 3
-        )
+        pending_tasks = TaskCRUD.get_pending_tasks(db, limit=self.batch_size * 3)
 
         if not pending_tasks:
             return []
@@ -79,9 +77,7 @@ class TaskBatcher:
         deduplicated_tasks = self._deduplicate_tasks(db, tasks)
 
         if not deduplicated_tasks:
-            logger.info(
-                f"All tasks in group were duplicates, skipping batch creation"
-            )
+            logger.info(f"All tasks in group were duplicates, skipping batch creation")
             return []
 
         # Create batches of appropriate size
@@ -103,9 +99,7 @@ class TaskBatcher:
             task_hash = self._calculate_task_hash(task)
 
             if task_hash in seen_hashes:
-                logger.info(
-                    f"Task {task.id} is a duplicate based on hash, skipping"
-                )
+                logger.info(f"Task {task.id} is a duplicate based on hash, skipping")
                 continue
 
             # Check if similar task was processed recently
@@ -128,9 +122,7 @@ class TaskBatcher:
         hash_string = json.dumps(hash_data, sort_keys=True)
         return hashlib.md5(hash_string.encode()).hexdigest()
 
-    def _normalize_payload_for_hash(
-        self, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _normalize_payload_for_hash(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         # Normalize payload by removing timestamps and other variable fields
         normalized = {}
 
@@ -151,9 +143,7 @@ class TaskBatcher:
 
         return normalized
 
-    def _is_recent_duplicate(
-        self, db: Session, task: Task, task_hash: str
-    ) -> bool:
+    def _is_recent_duplicate(self, db: Session, task: Task, task_hash: str) -> bool:
         # Check if a similar task was completed in the recent past
         cutoff_time = datetime.now(timezone.utc) - timedelta(
             hours=self.deduplication_window_hours
@@ -184,9 +174,7 @@ class TaskBatcher:
             TaskCRUD.update_task(db, task.id, update_data)
 
         task_ids = [task.id for task in batch]
-        logger.info(
-            f"Marked batch of {len(batch)} tasks as queued: {task_ids}"
-        )
+        logger.info(f"Marked batch of {len(batch)} tasks as queued: {task_ids}")
 
     def can_batch_tasks(self, tasks: List[Task]) -> bool:
         if not tasks:
@@ -200,9 +188,7 @@ class TaskBatcher:
         # Check if tasks are within reasonable priority range
         priorities = [task.priority for task in tasks]
         priority_range = max(priorities) - min(priorities)
-        if (
-            priority_range > 3
-        ):  # Don't batch tasks with very different priorities
+        if priority_range > 3:  # Don't batch tasks with very different priorities
             return False
 
         return True

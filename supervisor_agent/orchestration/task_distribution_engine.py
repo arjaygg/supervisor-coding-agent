@@ -60,8 +60,8 @@ class TaskDistributionEngine:
                 create_multi_provider_coordinator,
             )
 
-            self.multi_provider_coordinator = (
-                create_multi_provider_coordinator(mock_provider_service)
+            self.multi_provider_coordinator = create_multi_provider_coordinator(
+                mock_provider_service
             )
 
     async def distribute_task(
@@ -78,9 +78,7 @@ class TaskDistributionEngine:
         else:
             # If not splitting, treat the original task as a single split
             task_splits = [
-                TaskSplit(
-                    task_id=task.id, parent_task_id=task.id, config=task.config
-                )
+                TaskSplit(task_id=task.id, parent_task_id=task.id, config=task.config)
             ]
 
         # 2. Analyze dependencies
@@ -89,9 +87,7 @@ class TaskDistributionEngine:
         )
 
         # 3. Optimize distribution strategy (placeholder)
-        optimized_strategy = await self.optimize_distribution_strategy(
-            task, []
-        )
+        optimized_strategy = await self.optimize_distribution_strategy(task, [])
 
         # 4. Coordinate parallel execution (placeholder)
         execution_plan = await self.coordinate_parallel_execution(task_splits)
@@ -110,11 +106,7 @@ class TaskDistributionEngine:
         if complexity_analysis.requires_splitting:
             subtask_graph = self.task_splitter.generate_subtask_graph(task)
             return subtask_graph.subtasks
-        return [
-            TaskSplit(
-                task_id=task.id, parent_task_id=task.id, config=task.config
-            )
-        ]
+        return [TaskSplit(task_id=task.id, parent_task_id=task.id, config=task.config)]
 
     async def analyze_task_dependencies(self, task: Task) -> DependencyGraph:
         """
@@ -136,9 +128,7 @@ class TaskDistributionEngine:
         # Get agent specialization recommendations
         try:
             agent_recommendation = (
-                await self.agent_specialization_engine.select_optimal_agent(
-                    task
-                )
+                await self.agent_specialization_engine.select_optimal_agent(task)
             )
             specialization_capability = agent_recommendation.get(
                 "specialization", {}
@@ -152,9 +142,7 @@ class TaskDistributionEngine:
                 await self.multi_provider_coordinator.get_provider_health_summary()
             )
             healthy_providers = [
-                p
-                for p in provider_health.values()
-                if p.get("status") == "healthy"
+                p for p in provider_health.values() if p.get("status") == "healthy"
             ]
             provider_count = len(healthy_providers)
         except Exception:
@@ -164,9 +152,7 @@ class TaskDistributionEngine:
         if complexity_analysis.complexity_score <= 0.5:
             # Simple tasks - use sequential for reliability
             return DistributionStrategy.SEQUENTIAL
-        elif (
-            complexity_analysis.complexity_score <= 1.5 and provider_count >= 2
-        ):
+        elif complexity_analysis.complexity_score <= 1.5 and provider_count >= 2:
             # Moderate complexity with multiple providers - use load balanced
             return DistributionStrategy.LOAD_BALANCED
         elif complexity_analysis.requires_splitting and provider_count >= 3:
@@ -187,17 +173,13 @@ class TaskDistributionEngine:
         Creates execution plan based on dependencies and provider capabilities.
         """
         if not task_splits:
-            return ExecutionPlan(
-                steps=[], estimated_time=0.0, cost_estimate=0.0
-            )
+            return ExecutionPlan(steps=[], estimated_time=0.0, cost_estimate=0.0)
 
         # Convert task splits to tasks for dependency analysis
         tasks = [task_split_to_task(ts) for ts in task_splits]
 
         # Build dependency graph
-        dependency_graph = self.dependency_manager.build_dependency_graph(
-            tasks
-        )
+        dependency_graph = self.dependency_manager.build_dependency_graph(tasks)
         execution_order = self.dependency_manager.resolve_execution_order(
             dependency_graph
         )
@@ -208,9 +190,7 @@ class TaskDistributionEngine:
         total_cost = 0.0
 
         # Group tasks by execution level for parallel processing
-        execution_levels = self._calculate_execution_levels(
-            tasks, dependency_graph
-        )
+        execution_levels = self._calculate_execution_levels(tasks, dependency_graph)
 
         for level_idx, level_tasks in enumerate(execution_levels):
             if len(level_tasks) == 1:
@@ -221,12 +201,8 @@ class TaskDistributionEngine:
                 total_cost += 0.05
             else:
                 # Parallel execution
-                parallel_steps = [
-                    f"Execute task {task_id}" for task_id in level_tasks
-                ]
-                steps.append(
-                    f"Parallel execution: {', '.join(parallel_steps)}"
-                )
+                parallel_steps = [f"Execute task {task_id}" for task_id in level_tasks]
+                steps.append(f"Parallel execution: {', '.join(parallel_steps)}")
                 # Parallel tasks take max time, not sum
                 total_time += 30.0
                 total_cost += 0.05 * len(level_tasks)

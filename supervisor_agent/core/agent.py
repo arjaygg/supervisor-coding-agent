@@ -37,9 +37,7 @@ class ClaudeAgentWrapper:
 
             end_time = datetime.now(timezone.utc)
             execution_time = int((end_time - start_time).total_seconds())
-            execution_time_ms = int(
-                (end_time - start_time).total_seconds() * 1000
-            )
+            execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
 
             # Track cost and usage if database session is provided
             if db_session:
@@ -69,13 +67,9 @@ class ClaudeAgentWrapper:
         except Exception as e:
             end_time = datetime.now(timezone.utc)
             execution_time = int((end_time - start_time).total_seconds())
-            execution_time_ms = int(
-                (end_time - start_time).total_seconds() * 1000
-            )
+            execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
 
-            logger.error(
-                f"Task {task.id} failed with agent {self.agent_id}: {str(e)}"
-            )
+            logger.error(f"Task {task.id} failed with agent {self.agent_id}: {str(e)}")
 
             # Track failed execution cost if database session is provided
             if db_session and prompt:
@@ -137,9 +131,7 @@ class ClaudeAgentWrapper:
         elif task_type == "FEATURE":
             return base_prompt + self._build_feature_prompt(payload)
         else:
-            return (
-                base_prompt + f"Task Details: {json.dumps(payload, indent=2)}"
-            )
+            return base_prompt + f"Task Details: {json.dumps(payload, indent=2)}"
 
     def _build_pr_review_prompt(self, payload: Dict[str, Any]) -> str:
         return f"""Please review the following pull request:
@@ -230,10 +222,7 @@ Please provide:
     async def _run_claude_cli(self, prompt: str) -> str:
         try:
             # Check if we're in mock mode
-            if (
-                settings.claude_cli_path == "mock"
-                or not settings.claude_api_keys
-            ):
+            if settings.claude_cli_path == "mock" or not settings.claude_api_keys:
                 return self._generate_mock_response(prompt)
 
             # Validate Claude CLI exists
@@ -265,9 +254,7 @@ Please provide:
 
             if process.returncode != 0:
                 error_msg = (
-                    process.stderr.strip()
-                    if process.stderr
-                    else "Unknown error"
+                    process.stderr.strip() if process.stderr else "Unknown error"
                 )
                 logger.warning(
                     f"Claude CLI failed, falling back to mock response: {error_msg}"
@@ -277,9 +264,7 @@ Please provide:
             return process.stdout.strip()
 
         except subprocess.TimeoutExpired:
-            logger.warning(
-                "Claude CLI execution timed out, using mock response"
-            )
+            logger.warning("Claude CLI execution timed out, using mock response")
             return self._generate_mock_response(prompt)
         except FileNotFoundError:
             logger.warning(
@@ -303,9 +288,7 @@ Please provide:
                 return False
 
             # Check if file exists
-            if not shutil.which(self.cli_path) and not os.path.isfile(
-                self.cli_path
-            ):
+            if not shutil.which(self.cli_path) and not os.path.isfile(self.cli_path):
                 return False
 
             # Try to run a simple help command

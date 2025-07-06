@@ -64,8 +64,7 @@ class TokenBucketRateLimiter:
                     "error": "burst_limit_exceeded",
                     "burst_limit": self.burst_limit,
                     "burst_window": self.burst_window,
-                    "retry_after": self.burst_window
-                    - (now - entry.burst_window_start),
+                    "retry_after": self.burst_window - (now - entry.burst_window_start),
                 }
 
             # Check rate limit
@@ -74,8 +73,7 @@ class TokenBucketRateLimiter:
                     "error": "rate_limit_exceeded",
                     "rate_limit": self.requests_per_minute,
                     "window_duration": self.window_duration,
-                    "retry_after": self.window_duration
-                    - (now - entry.window_start),
+                    "retry_after": self.window_duration - (now - entry.window_start),
                 }
 
             # Allow request
@@ -246,9 +244,7 @@ class SecurityRateLimiter:
             del self.suspicious_ips[ip]
 
         expired_blocked = [
-            ip
-            for ip, timestamp in self.blocked_ips.items()
-            if now - timestamp > 3600
+            ip for ip, timestamp in self.blocked_ips.items() if now - timestamp > 3600
         ]  # 1 hour
         for ip in expired_blocked:
             del self.blocked_ips[ip]

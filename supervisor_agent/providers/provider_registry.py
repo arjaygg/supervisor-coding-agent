@@ -173,9 +173,7 @@ class ProviderRegistry:
             # Validate configuration
             validation_errors = await provider.validate_configuration()
             if validation_errors:
-                raise ValueError(
-                    f"Provider configuration invalid: {validation_errors}"
-                )
+                raise ValueError(f"Provider configuration invalid: {validation_errors}")
 
             # Store provider and metadata
             self._providers[config.provider_id] = provider
@@ -186,14 +184,10 @@ class ProviderRegistry:
             health = await provider.get_health_status(use_cache=False)
             self._health_cache[config.provider_id] = health
 
-            logger.info(
-                f"Successfully registered provider: {config.provider_id}"
-            )
+            logger.info(f"Successfully registered provider: {config.provider_id}")
 
         except Exception as e:
-            logger.error(
-                f"Failed to register provider {config.provider_id}: {str(e)}"
-            )
+            logger.error(f"Failed to register provider {config.provider_id}: {str(e)}")
             raise ProviderError(
                 f"Provider registration failed: {str(e)}", config.provider_id
             )
@@ -201,9 +195,7 @@ class ProviderRegistry:
     async def unregister_provider(self, provider_id: str) -> None:
         """Unregister a provider from the registry."""
         if provider_id not in self._providers:
-            logger.warning(
-                f"Attempt to unregister unknown provider: {provider_id}"
-            )
+            logger.warning(f"Attempt to unregister unknown provider: {provider_id}")
             return
 
         try:
@@ -236,9 +228,7 @@ class ProviderRegistry:
         """Get list of registered provider IDs."""
         return list(self._providers.keys())
 
-    async def get_available_providers(
-        self, task: Optional[Task] = None
-    ) -> List[str]:
+    async def get_available_providers(self, task: Optional[Task] = None) -> List[str]:
         """
         Get list of available providers, optionally filtered by task compatibility.
 
@@ -292,27 +282,14 @@ class ProviderRegistry:
         # Apply load balancing strategy
         if self._load_balancing_strategy == LoadBalancingStrategy.ROUND_ROBIN:
             return self._select_round_robin(available_providers)
-        elif (
-            self._load_balancing_strategy == LoadBalancingStrategy.LEAST_LOADED
-        ):
+        elif self._load_balancing_strategy == LoadBalancingStrategy.LEAST_LOADED:
             return self._select_least_loaded(available_providers)
-        elif (
-            self._load_balancing_strategy
-            == LoadBalancingStrategy.FASTEST_RESPONSE
-        ):
+        elif self._load_balancing_strategy == LoadBalancingStrategy.FASTEST_RESPONSE:
             return self._select_fastest_response(available_providers)
-        elif (
-            self._load_balancing_strategy
-            == LoadBalancingStrategy.PRIORITY_BASED
-        ):
+        elif self._load_balancing_strategy == LoadBalancingStrategy.PRIORITY_BASED:
             return self._select_priority_based(available_providers)
-        elif (
-            self._load_balancing_strategy
-            == LoadBalancingStrategy.CAPABILITY_BASED
-        ):
-            return await self._select_capability_based(
-                available_providers, task
-            )
+        elif self._load_balancing_strategy == LoadBalancingStrategy.CAPABILITY_BASED:
+            return await self._select_capability_based(available_providers, task)
         else:
             # Default to priority-based
             return self._select_priority_based(available_providers)
@@ -337,9 +314,7 @@ class ProviderRegistry:
         if provider_id is None:
             provider_id = await self.select_provider(task)
             if provider_id is None:
-                raise ProviderUnavailableError(
-                    "No available providers for task"
-                )
+                raise ProviderUnavailableError("No available providers for task")
 
         # Validate provider exists and is available
         provider = self._providers.get(provider_id)
@@ -381,17 +356,13 @@ class ProviderRegistry:
             # Record failed execution
             metrics.record_request(False, execution_time_ms)
 
-            logger.error(
-                f"Task {task.id} failed on provider {provider_id}: {str(e)}"
-            )
+            logger.error(f"Task {task.id} failed on provider {provider_id}: {str(e)}")
             raise
 
         finally:
             metrics.current_load -= 1
 
-    async def get_provider_health(
-        self, provider_id: str
-    ) -> Optional[ProviderHealth]:
+    async def get_provider_health(self, provider_id: str) -> Optional[ProviderHealth]:
         """Get health status for a specific provider."""
         return await self._get_cached_health(provider_id)
 
@@ -406,9 +377,7 @@ class ProviderRegistry:
 
         return health_status
 
-    def get_provider_metrics(
-        self, provider_id: str
-    ) -> Optional[ProviderMetrics]:
+    def get_provider_metrics(self, provider_id: str) -> Optional[ProviderMetrics]:
         """Get runtime metrics for a specific provider."""
         return self._metrics.get(provider_id)
 
@@ -459,9 +428,7 @@ class ProviderRegistry:
     def _select_round_robin(self, providers: List[str]) -> str:
         """Select provider using round-robin strategy."""
         if not providers:
-            raise ProviderError(
-                "No providers available for round-robin selection"
-            )
+            raise ProviderError("No providers available for round-robin selection")
 
         selected = providers[self._round_robin_index % len(providers)]
         self._round_robin_index += 1
@@ -506,9 +473,7 @@ class ProviderRegistry:
 
         return selected
 
-    async def _select_capability_based(
-        self, providers: List[str], task: Task
-    ) -> str:
+    async def _select_capability_based(self, providers: List[str], task: Task) -> str:
         """Select provider based on task-specific capabilities."""
         # Score providers based on capability match
         best_score = -1
@@ -536,9 +501,7 @@ class ProviderRegistry:
 
         return selected
 
-    async def _get_cached_health(
-        self, provider_id: str
-    ) -> Optional[ProviderHealth]:
+    async def _get_cached_health(self, provider_id: str) -> Optional[ProviderHealth]:
         """Get cached health status for a provider."""
         if provider_id not in self._providers:
             return None
@@ -547,9 +510,7 @@ class ProviderRegistry:
         cached_health = self._health_cache.get(provider_id)
         if cached_health:
             # Check if cache is still valid (1 minute)
-            age = (
-                datetime.now() - cached_health.last_check_time
-            ).total_seconds()
+            age = (datetime.now() - cached_health.last_check_time).total_seconds()
             if age < 60:
                 return cached_health
 
@@ -560,9 +521,7 @@ class ProviderRegistry:
             self._health_cache[provider_id] = health
             return health
         except Exception as e:
-            logger.error(
-                f"Failed to get health for provider {provider_id}: {str(e)}"
-            )
+            logger.error(f"Failed to get health for provider {provider_id}: {str(e)}")
             return None
 
     async def _health_check_loop(self, check_interval_seconds: int):

@@ -51,18 +51,14 @@ async def create_task(
                     "status": db_task.status,
                     "priority": db_task.priority,
                     "created_at": (
-                        db_task.created_at.isoformat()
-                        if db_task.created_at
-                        else None
+                        db_task.created_at.isoformat() if db_task.created_at else None
                     ),
                     "payload": db_task.payload,
                 }
             )
         )
 
-        logger.info(
-            f"Created and queued task {db_task.id} of type {task.type}"
-        )
+        logger.info(f"Created and queued task {db_task.id} of type {task.type}")
 
         return db_task
 
@@ -79,9 +75,7 @@ async def get_tasks(
     db: Session = Depends(get_db),
 ):
     try:
-        tasks = crud.TaskCRUD.get_tasks(
-            db, skip=skip, limit=limit, status=status
-        )
+        tasks = crud.TaskCRUD.get_tasks(db, skip=skip, limit=limit, status=status)
         return tasks
 
     except Exception as e:
@@ -140,9 +134,7 @@ async def retry_task(task_id: int, db: Session = Depends(get_db)):
             )
 
         # Reset task status
-        update_data = schemas.TaskUpdate(
-            status=TaskStatus.PENDING, error_message=None
-        )
+        update_data = schemas.TaskUpdate(status=TaskStatus.PENDING, error_message=None)
         crud.TaskCRUD.update_task(db, task_id, update_data)
 
         # Queue for processing using dependency injection
@@ -182,15 +174,11 @@ async def get_task_stats(db: Session = Depends(get_db)):
 
             # Count by type
             task_type = task.type
-            stats["by_type"][task_type] = (
-                stats["by_type"].get(task_type, 0) + 1
-            )
+            stats["by_type"][task_type] = stats["by_type"].get(task_type, 0) + 1
 
             # Count by priority
             priority = task.priority
-            stats["by_priority"][priority] = (
-                stats["by_priority"].get(priority, 0) + 1
-            )
+            stats["by_priority"][priority] = stats["by_priority"].get(priority, 0) + 1
 
         return stats
 

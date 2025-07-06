@@ -132,8 +132,7 @@ class TestSwarmCoordinator:
 
         assert agent.agent_id == sample_agent_config.agent_id
         assert (
-            agent.configuration.specialization
-            == AgentSpecialization.SOLUTION_ARCHITECT
+            agent.configuration.specialization == AgentSpecialization.SOLUTION_ARCHITECT
         )
         assert agent.current_state == AgentState.IDLE
         assert len(agent.configuration.capabilities) == 1
@@ -151,9 +150,7 @@ class TestSwarmCoordinator:
             "priority": "high",
         }
 
-        best_agent = await agent_pool.get_best_agent_for_task(
-            task_requirements
-        )
+        best_agent = await agent_pool.get_best_agent_for_task(task_requirements)
 
         assert best_agent is not None
         assert "solution_architect" in best_agent.agent_id
@@ -162,15 +159,11 @@ class TestSwarmCoordinator:
     def test_agent_capability_matching(self, sample_agents):
         """Test agent capability matching."""
         architect_agent = next(
-            a
-            for a in sample_agents.values()
-            if "solution_architect" in a.agent_id
+            a for a in sample_agents.values() if "solution_architect" in a.agent_id
         )
 
         # Test capability score retrieval
-        score = architect_agent.get_capability_score(
-            "solution_architect_capability"
-        )
+        score = architect_agent.get_capability_score("solution_architect_capability")
         assert score == 0.8
 
         # Test non-existent capability
@@ -214,10 +207,7 @@ class TestSwarmCoordinator:
         response = await coordinator._optimize_resource_allocation(event)
 
         assert response.event_id == event.event_id
-        assert (
-            "resource" in response.response_type
-            or response.response_type == "test"
-        )
+        assert "resource" in response.response_type or response.response_type == "test"
         assert len(response.recommended_actions) > 0
 
     @pytest.mark.asyncio
@@ -282,17 +272,13 @@ class TestSwarmCoordinator:
         assert messages[0]["from"] == from_agent
 
     @pytest.mark.asyncio
-    async def test_execution_metrics_calculation(
-        self, coordinator, sample_agents
-    ):
+    async def test_execution_metrics_calculation(self, coordinator, sample_agents):
         """Test execution metrics calculation."""
         # Create mock execution
         mock_execution = Mock()
         mock_execution.execution_id = "test_execution"
         mock_execution.agents = sample_agents
-        mock_execution.started_at = datetime.now(timezone.utc) - timedelta(
-            minutes=30
-        )
+        mock_execution.started_at = datetime.now(timezone.utc) - timedelta(minutes=30)
 
         # Set different agent states
         agent_list = list(sample_agents.values())
@@ -303,9 +289,7 @@ class TestSwarmCoordinator:
         agent_list[2].current_state = AgentState.BLOCKED
         agent_list[2].current_workload = 1
 
-        metrics = await coordinator._calculate_execution_metrics(
-            mock_execution
-        )
+        metrics = await coordinator._calculate_execution_metrics(mock_execution)
 
         assert metrics["total_agents"] == 3
         assert metrics["active_agents"] == 1
@@ -333,17 +317,13 @@ class TestSwarmCoordinator:
         assert abs(variance - expected_variance) < 0.1
 
     @pytest.mark.asyncio
-    async def test_execution_completion_check(
-        self, coordinator, sample_agents
-    ):
+    async def test_execution_completion_check(self, coordinator, sample_agents):
         """Test execution completion checking."""
         # Create mock execution
         mock_execution = Mock()
         mock_execution.execution_id = "test_completion"
         mock_execution.agents = sample_agents
-        mock_execution.started_at = datetime.now(timezone.utc) - timedelta(
-            minutes=10
-        )
+        mock_execution.started_at = datetime.now(timezone.utc) - timedelta(minutes=10)
         mock_execution.workflow_def = Mock()
 
         # Test with all agents idle (should be complete)
@@ -449,16 +429,12 @@ class TestAgentCollaborationEngine:
         collaboration_engine.active_sessions[session.session_id] = session
 
         # Test peer review initiation
-        plan = {
-            "quality_gates": ["correctness", "performance", "maintainability"]
-        }
+        plan = {"quality_gates": ["correctness", "performance", "maintainability"]}
         await collaboration_engine._initiate_peer_review(session, plan)
 
         assert session.status == CollaborationStatus.IN_PROGRESS
         assert "review_tasks" in session.shared_artifacts
-        assert (
-            len(session.shared_artifacts["review_tasks"]) == 2
-        )  # agent_2 and agent_3
+        assert len(session.shared_artifacts["review_tasks"]) == 2  # agent_2 and agent_3
 
     @pytest.mark.asyncio
     async def test_peer_review_submission(self, collaboration_engine):
@@ -533,9 +509,7 @@ class TestAgentCollaborationEngine:
 
         assert session.status == CollaborationStatus.IN_PROGRESS
         assert "knowledge_transfers" in session.shared_artifacts
-        assert (
-            len(session.shared_artifacts["knowledge_transfers"]) == 2
-        )  # Two learners
+        assert len(session.shared_artifacts["knowledge_transfers"]) == 2  # Two learners
 
     @pytest.mark.asyncio
     async def test_task_delegation_optimization(self, collaboration_engine):
@@ -557,9 +531,7 @@ class TestAgentCollaborationEngine:
         assert "coordination_plan" in assignments
 
     @pytest.mark.asyncio
-    async def test_collaborative_solving_initiation(
-        self, collaboration_engine
-    ):
+    async def test_collaborative_solving_initiation(self, collaboration_engine):
         """Test collaborative solving session initiation."""
         session = CollaborationSession(
             session_id="solving_session_001",
@@ -580,9 +552,7 @@ class TestAgentCollaborationEngine:
 
         # Test collaborative solving initiation
         plan = {"objectives": ["identify_bottlenecks", "propose_solutions"]}
-        await collaboration_engine._initiate_collaborative_solving(
-            session, plan
-        )
+        await collaboration_engine._initiate_collaborative_solving(session, plan)
 
         assert session.status == CollaborationStatus.IN_PROGRESS
         assert "solving_framework" in session.shared_artifacts
@@ -612,9 +582,7 @@ class TestAgentCollaborationEngine:
         collaboration_engine.active_sessions[session.session_id] = session
 
         # Test consensus building initiation
-        plan = {
-            "success_criteria": ["majority_agreement", "technical_feasibility"]
-        }
+        plan = {"success_criteria": ["majority_agreement", "technical_feasibility"]}
         await collaboration_engine._initiate_consensus_building(session, plan)
 
         assert session.status == CollaborationStatus.IN_PROGRESS
@@ -640,14 +608,10 @@ class TestAgentCollaborationEngine:
         collaboration_engine.active_sessions[session.session_id] = session
 
         # Get status
-        status = await collaboration_engine.get_collaboration_status(
-            session.session_id
-        )
+        status = await collaboration_engine.get_collaboration_status(session.session_id)
 
         assert status["session_id"] == session.session_id
-        assert (
-            status["collaboration_type"] == CollaborationType.PEER_REVIEW.value
-        )
+        assert status["collaboration_type"] == CollaborationType.PEER_REVIEW.value
         assert status["status"] == CollaborationStatus.IN_PROGRESS.value
         assert len(status["participants"]) == 2
         assert "duration_minutes" in status
@@ -664,11 +628,9 @@ class TestAgentCollaborationEngine:
 
         await collaboration_engine.register_agent_skills("test_agent", skills)
 
-        registered_skills = (
-            collaboration_engine.collaboration_network.skill_registry[
-                "test_agent"
-            ]
-        )
+        registered_skills = collaboration_engine.collaboration_network.skill_registry[
+            "test_agent"
+        ]
         assert len(registered_skills) == 4
         assert registered_skills["python"] == 0.9
         assert registered_skills["javascript"] == 0.7
@@ -686,9 +648,7 @@ class TestAgentCollaborationEngine:
         )
 
         # Simulate some collaboration history for trust scores
-        collaboration_engine.collaboration_network.agent_relationships[
-            "test_agent"
-        ] = {
+        collaboration_engine.collaboration_network.agent_relationships["test_agent"] = {
             "expert_agent": 0.9,
             "junior_agent": 0.7,
         }
@@ -699,10 +659,8 @@ class TestAgentCollaborationEngine:
             "complexity": "medium",
         }
 
-        recommendations = (
-            await collaboration_engine.get_collaboration_recommendations(
-                "test_agent", task_context
-            )
+        recommendations = await collaboration_engine.get_collaboration_recommendations(
+            "test_agent", task_context
         )
 
         assert len(recommendations) > 0
@@ -794,23 +752,17 @@ class TestAgentCollaborationEngine:
 
         # Test perfect skill match
         required_skills = ["python", "testing"]
-        match_score = network._calculate_skill_match(
-            "skilled_agent", required_skills
-        )
+        match_score = network._calculate_skill_match("skilled_agent", required_skills)
         assert match_score > 0.8  # Should be high due to good skill match
 
         # Test partial skill match
         required_skills = ["python", "java", "c++"]
-        match_score = network._calculate_skill_match(
-            "skilled_agent", required_skills
-        )
+        match_score = network._calculate_skill_match("skilled_agent", required_skills)
         assert 0 < match_score < 0.5  # Should be lower due to missing skills
 
         # Test no skill match
         required_skills = ["rust", "go"]
-        match_score = network._calculate_skill_match(
-            "skilled_agent", required_skills
-        )
+        match_score = network._calculate_skill_match("skilled_agent", required_skills)
         assert match_score == 0.0  # No matching skills
 
     @pytest.mark.asyncio
@@ -841,13 +793,9 @@ class TestAgentCollaborationEngine:
             "experienced_reviewer", context
         )
 
-        assert (
-            confidence > 0.8
-        )  # Should be high due to experience and skill match
+        assert confidence > 0.8  # Should be high due to experience and skill match
 
-    def test_collaboration_request_validation(
-        self, sample_collaboration_request
-    ):
+    def test_collaboration_request_validation(self, sample_collaboration_request):
         """Test collaboration request validation."""
         assert sample_collaboration_request.request_id == "test_request_001"
         assert sample_collaboration_request.requesting_agent == "agent_1"

@@ -153,9 +153,7 @@ class ProviderResponse:
 class ProviderError(Exception):
     """Base exception for provider-related errors."""
 
-    def __init__(
-        self, message: str, provider_id: str = None, error_code: str = None
-    ):
+    def __init__(self, message: str, provider_id: str = None, error_code: str = None):
         self.provider_id = provider_id
         self.error_code = error_code
         super().__init__(message)
@@ -290,9 +288,7 @@ class AIProvider(ABC):
         pass
 
     @abstractmethod
-    async def get_health_status(
-        self, use_cache: bool = True
-    ) -> ProviderHealth:
+    async def get_health_status(self, use_cache: bool = True) -> ProviderHealth:
         """
         Get the current health status of the provider.
 
@@ -340,9 +336,7 @@ class AIProvider(ABC):
 
         # Estimate tokens and check if provider can handle the request size
         cost_estimate = self.estimate_cost(task)
-        if not capabilities.can_handle_request_size(
-            cost_estimate.estimated_tokens
-        ):
+        if not capabilities.can_handle_request_size(cost_estimate.estimated_tokens):
             return False
 
         return True
@@ -402,4 +396,6 @@ class AIProvider(ABC):
         return f"{self.__class__.__name__}(id={self.provider_id})"
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(id='{self.provider_id}', config={self.config})"
+        return (
+            f"{self.__class__.__name__}(id='{self.provider_id}', config={self.config})"
+        )

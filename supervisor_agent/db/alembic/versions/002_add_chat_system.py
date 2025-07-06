@@ -36,9 +36,7 @@ def upgrade():
         sa.UniqueConstraint("username"),
     )
     op.create_index(op.f("ix_users_id"), "users", ["id"], unique=False)
-    op.create_index(
-        op.f("ix_users_username"), "users", ["username"], unique=True
-    )
+    op.create_index(op.f("ix_users_username"), "users", ["username"], unique=True)
 
     # Create chat_sessions table
     op.create_table(
@@ -61,9 +59,7 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_chat_sessions_id"), "chat_sessions", ["id"], unique=False
-    )
+    op.create_index(op.f("ix_chat_sessions_id"), "chat_sessions", ["id"], unique=False)
 
     # Create chat_messages table
     op.create_table(
@@ -90,9 +86,7 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_chat_messages_id"), "chat_messages", ["id"], unique=False
-    )
+    op.create_index(op.f("ix_chat_messages_id"), "chat_messages", ["id"], unique=False)
 
 
 def downgrade():

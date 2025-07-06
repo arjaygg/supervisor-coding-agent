@@ -118,17 +118,13 @@ def process_single_task_enhanced(self, task_id: int):
         result = asyncio.run(process_task_intelligently(task, agent_processor))
 
         # Update quota usage (if not already tracked by intelligent processor)
-        if not result.get("optimization_metadata", {}).get(
-            "was_cached", False
-        ):
+        if not result.get("optimization_metadata", {}).get("was_cached", False):
             payload_size = len(json.dumps(task.payload))
             estimated_messages = quota_manager.estimate_messages_from_task(
                 task.type, payload_size
             )
 
-            if not quota_manager.consume_quota(
-                db, agent.id, estimated_messages
-            ):
+            if not quota_manager.consume_quota(db, agent.id, estimated_messages):
                 logger.warning(f"Failed to consume quota for agent {agent.id}")
 
         if result["success"]:
@@ -177,9 +173,7 @@ def process_single_task_enhanced(self, task_id: int):
                 details={
                     "execution_time": result["execution_time"],
                     "success": True,
-                    "optimization_metadata": result.get(
-                        "optimization_metadata", {}
-                    ),
+                    "optimization_metadata": result.get("optimization_metadata", {}),
                 },
             )
             crud.AuditLogCRUD.create_log(db, audit_data)
@@ -216,9 +210,7 @@ def process_single_task_enhanced(self, task_id: int):
                             "type": task.type,
                             "status": "FAILED",
                             "error_message": error_message,
-                            "updated_at": datetime.now(
-                                timezone.utc
-                            ).isoformat(),
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
                         }
                     )
                 )
@@ -230,9 +222,7 @@ def process_single_task_enhanced(self, task_id: int):
                     )
                 )
 
-                logger.error(
-                    f"Task {task_id} failed after {task.retry_count} retries"
-                )
+                logger.error(f"Task {task_id} failed after {task.retry_count} retries")
             else:
                 update_data = schemas.TaskUpdate(
                     status=TaskStatus.RETRY, error_message=error_message
@@ -240,9 +230,7 @@ def process_single_task_enhanced(self, task_id: int):
                 crud.TaskCRUD.update_task(db, task_id, update_data)
 
                 # Retry the task
-                raise self.retry(
-                    countdown=60 * task.retry_count
-                )  # Exponential backoff
+                raise self.retry(countdown=60 * task.retry_count)  # Exponential backoff
 
             # Create audit log
             audit_data = schemas.AuditLogCreate(
@@ -264,14 +252,10 @@ def process_single_task_enhanced(self, task_id: int):
             }
 
     except Exception as e:
-        logger.error(
-            f"Error processing task {task_id}: {str(e)}", exc_info=True
-        )
+        logger.error(f"Error processing task {task_id}: {str(e)}", exc_info=True)
 
         # Update task status to failed
-        update_data = schemas.TaskUpdate(
-            status=TaskStatus.FAILED, error_message=str(e)
-        )
+        update_data = schemas.TaskUpdate(status=TaskStatus.FAILED, error_message=str(e))
         crud.TaskCRUD.update_task(db, task_id, update_data)
 
         # Send real-time error update
@@ -369,9 +353,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                     results.append(result)
 
                 except Exception as e:
-                    logger.error(
-                        f"Error processing task {task.id} in batch: {str(e)}"
-                    )
+                    logger.error(f"Error processing task {task.id} in batch: {str(e)}")
                     results.append(
                         {"success": False, "error": str(e), "task_id": task.id}
                     )
@@ -379,9 +361,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
             return results
 
         # Process batch with intelligent optimization
-        results = asyncio.run(
-            process_batch_intelligently(tasks, batch_agent_processor)
-        )
+        results = asyncio.run(process_batch_intelligently(tasks, batch_agent_processor))
 
         # Process results and update database
         successful_count = 0
@@ -401,9 +381,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                     )
                     crud.TaskSessionCRUD.create_session(db, session_data)
 
-                    update_data = schemas.TaskUpdate(
-                        status=TaskStatus.COMPLETED
-                    )
+                    update_data = schemas.TaskUpdate(status=TaskStatus.COMPLETED)
                     crud.TaskCRUD.update_task(db, task.id, update_data)
 
                     shared_memory.store_task_result(task, result)
@@ -416,9 +394,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                                 "id": task.id,
                                 "type": task.type,
                                 "status": "COMPLETED",
-                                "updated_at": datetime.now(
-                                    timezone.utc
-                                ).isoformat(),
+                                "updated_at": datetime.now(timezone.utc).isoformat(),
                                 "batch_processed": True,
                                 "optimization_metadata": result.get(
                                     "optimization_metadata", {}
@@ -443,12 +419,8 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                                 "id": task.id,
                                 "type": task.type,
                                 "status": "FAILED",
-                                "error_message": result.get(
-                                    "error", "Unknown error"
-                                ),
-                                "updated_at": datetime.now(
-                                    timezone.utc
-                                ).isoformat(),
+                                "error_message": result.get("error", "Unknown error"),
+                                "updated_at": datetime.now(timezone.utc).isoformat(),
                                 "batch_processed": True,
                             }
                         )
@@ -462,9 +434,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
                 failed_count += 1
 
         # Calculate processing time
-        processing_time = int(
-            (datetime.now(timezone.utc) - start_time).total_seconds()
-        )
+        processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds())
 
         # Get optimization metrics
         processor = TaskProcessorFactory.get_processor()
@@ -501,9 +471,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
         )
 
         # Send traditional notification
-        asyncio.run(
-            notification_manager.send_batch_completion_alert(batch_summary)
-        )
+        asyncio.run(notification_manager.send_batch_completion_alert(batch_summary))
 
         logger.info(
             f"Enhanced batch processing completed: {successful_count} successful, "
@@ -520,9 +488,7 @@ def process_task_batch_enhanced(self, task_ids: List[int]):
         }
 
     except Exception as e:
-        logger.error(
-            f"Error in enhanced batch processing: {str(e)}", exc_info=True
-        )
+        logger.error(f"Error in enhanced batch processing: {str(e)}", exc_info=True)
 
         # Send batch failure notification
         asyncio.run(

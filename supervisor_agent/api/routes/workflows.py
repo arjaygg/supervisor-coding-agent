@@ -46,9 +46,7 @@ from pydantic import BaseModel, Field
 
 class WorkflowCreateRequest(BaseModel):
     name: str = Field(..., description="Workflow name")
-    description: Optional[str] = Field(
-        None, description="Workflow description"
-    )
+    description: Optional[str] = Field(None, description="Workflow description")
     tasks: List[Dict[str, Any]] = Field(
         ..., description="List of tasks in the workflow"
     )
@@ -80,9 +78,7 @@ class ScheduleUpdateRequest(BaseModel):
     name: Optional[str] = Field(None, description="Schedule name")
     cron_expression: Optional[str] = Field(None, description="Cron expression")
     timezone: Optional[str] = Field(None, description="Timezone")
-    status: Optional[ScheduleStatus] = Field(
-        None, description="Schedule status"
-    )
+    status: Optional[ScheduleStatus] = Field(None, description="Schedule status")
 
 
 class WorkflowResponse(BaseModel):
@@ -139,9 +135,7 @@ async def create_workflow(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to create workflow: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to create workflow"
-        )
+        raise HTTPException(status_code=500, detail="Failed to create workflow")
 
 
 @router.get("/{workflow_id}")
@@ -151,9 +145,7 @@ async def get_workflow(workflow_id: str, db: Session = Depends(get_db)):
     try:
         from supervisor_agent.core.workflow_models import Workflow
 
-        workflow = (
-            db.query(Workflow).filter(Workflow.id == workflow_id).first()
-        )
+        workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
 
@@ -165,9 +157,7 @@ async def get_workflow(workflow_id: str, db: Session = Depends(get_db)):
             "created_by": workflow.created_by,
             "created_at": workflow.created_at.isoformat(),
             "updated_at": (
-                workflow.updated_at.isoformat()
-                if workflow.updated_at
-                else None
+                workflow.updated_at.isoformat() if workflow.updated_at else None
             ),
             "is_active": workflow.is_active,
             "version": workflow.version,
@@ -182,9 +172,7 @@ async def get_workflow(workflow_id: str, db: Session = Depends(get_db)):
 
 @router.get("/")
 async def list_workflows(
-    active_only: bool = Query(
-        True, description="Only return active workflows"
-    ),
+    active_only: bool = Query(True, description="Only return active workflows"),
     limit: int = Query(
         50, ge=1, le=100, description="Maximum number of workflows to return"
     ),
@@ -233,9 +221,7 @@ async def delete_workflow(workflow_id: str, db: Session = Depends(get_db)):
     try:
         from supervisor_agent.core.workflow_models import Workflow
 
-        workflow = (
-            db.query(Workflow).filter(Workflow.id == workflow_id).first()
-        )
+        workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
 
@@ -250,9 +236,7 @@ async def delete_workflow(workflow_id: str, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"Failed to delete workflow {workflow_id}: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to delete workflow"
-        )
+        raise HTTPException(status_code=500, detail="Failed to delete workflow")
 
 
 # Workflow Execution Operations
@@ -282,9 +266,7 @@ async def execute_workflow(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to execute workflow {workflow_id}: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to execute workflow"
-        )
+        raise HTTPException(status_code=500, detail="Failed to execute workflow")
 
 
 @router.get("/{workflow_id}/executions/{execution_id}")
@@ -301,9 +283,7 @@ async def get_execution_status(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to get execution status {execution_id}: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to get execution status"
-        )
+        raise HTTPException(status_code=500, detail="Failed to get execution status")
 
 
 @router.post("/{workflow_id}/executions/{execution_id}/cancel")
@@ -318,17 +298,13 @@ async def cancel_execution(
         if success:
             return {"message": "Workflow execution cancelled successfully"}
         else:
-            raise HTTPException(
-                status_code=400, detail="Unable to cancel execution"
-            )
+            raise HTTPException(status_code=400, detail="Unable to cancel execution")
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to cancel execution {execution_id}: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to cancel execution"
-        )
+        raise HTTPException(status_code=500, detail="Failed to cancel execution")
 
 
 @router.get("/{workflow_id}/executions")
@@ -336,9 +312,7 @@ async def list_executions(
     workflow_id: str,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    status: Optional[str] = Query(
-        None, description="Filter by execution status"
-    ),
+    status: Optional[str] = Query(None, description="Filter by execution status"),
     db: Session = Depends(get_db),
 ):
     """List workflow executions"""
@@ -381,12 +355,8 @@ async def list_executions(
         }
 
     except Exception as e:
-        logger.error(
-            f"Failed to list executions for workflow {workflow_id}: {e}"
-        )
-        raise HTTPException(
-            status_code=500, detail="Failed to list executions"
-        )
+        logger.error(f"Failed to list executions for workflow {workflow_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list executions")
 
 
 # Schedule Management Operations
@@ -442,13 +412,9 @@ async def update_schedule(
     """Update schedule configuration"""
 
     try:
-        updates = {
-            k: v for k, v in request.model_dump().items() if v is not None
-        }
+        updates = {k: v for k, v in request.model_dump().items() if v is not None}
 
-        success = await workflow_scheduler.update_schedule(
-            schedule_id, **updates
-        )
+        success = await workflow_scheduler.update_schedule(schedule_id, **updates)
 
         if success:
             return {"message": "Schedule updated successfully"}
@@ -478,9 +444,7 @@ async def delete_schedule(schedule_id: str, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"Failed to delete schedule {schedule_id}: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to delete schedule"
-        )
+        raise HTTPException(status_code=500, detail="Failed to delete schedule")
 
 
 @router.post("/schedules/{schedule_id}/pause")
@@ -518,9 +482,7 @@ async def resume_schedule(schedule_id: str, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"Failed to resume schedule {schedule_id}: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to resume schedule"
-        )
+        raise HTTPException(status_code=500, detail="Failed to resume schedule")
 
 
 @router.post("/schedules/{schedule_id}/trigger")
@@ -528,9 +490,7 @@ async def trigger_schedule(schedule_id: str, db: Session = Depends(get_db)):
     """Manually trigger a scheduled workflow"""
 
     try:
-        execution_id = await workflow_scheduler.force_schedule_execution(
-            schedule_id
-        )
+        execution_id = await workflow_scheduler.force_schedule_execution(schedule_id)
 
         return {
             "execution_id": execution_id,
@@ -544,20 +504,14 @@ async def trigger_schedule(schedule_id: str, db: Session = Depends(get_db)):
 
 @router.get("/schedules")
 async def list_schedules(
-    workflow_id: Optional[str] = Query(
-        None, description="Filter by workflow ID"
-    ),
-    status: Optional[ScheduleStatus] = Query(
-        None, description="Filter by status"
-    ),
+    workflow_id: Optional[str] = Query(None, description="Filter by workflow ID"),
+    status: Optional[ScheduleStatus] = Query(None, description="Filter by status"),
     db: Session = Depends(get_db),
 ):
     """List workflow schedules"""
 
     try:
-        schedules = await workflow_scheduler.list_schedules(
-            workflow_id, status
-        )
+        schedules = await workflow_scheduler.list_schedules(workflow_id, status)
         return {"schedules": schedules}
 
     except Exception as e:

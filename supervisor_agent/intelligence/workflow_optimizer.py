@@ -238,10 +238,8 @@ class WorkflowOptimizer:
             )
 
             # Step 4: Create optimized execution plan
-            execution_plan = (
-                await self.dag_resolver.create_intelligent_execution_plan(
-                    optimized_workflow, historical_data
-                )
+            execution_plan = await self.dag_resolver.create_intelligent_execution_plan(
+                optimized_workflow, historical_data
             )
 
             # Step 5: Analyze parallelization opportunities
@@ -287,9 +285,7 @@ class WorkflowOptimizer:
 
         except Exception as e:
             self.logger.error("Workflow optimization failed", error=str(e))
-            return await self._create_fallback_optimization_result(
-                workflow, strategy
-            )
+            return await self._create_fallback_optimization_result(workflow, strategy)
 
     async def compare_optimization_strategies(
         self,
@@ -415,9 +411,7 @@ class WorkflowOptimizer:
                 "execution_stages": len(
                     optimization_result.execution_plan.execution_order
                 ),
-                "total_tasks": len(
-                    optimization_result.execution_plan.task_map
-                ),
+                "total_tasks": len(optimization_result.execution_plan.task_map),
                 "dependencies_resolved": len(
                     optimization_result.execution_plan.dependency_map
                 ),
@@ -446,9 +440,7 @@ class WorkflowOptimizer:
                         if r.priority == OptimizationPriority.LOW
                     ]
                 ),
-                "total_recommendations": len(
-                    optimization_result.recommendations
-                ),
+                "total_recommendations": len(optimization_result.recommendations),
             },
         }
 
@@ -495,9 +487,7 @@ class WorkflowOptimizer:
         total_dependencies = sum(
             len(task.dependencies or []) for task in workflow.tasks
         )
-        dependency_complexity = (
-            total_dependencies / task_count if task_count > 0 else 0
-        )
+        dependency_complexity = total_dependencies / task_count if task_count > 0 else 0
 
         return {
             "task_count": task_count,
@@ -525,10 +515,8 @@ class WorkflowOptimizer:
 
         if self.claude_agent:
             try:
-                ai_recommendations = (
-                    await self._get_ai_optimization_recommendations(
-                        workflow, strategy, historical_data, constraints
-                    )
+                ai_recommendations = await self._get_ai_optimization_recommendations(
+                    workflow, strategy, historical_data, constraints
                 )
                 recommendations.extend(ai_recommendations)
             except Exception as e:
@@ -609,15 +597,11 @@ class WorkflowOptimizer:
                 description=rec_data.get("description", ""),
                 impact=rec_data.get("impact", "medium"),
                 effort=rec_data.get("effort", "medium"),
-                priority=OptimizationPriority(
-                    rec_data.get("priority", "medium")
-                ),
+                priority=OptimizationPriority(rec_data.get("priority", "medium")),
                 implementation_steps=rec_data.get("implementation_steps", []),
                 expected_benefit=rec_data.get("expected_benefit", {}),
                 risks=rec_data.get("risks", []),
-                monitoring_requirements=rec_data.get(
-                    "monitoring_requirements", []
-                ),
+                monitoring_requirements=rec_data.get("monitoring_requirements", []),
             )
             recommendations.append(recommendation)
 
@@ -634,9 +618,7 @@ class WorkflowOptimizer:
         recommendations = []
 
         # Analyze for parallelization opportunities
-        independent_tasks = [
-            task for task in workflow.tasks if not task.dependencies
-        ]
+        independent_tasks = [task for task in workflow.tasks if not task.dependencies]
         if len(independent_tasks) > 1:
             recommendations.append(
                 OptimizationRecommendation(
@@ -698,9 +680,7 @@ class WorkflowOptimizer:
             )
 
         # Dependency optimization
-        max_dependencies = max(
-            len(task.dependencies or []) for task in workflow.tasks
-        )
+        max_dependencies = max(len(task.dependencies or []) for task in workflow.tasks)
         if max_dependencies > 3:
             recommendations.append(
                 OptimizationRecommendation(
@@ -745,9 +725,7 @@ class WorkflowOptimizer:
             effort_score = {"low": 3, "medium": 2, "high": 1}[
                 rec.effort
             ]  # Lower effort is better
-            priority_score = {"high": 3, "medium": 2, "low": 1}[
-                rec.priority.value
-            ]
+            priority_score = {"high": 3, "medium": 2, "low": 1}[rec.priority.value]
 
             # Adjust based on strategy
             type_weight = 1.0
@@ -772,9 +750,7 @@ class WorkflowOptimizer:
                 unique_recommendations.append(rec)
 
         # Sort by calculated score (highest first)
-        return sorted(
-            unique_recommendations, key=calculate_score, reverse=True
-        )
+        return sorted(unique_recommendations, key=calculate_score, reverse=True)
 
     async def _apply_optimizations(
         self,
@@ -803,9 +779,7 @@ class WorkflowOptimizer:
         baseline_time = baseline_metrics["baseline_execution_time_minutes"]
         optimized_time = execution_plan.estimated_execution_time_minutes
 
-        speedup_factor = (
-            baseline_time / optimized_time if optimized_time > 0 else 1.0
-        )
+        speedup_factor = baseline_time / optimized_time if optimized_time > 0 else 1.0
 
         return OptimizationMetrics(
             baseline_execution_time_minutes=baseline_time,
@@ -924,6 +898,4 @@ async def create_workflow_optimizer(
     Returns:
         Configured WorkflowOptimizer instance
     """
-    return WorkflowOptimizer(
-        claude_agent, tenant_context, provider_coordinator
-    )
+    return WorkflowOptimizer(claude_agent, tenant_context, provider_coordinator)

@@ -208,9 +208,7 @@ class Insight(BaseModel):
     value: Union[float, int, str]
     threshold: Optional[Union[float, int]] = None
     recommendation: Optional[str] = None
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # SQLAlchemy Database Models

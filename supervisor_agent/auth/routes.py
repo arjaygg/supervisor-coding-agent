@@ -112,9 +112,7 @@ async def login(
         )
 
     # Verify password
-    if not jwt_handler.verify_password(
-        form_data.password, user.hashed_password
-    ):
+    if not jwt_handler.verify_password(form_data.password, user.hashed_password):
         log_security_event(
             db,
             "login_failed",
@@ -349,9 +347,7 @@ async def update_current_user(
         "user_updated",
         user_id=current_user.id,
         details={
-            "updated_fields": list(
-                user_update.model_dump(exclude_unset=True).keys()
-            )
+            "updated_fields": list(user_update.model_dump(exclude_unset=True).keys())
         },
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
@@ -418,9 +414,7 @@ async def create_api_key(
     db: Session = Depends(get_db),
 ):
     """Create a new API key"""
-    api_key, full_key = APIKeyCRUD.create_api_key(
-        db, current_user.id, api_key_create
-    )
+    api_key, full_key = APIKeyCRUD.create_api_key(db, current_user.id, api_key_create)
 
     log_security_event(
         db,
@@ -547,9 +541,7 @@ async def update_user_admin(
         user_id=current_user.id,
         details={
             "updated_user_id": user_id,
-            "updated_fields": list(
-                user_update.model_dump(exclude_unset=True).keys()
-            ),
+            "updated_fields": list(user_update.model_dump(exclude_unset=True).keys()),
         },
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),

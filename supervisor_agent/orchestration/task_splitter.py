@@ -112,9 +112,7 @@ class IntelligentTaskSplitter:
         if complexity == TaskComplexity.SIMPLE or steps <= 2:
             return SplittingStrategy.DEFAULT
         else:
-            return (
-                SplittingStrategy.DEFAULT
-            )  # For now, only DEFAULT is implemented
+            return SplittingStrategy.DEFAULT  # For now, only DEFAULT is implemented
 
     def analyze_task_complexity(self, task) -> ComplexityAnalysis:
         """
@@ -140,14 +138,10 @@ class IntelligentTaskSplitter:
         dependencies_found = self._identify_dependencies(content)
 
         # Analyze content for logical break points
-        subtasks = self._create_intelligent_subtasks(
-            task, content, estimated_steps
-        )
+        subtasks = self._create_intelligent_subtasks(task, content, estimated_steps)
 
         # Build dependency relationships
-        dependencies = self._build_subtask_dependencies(
-            subtasks, dependencies_found
-        )
+        dependencies = self._build_subtask_dependencies(subtasks, dependencies_found)
 
         return SubtaskGraph(subtasks=subtasks, dependencies=dependencies)
 
@@ -205,9 +199,7 @@ class IntelligentTaskSplitter:
                     TaskSplit(
                         task_id=f"{task.id}_step{i+1}",
                         parent_task_id=task.id,
-                        config={
-                            "description": f"Step {i+1}: {content[:30]}..."
-                        },
+                        config={"description": f"Step {i+1}: {content[:30]}..."},
                     )
                 )
         else:
@@ -246,8 +238,7 @@ class IntelligentTaskSplitter:
                 impl_tasks = [
                     st
                     for st in subtasks
-                    if "_implementation" in st.task_id
-                    or "_configure" in st.task_id
+                    if "_implementation" in st.task_id or "_configure" in st.task_id
                 ]
                 for impl_task in impl_tasks:
                     dependencies.append((subtask.task_id, impl_task.task_id))

@@ -35,7 +35,8 @@ class Settings(BaseSettings):
     # Claude Configuration
     claude_cli_path: str = Field(default="claude")
     claude_prefer_pro_auth: bool = Field(
-        default=True, description="Prefer Claude Code CLI Pro subscription over API keys"
+        default=True,
+        description="Prefer Claude Code CLI Pro subscription over API keys",
     )
     claude_api_keys: str = Field(
         default="", description="Comma-separated list of Claude API keys"
@@ -131,11 +132,7 @@ class Settings(BaseSettings):
     def claude_api_keys_list(self) -> List[str]:
         if not self.claude_api_keys:
             return []
-        return [
-            key.strip()
-            for key in self.claude_api_keys.split(",")
-            if key.strip()
-        ]
+        return [key.strip() for key in self.claude_api_keys.split(",") if key.strip()]
 
     @property
     def providers_config_dict(self) -> Dict[str, Any]:
@@ -278,23 +275,15 @@ class Settings(BaseSettings):
                     "priority_based",
                     "capability_based",
                 ]
-                if (
-                    self.default_load_balancing_strategy
-                    not in valid_strategies
-                ):
+                if self.default_load_balancing_strategy not in valid_strategies:
                     warnings.append(
                         f"Invalid load balancing strategy: {self.default_load_balancing_strategy}"
                     )
 
             except Exception as e:
-                warnings.append(
-                    f"Provider configuration validation failed: {str(e)}"
-                )
+                warnings.append(f"Provider configuration validation failed: {str(e)}")
 
-        if (
-            "localhost" in self.database_url
-            and "sqlite" not in self.database_url
-        ):
+        if "localhost" in self.database_url and "sqlite" not in self.database_url:
             warnings.append(
                 "Using localhost database - ensure PostgreSQL/MySQL is running"
             )

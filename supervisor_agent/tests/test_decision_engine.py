@@ -183,9 +183,7 @@ class TestDecisionEngine:
         assert "adaptive" in decision_engine.decision_strategies
 
     @pytest.mark.asyncio
-    async def test_make_decision_basic(
-        self, decision_engine, sample_decision_request
-    ):
+    async def test_make_decision_basic(self, decision_engine, sample_decision_request):
         """Test basic decision making functionality."""
         result = await decision_engine.make_decision(sample_decision_request)
 
@@ -321,9 +319,7 @@ class TestDecisionEngine:
         result = await decision_engine.make_decision(sample_decision_request)
 
         # Should add to decision history
-        assert (
-            len(decision_engine.decision_history) == initial_history_count + 1
-        )
+        assert len(decision_engine.decision_history) == initial_history_count + 1
 
         # Should store result
         assert result.decision_id in decision_engine.decision_results
@@ -429,9 +425,7 @@ class TestDecisionEngine:
             assert 0 <= rec["confidence"] <= 1
 
     @pytest.mark.asyncio
-    async def test_performance_metrics(
-        self, decision_engine, sample_decision_request
-    ):
+    async def test_performance_metrics(self, decision_engine, sample_decision_request):
         """Test decision engine performance metrics."""
         # Make a decision to generate metrics
         await decision_engine.make_decision(sample_decision_request)

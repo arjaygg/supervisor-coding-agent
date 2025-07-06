@@ -66,9 +66,7 @@ class QuotaManager:
 
         return best_agent
 
-    def consume_quota(
-        self, db: Session, agent_id: str, messages_used: int = 1
-    ) -> bool:
+    def consume_quota(self, db: Session, agent_id: str, messages_used: int = 1) -> bool:
         agent = AgentCRUD.get_agent(db, agent_id)
         if not agent:
             logger.error(f"Agent {agent_id} not found")
@@ -132,9 +130,7 @@ class QuotaManager:
                 "quota_reset_at": agent.quota_reset_at.isoformat(),
                 "is_available": agent.quota_used < agent.quota_limit,
                 "last_used_at": (
-                    agent.last_used_at.isoformat()
-                    if agent.last_used_at
-                    else None
+                    agent.last_used_at.isoformat() if agent.last_used_at else None
                 ),
             }
 
@@ -159,9 +155,7 @@ class QuotaManager:
         next_reset = min(agent.quota_reset_at for agent in agents)
         return next_reset
 
-    def estimate_messages_from_task(
-        self, task_type: str, payload_size: int
-    ) -> int:
+    def estimate_messages_from_task(self, task_type: str, payload_size: int) -> int:
         # Estimate messages based on task type and payload size
         base_messages = 1
 

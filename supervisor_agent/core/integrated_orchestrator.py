@@ -119,9 +119,7 @@ class IntegratedOrchestrator:
             asyncio.create_task(self._conflict_resolution_loop())
 
             self.status = OrchestrationStatus.READY
-            self.logger.info(
-                "Integrated Orchestrator initialized successfully"
-            )
+            self.logger.info("Integrated Orchestrator initialized successfully")
 
         except Exception as e:
             self.status = OrchestrationStatus.ERROR
@@ -148,17 +146,13 @@ class IntegratedOrchestrator:
             self.status = OrchestrationStatus.PROCESSING
             task_id = task_request.task.id
 
-            self.logger.info(
-                f"Processing task {task_id} through integrated pipeline"
-            )
+            self.logger.info(f"Processing task {task_id} through integrated pipeline")
 
             # Step 1: Resource Planning and Allocation
             resource_plan = await self._plan_resources(task_request)
 
             # Step 2: Conflict Detection and Resolution
-            conflicts = await self._check_conflicts(
-                resource_plan, task_request
-            )
+            conflicts = await self._check_conflicts(resource_plan, task_request)
             if conflicts:
                 resolution_plan = await self._resolve_conflicts(conflicts)
                 resource_plan = await self._apply_conflict_resolution(
@@ -187,9 +181,7 @@ class IntegratedOrchestrator:
             )
 
             # Step 7: Performance Analysis and Optimization
-            await self._analyze_execution_performance(
-                task_request, execution_result
-            )
+            await self._analyze_execution_performance(task_request, execution_result)
 
             # Update metrics
             self._update_metrics(task_request, execution_result)
@@ -198,31 +190,21 @@ class IntegratedOrchestrator:
             return execution_result
 
         except Exception as e:
-            self.logger.error(
-                f"Error processing task {task_request.task.id}: {e}"
-            )
+            self.logger.error(f"Error processing task {task_request.task.id}: {e}")
             self.status = OrchestrationStatus.ERROR
             return {"success": False, "error": str(e)}
 
-    async def _plan_resources(
-        self, task_request: IntegratedTaskRequest
-    ) -> Dict:
+    async def _plan_resources(self, task_request: IntegratedTaskRequest) -> Dict:
         """Plan resource allocation for the task."""
         # Get current resource usage
-        current_metrics = (
-            await self.resource_allocator.monitor_resource_usage()
-        )
+        current_metrics = await self.resource_allocator.monitor_resource_usage()
 
         # Predict resource demand
-        demand_prediction = (
-            await self.resource_allocator.predict_resource_demand(60)
-        )
+        demand_prediction = await self.resource_allocator.predict_resource_demand(60)
 
         # Calculate optimal allocation
-        allocation_plan = (
-            await self.resource_allocator.optimize_allocation_strategy(
-                task_request.task, task_request.resource_requirements or {}
-            )
+        allocation_plan = await self.resource_allocator.optimize_allocation_strategy(
+            task_request.task, task_request.resource_requirements or {}
         )
 
         return {
@@ -255,10 +237,8 @@ class IntegratedOrchestrator:
         resolution_plans = []
 
         for conflict in conflicts:
-            plan = (
-                await self.conflict_resolver.implement_resolution_strategies(
-                    [conflict]
-                )
+            plan = await self.conflict_resolver.implement_resolution_strategies(
+                [conflict]
             )
             resolution_plans.extend(plan)
 
@@ -281,9 +261,7 @@ class IntegratedOrchestrator:
 
         return updated_plan
 
-    async def _select_optimal_agent(
-        self, task_request: IntegratedTaskRequest
-    ) -> Dict:
+    async def _select_optimal_agent(self, task_request: IntegratedTaskRequest) -> Dict:
         """Select optimal agent for the task."""
         agent_selection = await self.agent_engine.select_optimal_agent(
             task_request.task
@@ -405,16 +383,16 @@ class IntegratedOrchestrator:
             return
 
         # Analyze performance
-        analysis = (
-            await self.performance_optimizer.analyze_performance_patterns(
-                datetime.now() - timedelta(minutes=60),  # Last hour
-                datetime.now(),
-            )
+        analysis = await self.performance_optimizer.analyze_performance_patterns(
+            datetime.now() - timedelta(minutes=60),  # Last hour
+            datetime.now(),
         )
 
         # Generate recommendations
-        recommendations = await self.performance_optimizer.generate_optimization_recommendations(
-            analysis
+        recommendations = (
+            await self.performance_optimizer.generate_optimization_recommendations(
+                analysis
+            )
         )
 
         # Store performance data
@@ -422,9 +400,7 @@ class IntegratedOrchestrator:
             {
                 "task_id": task_request.task.id,
                 "execution_time": execution_result.get("execution_time", 0),
-                "performance_score": execution_result.get(
-                    "performance_score", 0
-                ),
+                "performance_score": execution_result.get("performance_score", 0),
                 "analysis": analysis,
                 "recommendations": recommendations,
                 "timestamp": datetime.now(),
@@ -481,15 +457,15 @@ class IntegratedOrchestrator:
         self.logger.info("Running optimization cycle...")
 
         # Get current performance analysis
-        analysis = (
-            await self.performance_optimizer.analyze_performance_patterns(
-                datetime.now() - timedelta(minutes=30), datetime.now()
-            )
+        analysis = await self.performance_optimizer.analyze_performance_patterns(
+            datetime.now() - timedelta(minutes=30), datetime.now()
         )
 
         # Generate and implement optimizations
-        recommendations = await self.performance_optimizer.generate_optimization_recommendations(
-            analysis
+        recommendations = (
+            await self.performance_optimizer.generate_optimization_recommendations(
+                analysis
+            )
         )
 
         if recommendations:
@@ -513,9 +489,7 @@ class IntegratedOrchestrator:
                 current_allocations
             )
             if conflicts:
-                await self.conflict_resolver.implement_resolution_strategies(
-                    conflicts
-                )
+                await self.conflict_resolver.implement_resolution_strategies(conflicts)
                 self.metrics.conflicts_resolved += len(conflicts)
 
     def get_status(self) -> Dict:

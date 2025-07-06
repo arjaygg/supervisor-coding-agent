@@ -55,9 +55,7 @@ class SharedMemoryStore:
             logger.info(f"Stored result for task {task.id} in shared memory")
 
         except Exception as e:
-            logger.error(
-                f"Failed to store task result in shared memory: {str(e)}"
-            )
+            logger.error(f"Failed to store task result in shared memory: {str(e)}")
 
     def _get_similar_task_history(self, task: Task) -> List[Dict[str, Any]]:
         try:
@@ -81,9 +79,7 @@ class SharedMemoryStore:
                             }
                         )
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to parse cached task data: {str(e)}"
-                    )
+                    logger.warning(f"Failed to parse cached task data: {str(e)}")
 
             return similar_tasks
 
@@ -153,9 +149,7 @@ class SharedMemoryStore:
                 context = existing_context
 
             # Store project context with 30-day expiration
-            self.redis_client.setex(
-                repo_key, timedelta(days=30), json.dumps(context)
-            )
+            self.redis_client.setex(repo_key, timedelta(days=30), json.dumps(context))
 
             logger.info(f"Updated project context for {repository}")
 

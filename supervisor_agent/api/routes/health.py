@@ -96,9 +96,7 @@ async def readiness_check(db: Session = Depends(get_db)):
 
     except Exception as e:
         logger.error(f"Readiness check failed: {str(e)}")
-        raise HTTPException(
-            status_code=503, detail=f"Service not ready: {str(e)}"
-        )
+        raise HTTPException(status_code=503, detail=f"Service not ready: {str(e)}")
 
 
 @router.get("/health/detailed")
@@ -163,17 +161,13 @@ async def detailed_health_check(db: Session = Depends(get_db)):
 
         health_data["components"]["agents"] = {
             "status": (
-                "healthy"
-                if quota_status["available_agents"] > 0
-                else "degraded"
+                "healthy" if quota_status["available_agents"] > 0 else "degraded"
             ),
             "details": quota_status,
         }
 
         if quota_status["available_agents"] == 0:
-            health_data["issues"].append(
-                "No agents available for task processing"
-            )
+            health_data["issues"].append("No agents available for task processing")
 
     except Exception as e:
         health_data["components"]["agents"] = {
@@ -202,9 +196,7 @@ async def detailed_health_check(db: Session = Depends(get_db)):
         health_data["issues"].append(f"Queue: {str(e)}")
 
     # Overall status
-    component_statuses = [
-        comp["status"] for comp in health_data["components"].values()
-    ]
+    component_statuses = [comp["status"] for comp in health_data["components"].values()]
     if "unhealthy" in component_statuses:
         health_data["status"] = "unhealthy"
     elif "degraded" in component_statuses:
@@ -259,9 +251,7 @@ async def get_metrics(db: Session = Depends(get_db)):
 
         quota_status = quota_manager.get_quota_status(db)
         metrics["supervisor_agent_agents_total"] = quota_status["total_agents"]
-        metrics["supervisor_agent_agents_available"] = quota_status[
-            "available_agents"
-        ]
+        metrics["supervisor_agent_agents_available"] = quota_status["available_agents"]
 
         # Cost and usage metrics
         try:
@@ -269,12 +259,8 @@ async def get_metrics(db: Session = Depends(get_db)):
             metrics["supervisor_agent_total_cost_usd"] = float(
                 cost_summary["total_cost_usd"]
             )
-            metrics["supervisor_agent_total_tokens"] = cost_summary[
-                "total_tokens"
-            ]
-            metrics["supervisor_agent_total_requests"] = cost_summary[
-                "total_requests"
-            ]
+            metrics["supervisor_agent_total_tokens"] = cost_summary["total_tokens"]
+            metrics["supervisor_agent_total_requests"] = cost_summary["total_requests"]
             metrics["supervisor_agent_avg_cost_per_request"] = float(
                 cost_summary["avg_cost_per_request"]
             )

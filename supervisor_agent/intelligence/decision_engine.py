@@ -117,9 +117,7 @@ class DecisionRequest:
     criteria: List[DecisionCriteria]
     options: List[DecisionOption]
     requesting_entity: str
-    created_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -137,9 +135,7 @@ class DecisionResult:
     risk_analysis: Dict[str, Any]
     monitoring_requirements: Dict[str, Any]
     rollback_plan: Dict[str, Any]
-    decided_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    decided_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DecisionEngine:
@@ -158,9 +154,7 @@ class DecisionEngine:
 
         # Decision performance tracking
         self.performance_metrics: Dict[str, Any] = defaultdict(dict)
-        self.learning_database: Dict[str, List[Dict[str, Any]]] = defaultdict(
-            list
-        )
+        self.learning_database: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
 
         # Configuration
         self.max_concurrent_decisions = 10
@@ -201,9 +195,7 @@ class DecisionEngine:
             )
 
             # Store active decision
-            self.active_decisions[decision_request.request_id] = (
-                decision_request
-            )
+            self.active_decisions[decision_request.request_id] = decision_request
 
             # Generate comprehensive decision analysis
             decision_analysis = await self._analyze_decision_context(
@@ -237,20 +229,14 @@ class DecisionEngine:
                 alternative_options=option_evaluations.get("alternatives", []),
                 implementation_plan=implementation_plan,
                 risk_analysis=decision_analysis.get("risk_analysis", {}),
-                monitoring_requirements=decision_analysis.get(
-                    "monitoring", {}
-                ),
+                monitoring_requirements=decision_analysis.get("monitoring", {}),
                 rollback_plan=decision_analysis.get("rollback_plan", {}),
             )
 
             # Store results and update learning
-            self.decision_results[decision_result.decision_id] = (
-                decision_result
-            )
+            self.decision_results[decision_result.decision_id] = decision_result
             self.decision_history.append(decision_result)
-            await self._update_learning_database(
-                decision_request, decision_result
-            )
+            await self._update_learning_database(decision_request, decision_result)
 
             # Clean up active decision
             if decision_request.request_id in self.active_decisions:
@@ -343,9 +329,7 @@ class DecisionEngine:
             analysis = json.loads(result["result"])
 
             # Add reasoning summary
-            analysis["reasoning"] = self._generate_decision_reasoning(
-                request, analysis
-            )
+            analysis["reasoning"] = self._generate_decision_reasoning(request, analysis)
 
             return analysis
 
@@ -404,9 +388,7 @@ class DecisionEngine:
         evaluation_results["primary_option"] = (
             ranked_options[0] if ranked_options else None
         )
-        evaluation_results["alternatives"] = ranked_options[
-            1:5
-        ]  # Top 4 alternatives
+        evaluation_results["alternatives"] = ranked_options[1:5]  # Top 4 alternatives
 
         return evaluation_results
 
@@ -535,9 +517,7 @@ class DecisionEngine:
             )
 
         # Apply risk adjustment
-        risk_factor = 1.0 - (
-            option.risk_assessment.get("overall_risk", 0.5) * 0.3
-        )
+        risk_factor = 1.0 - (option.risk_assessment.get("overall_risk", 0.5) * 0.3)
 
         # Apply implementation feasibility factor
         feasibility_factor = 1.0 - (
@@ -549,10 +529,7 @@ class DecisionEngine:
 
         # Calculate final risk-adjusted score
         final_score = (
-            weighted_score
-            * risk_factor
-            * feasibility_factor
-            * context_confidence
+            weighted_score * risk_factor * feasibility_factor * context_confidence
         )
 
         return min(1.0, max(0.0, final_score))
@@ -669,8 +646,7 @@ class DecisionEngine:
             result
             for result in self.decision_history
             if result.request_id in self.active_decisions
-            and self.active_decisions[result.request_id].decision_type
-            == decision_type
+            and self.active_decisions[result.request_id].decision_type == decision_type
         ]
 
         if not historical_decisions:
@@ -687,15 +663,10 @@ class DecisionEngine:
         return {
             "total_decisions": len(historical_decisions),
             "successful_decisions": len(successful_decisions),
-            "success_rate": len(successful_decisions)
-            / len(historical_decisions),
+            "success_rate": len(successful_decisions) / len(historical_decisions),
             "patterns": patterns,
-            "insights": self._generate_historical_insights(
-                historical_decisions
-            ),
-            "lessons_learned": self._extract_lessons_learned(
-                historical_decisions
-            ),
+            "insights": self._generate_historical_insights(historical_decisions),
+            "lessons_learned": self._extract_lessons_learned(historical_decisions),
         }
 
     async def _analyze_environmental_factors(
@@ -757,9 +728,7 @@ class DecisionEngine:
 
         learning_entry = {
             "decision_type": request.decision_type.value,
-            "context_signature": self._generate_context_signature(
-                request.context
-            ),
+            "context_signature": self._generate_context_signature(request.context),
             "selected_option": result.selected_option.name,
             "confidence_score": result.confidence_score,
             "implementation_success": None,  # To be updated later
@@ -768,9 +737,7 @@ class DecisionEngine:
             "timestamp": result.decided_at.isoformat(),
         }
 
-        self.learning_database[request.decision_type.value].append(
-            learning_entry
-        )
+        self.learning_database[request.decision_type.value].append(learning_entry)
 
         # Maintain database size limits
         if len(self.learning_database[request.decision_type.value]) > 100:
@@ -789,15 +756,11 @@ class DecisionEngine:
             "risk_analysis": {
                 "primary_risks": ["implementation_risk", "resource_risk"]
             },
-            "opportunity_analysis": {
-                "primary_opportunities": ["process_improvement"]
-            },
+            "opportunity_analysis": {"primary_opportunities": ["process_improvement"]},
             "reasoning": f"Basic analysis for {request.decision_type.value} decision",
         }
 
-    def _create_basic_option_evaluation(
-        self, option: DecisionOption
-    ) -> Dict[str, Any]:
+    def _create_basic_option_evaluation(self, option: DecisionOption) -> Dict[str, Any]:
         """Create basic option evaluation as fallback."""
         return {
             "effectiveness_score": 70,
@@ -856,15 +819,11 @@ class DecisionEngine:
         else:
             return 0.7  # Default score
 
-    def _extract_decision_patterns(
-        self, decisions: List[DecisionResult]
-    ) -> List[str]:
+    def _extract_decision_patterns(self, decisions: List[DecisionResult]) -> List[str]:
         """Extract common patterns from successful decisions."""
         patterns = []
         if decisions:
-            avg_confidence = sum(d.confidence_score for d in decisions) / len(
-                decisions
-            )
+            avg_confidence = sum(d.confidence_score for d in decisions) / len(decisions)
             if avg_confidence > 0.8:
                 patterns.append("high_confidence_decisions_successful")
 
@@ -892,15 +851,11 @@ class DecisionEngine:
             high_confidence_rate = len(
                 [d for d in decisions if d.confidence_score > 0.8]
             ) / len(decisions)
-            insights.append(
-                f"High confidence rate: {high_confidence_rate:.1%}"
-            )
+            insights.append(f"High confidence rate: {high_confidence_rate:.1%}")
 
         return insights
 
-    def _extract_lessons_learned(
-        self, decisions: List[DecisionResult]
-    ) -> List[str]:
+    def _extract_lessons_learned(self, decisions: List[DecisionResult]) -> List[str]:
         """Extract lessons learned from historical decisions."""
         lessons = []
         if decisions:
@@ -978,8 +933,7 @@ class DecisionEngine:
                 f
                 for f in factors.keys()
                 if any(
-                    word in f.lower()
-                    for word in ["volatile", "changing", "uncertain"]
+                    word in f.lower() for word in ["volatile", "changing", "uncertain"]
                 )
             ]
         )
@@ -1048,8 +1002,7 @@ class DecisionEngine:
             return {"total_decisions": 0, "metrics": "insufficient_data"}
 
         avg_confidence = (
-            sum(d.confidence_score for d in self.decision_history)
-            / total_decisions
+            sum(d.confidence_score for d in self.decision_history) / total_decisions
         )
 
         decision_types = defaultdict(int)

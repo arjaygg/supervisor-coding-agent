@@ -160,20 +160,16 @@ class BottleneckDetector:
                 > 3000,
                 "severity_fn": lambda metrics: (
                     "critical"
-                    if statistics.mean(metrics.response_times[-5:] or [0])
-                    > 10000
+                    if statistics.mean(metrics.response_times[-5:] or [0]) > 10000
                     else "high"
                 ),
             },
             "throughput_bottleneck": {
-                "condition": lambda metrics: self._is_throughput_degraded(
-                    metrics
-                ),
+                "condition": lambda metrics: self._is_throughput_degraded(metrics),
                 "severity_fn": lambda metrics: (
                     "high"
                     if metrics.throughput
-                    < self._get_baseline_throughput(metrics.component_name)
-                    * 0.5
+                    < self._get_baseline_throughput(metrics.component_name) * 0.5
                     else "medium"
                 ),
             },
@@ -195,12 +191,8 @@ class BottleneckDetector:
         pipeline_stages = []
         for stage_data in stages:
             stage = PipelineStage(
-                stage_name=stage_data.get(
-                    "name", f"stage_{len(pipeline_stages)}"
-                ),
-                stage_type=ComponentType(
-                    stage_data.get("type", "task_processor")
-                ),
+                stage_name=stage_data.get("name", f"stage_{len(pipeline_stages)}"),
+                stage_type=ComponentType(stage_data.get("type", "task_processor")),
                 execution_time=stage_data.get("execution_time", 1000.0),
                 throughput=stage_data.get("throughput", 10.0),
                 dependencies=stage_data.get("dependencies", []),
@@ -213,9 +205,7 @@ class BottleneckDetector:
         analysis = {
             "pipeline_id": pipeline.get("pipeline_id", "unknown"),
             "total_stages": len(pipeline_stages),
-            "critical_path": await self._identify_critical_path(
-                pipeline_stages
-            ),
+            "critical_path": await self._identify_critical_path(pipeline_stages),
             "bottleneck_stages": await self._identify_bottleneck_stages(
                 pipeline_stages
             ),
@@ -235,9 +225,7 @@ class BottleneckDetector:
 
         return analysis
 
-    async def _identify_critical_path(
-        self, stages: List[PipelineStage]
-    ) -> Dict:
+    async def _identify_critical_path(self, stages: List[PipelineStage]) -> Dict:
         """Identify the critical path through the pipeline."""
         # Build dependency graph and find longest path
         stage_map = {stage.stage_name: stage for stage in stages}
@@ -262,9 +250,7 @@ class BottleneckDetector:
         max_time = 0
 
         for stage in stages:
-            if (
-                not stage.dependencies
-            ):  # Start from stages with no dependencies
+            if not stage.dependencies:  # Start from stages with no dependencies
                 path_time = calculate_path_length(stage.stage_name, set())
                 if path_time > max_time:
                     max_time = path_time
@@ -309,9 +295,7 @@ class BottleneckDetector:
                     }
                 )
 
-        return sorted(
-            bottlenecks, key=lambda x: x["utilization"], reverse=True
-        )
+        return sorted(bottlenecks, key=lambda x: x["utilization"], reverse=True)
 
     def _get_stage_recommendation(
         self, stage: PipelineStage, utilization: float
@@ -321,7 +305,9 @@ class BottleneckDetector:
             if stage.parallel_capacity == 1:
                 return "Scale horizontally: Add parallel processing capacity"
             else:
-                return "Scale vertically: Increase processing power or optimize algorithm"
+                return (
+                    "Scale vertically: Increase processing power or optimize algorithm"
+                )
         elif utilization > 0.8:
             return "Monitor closely and prepare for scaling"
         else:
@@ -342,23 +328,15 @@ class BottleneckDetector:
                 total_execution_time = sum(
                     stage.execution_time for stage in level_stages
                 )
-                max_execution_time = max(
-                    stage.execution_time for stage in level_stages
-                )
+                max_execution_time = max(stage.execution_time for stage in level_stages)
 
-                parallelization_benefit = (
-                    total_execution_time - max_execution_time
-                )
+                parallelization_benefit = total_execution_time - max_execution_time
 
-                if (
-                    parallelization_benefit > 1000
-                ):  # 1 second benefit threshold
+                if parallelization_benefit > 1000:  # 1 second benefit threshold
                     opportunities.append(
                         {
                             "level": level,
-                            "stages": [
-                                stage.stage_name for stage in level_stages
-                            ],
+                            "stages": [stage.stage_name for stage in level_stages],
                             "current_total_time": total_execution_time,
                             "parallel_time": max_execution_time,
                             "time_savings": parallelization_benefit,
@@ -406,13 +384,11 @@ class BottleneckDetector:
 
         return dict(levels)
 
-    async def _analyze_resource_utilization(
-        self, stages: List[PipelineStage]
-    ) -> Dict:
+    async def _analyze_resource_utilization(self, stages: List[PipelineStage]) -> Dict:
         """Analyze resource utilization across pipeline stages."""
-        total_cpu = sum(
-            getattr(stage, "cpu_usage", 50.0) for stage in stages
-        ) / len(stages)
+        total_cpu = sum(getattr(stage, "cpu_usage", 50.0) for stage in stages) / len(
+            stages
+        )
         total_memory = sum(
             getattr(stage, "memory_usage", 60.0) for stage in stages
         ) / len(stages)
@@ -422,20 +398,14 @@ class BottleneckDetector:
             "average_memory_utilization": total_memory,
             "resource_efficiency": self._calculate_resource_efficiency(stages),
             "underutilized_stages": [
-                stage.stage_name
-                for stage in stages
-                if stage.current_load < 0.3
+                stage.stage_name for stage in stages if stage.current_load < 0.3
             ],
             "overutilized_stages": [
-                stage.stage_name
-                for stage in stages
-                if stage.current_load > 0.8
+                stage.stage_name for stage in stages if stage.current_load > 0.8
             ],
         }
 
-    def _calculate_resource_efficiency(
-        self, stages: List[PipelineStage]
-    ) -> float:
+    def _calculate_resource_efficiency(self, stages: List[PipelineStage]) -> float:
         """Calculate overall resource efficiency."""
         if not stages:
             return 0.0
@@ -448,9 +418,7 @@ class BottleneckDetector:
                 efficiency = stage.throughput / (
                     resource_usage * stage.parallel_capacity
                 )
-                efficiency_scores.append(
-                    min(100, efficiency * 10)
-                )  # Scale to 0-100
+                efficiency_scores.append(min(100, efficiency * 10))  # Scale to 0-100
 
         return (
             sum(efficiency_scores) / len(efficiency_scores)
@@ -458,28 +426,20 @@ class BottleneckDetector:
             else 0.0
         )
 
-    async def _calculate_pipeline_metrics(
-        self, stages: List[PipelineStage]
-    ) -> Dict:
+    async def _calculate_pipeline_metrics(self, stages: List[PipelineStage]) -> Dict:
         """Calculate comprehensive pipeline performance metrics."""
         total_execution_time = sum(stage.execution_time for stage in stages)
-        min_throughput = (
-            min(stage.throughput for stage in stages) if stages else 0
-        )
+        min_throughput = min(stage.throughput for stage in stages) if stages else 0
 
         return {
             "total_execution_time": total_execution_time,
             "bottleneck_throughput": min_throughput,
-            "average_stage_time": (
-                total_execution_time / len(stages) if stages else 0
-            ),
+            "average_stage_time": (total_execution_time / len(stages) if stages else 0),
             "pipeline_efficiency": self._calculate_pipeline_efficiency(stages),
             "scalability_score": self._calculate_scalability_score(stages),
         }
 
-    def _calculate_pipeline_efficiency(
-        self, stages: List[PipelineStage]
-    ) -> float:
+    def _calculate_pipeline_efficiency(self, stages: List[PipelineStage]) -> float:
         """Calculate pipeline efficiency score."""
         if not stages:
             return 0.0
@@ -492,17 +452,13 @@ class BottleneckDetector:
         if avg_utilization < 0.3:
             efficiency = avg_utilization * 100  # Underutilized
         elif avg_utilization > 0.8:
-            efficiency = (
-                1.0 - (avg_utilization - 0.8) * 2
-            ) * 100  # Overutilized
+            efficiency = (1.0 - (avg_utilization - 0.8) * 2) * 100  # Overutilized
         else:
             efficiency = 100  # Optimal range
 
         return max(0, min(100, efficiency))
 
-    def _calculate_scalability_score(
-        self, stages: List[PipelineStage]
-    ) -> float:
+    def _calculate_scalability_score(self, stages: List[PipelineStage]) -> float:
         """Calculate scalability score for the pipeline."""
         if not stages:
             return 0.0
@@ -514,8 +470,7 @@ class BottleneckDetector:
                 # Can scale horizontally
                 scalability = min(
                     100,
-                    (stage.parallel_capacity / max(1, stage.current_load))
-                    * 20,
+                    (stage.parallel_capacity / max(1, stage.current_load)) * 20,
                 )
             else:
                 # Limited scalability
@@ -587,9 +542,7 @@ class BottleneckDetector:
 
         return opportunities
 
-    async def identify_slow_components(
-        self, component_metrics: Dict
-    ) -> List[Dict]:
+    async def identify_slow_components(self, component_metrics: Dict) -> List[Dict]:
         """Identify slow components based on performance metrics."""
         slow_components = []
 
@@ -616,17 +569,13 @@ class BottleneckDetector:
                         "component_name": component_name,
                         "component_type": metrics.component_type.value,
                         "issues": issues,
-                        "performance_score": self._calculate_performance_score(
-                            metrics
-                        ),
+                        "performance_score": self._calculate_performance_score(metrics),
                         "priority": self._calculate_priority(issues),
                     }
                 )
 
         # Sort by priority (higher priority first)
-        return sorted(
-            slow_components, key=lambda x: x["priority"], reverse=True
-        )
+        return sorted(slow_components, key=lambda x: x["priority"], reverse=True)
 
     async def _analyze_component_performance(
         self, metrics: ComponentMetrics
@@ -647,14 +596,10 @@ class BottleneckDetector:
                 issues.append(
                     {
                         "type": "slow_response",
-                        "severity": (
-                            "high" if avg_response_time > 5000 else "medium"
-                        ),
+                        "severity": ("high" if avg_response_time > 5000 else "medium"),
                         "description": f"Average response time {avg_response_time:.0f}ms exceeds threshold",
                         "metric_value": avg_response_time,
-                        "threshold": self.thresholds[
-                            "response_time_threshold"
-                        ],
+                        "threshold": self.thresholds["response_time_threshold"],
                     }
                 )
 
@@ -670,13 +615,8 @@ class BottleneckDetector:
                 )
 
         # Throughput analysis
-        baseline_throughput = self._get_baseline_throughput(
-            metrics.component_name
-        )
-        if (
-            baseline_throughput > 0
-            and metrics.throughput < baseline_throughput * 0.7
-        ):
+        baseline_throughput = self._get_baseline_throughput(metrics.component_name)
+        if baseline_throughput > 0 and metrics.throughput < baseline_throughput * 0.7:
             issues.append(
                 {
                     "type": "low_throughput",
@@ -696,9 +636,7 @@ class BottleneckDetector:
             issues.append(
                 {
                     "type": "high_cpu_usage",
-                    "severity": (
-                        "critical" if metrics.cpu_usage > 95 else "high"
-                    ),
+                    "severity": ("critical" if metrics.cpu_usage > 95 else "high"),
                     "description": f"CPU usage {metrics.cpu_usage:.1f}% exceeds threshold",
                     "metric_value": metrics.cpu_usage,
                     "threshold": self.thresholds["cpu_threshold"],
@@ -709,9 +647,7 @@ class BottleneckDetector:
             issues.append(
                 {
                     "type": "high_memory_usage",
-                    "severity": (
-                        "critical" if metrics.memory_usage > 95 else "high"
-                    ),
+                    "severity": ("critical" if metrics.memory_usage > 95 else "high"),
                     "description": f"Memory usage {metrics.memory_usage:.1f}% exceeds threshold",
                     "metric_value": metrics.memory_usage,
                     "threshold": self.thresholds["memory_threshold"],
@@ -723,9 +659,7 @@ class BottleneckDetector:
             issues.append(
                 {
                     "type": "high_error_rate",
-                    "severity": (
-                        "critical" if metrics.error_rate > 10 else "high"
-                    ),
+                    "severity": ("critical" if metrics.error_rate > 10 else "high"),
                     "description": f"Error rate {metrics.error_rate:.1f}% exceeds threshold",
                     "metric_value": metrics.error_rate,
                     "threshold": self.thresholds["error_rate_threshold"],
@@ -741,9 +675,7 @@ class BottleneckDetector:
         # Response time score
         if metrics.response_times:
             avg_response = statistics.mean(metrics.response_times)
-            response_score = max(
-                0, 100 - (avg_response / 50)
-            )  # Scale response time
+            response_score = max(0, 100 - (avg_response / 50))  # Scale response time
             scores.append(response_score)
 
         # Throughput score (normalized to baseline)
@@ -931,13 +863,9 @@ class BottleneckDetector:
 
         return recommendations
 
-    async def update_component_metrics(
-        self, component_name: str, metrics_data: Dict
-    ):
+    async def update_component_metrics(self, component_name: str, metrics_data: Dict):
         """Update metrics for a component."""
-        component_type = ComponentType(
-            metrics_data.get("type", "task_processor")
-        )
+        component_type = ComponentType(metrics_data.get("type", "task_processor"))
 
         self.component_metrics[component_name] = ComponentMetrics(
             component_name=component_name,
@@ -970,12 +898,8 @@ class BottleneckDetector:
         )
 
         # Generate optimization strategies
-        bottlenecks = [
-            comp for comp in slow_components if comp["priority"] > 5
-        ]
-        recommendations = await self.suggest_optimization_strategies(
-            bottlenecks
-        )
+        bottlenecks = [comp for comp in slow_components if comp["priority"] > 5]
+        recommendations = await self.suggest_optimization_strategies(bottlenecks)
 
         return {
             "timestamp": datetime.now().isoformat(),
@@ -986,10 +910,7 @@ class BottleneckDetector:
                     [
                         b
                         for b in bottlenecks
-                        if any(
-                            issue["severity"] == "critical"
-                            for issue in b["issues"]
-                        )
+                        if any(issue["severity"] == "critical" for issue in b["issues"])
                     ]
                 ),
                 "optimization_recommendations": len(recommendations),
@@ -1020,9 +941,7 @@ class BottleneckDetector:
 
         for component_name, metrics in self.component_metrics.items():
             # Simplified trend analysis
-            baseline_score = self._get_baseline_performance_score(
-                component_name
-            )
+            baseline_score = self._get_baseline_performance_score(component_name)
             current_score = self._calculate_performance_score(metrics)
 
             change_percent = (
@@ -1066,8 +985,6 @@ class BottleneckDetector:
 
         return sum(scores) / len(scores)
 
-    def set_performance_baseline(
-        self, component_name: str, baseline_metrics: Dict
-    ):
+    def set_performance_baseline(self, component_name: str, baseline_metrics: Dict):
         """Set performance baseline for a component."""
         self.performance_baselines[component_name] = baseline_metrics

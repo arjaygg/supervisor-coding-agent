@@ -19,9 +19,7 @@ class JWTHandler:
     def __init__(self):
         self.secret_key = settings.jwt_secret_key
         self.algorithm = settings.jwt_algorithm
-        self.access_token_expire_minutes = (
-            settings.jwt_access_token_expire_minutes
-        )
+        self.access_token_expire_minutes = settings.jwt_access_token_expire_minutes
         self.refresh_token_expire_days = settings.jwt_refresh_token_expire_days
 
     def create_access_token(
@@ -89,9 +87,7 @@ class JWTHandler:
     ) -> Optional[Dict[str, Any]]:
         """Verify JWT token and return payload"""
         try:
-            payload = jwt.decode(
-                token, self.secret_key, algorithms=[self.algorithm]
-            )
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
 
             # Check token type if specified
             if token_type and payload.get("type") != token_type.value:
@@ -125,9 +121,7 @@ class JWTHandler:
         """Hash password using bcrypt"""
         return pwd_context.hash(password)
 
-    def verify_password(
-        self, plain_password: str, hashed_password: str
-    ) -> bool:
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify password against hash"""
         return pwd_context.verify(plain_password, hashed_password)
 
