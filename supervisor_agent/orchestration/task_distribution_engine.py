@@ -78,7 +78,7 @@ class TaskDistributionEngine:
         else:
             # If not splitting, treat the original task as a single split
             task_splits = [
-                TaskSplit(task_id=task.id, parent_task_id=task.id, config=task.config)
+                TaskSplit(task_id=str(task.id), parent_task_id=str(task.id), config=task.payload or {})
             ]
 
         # 2. Analyze dependencies
@@ -96,6 +96,9 @@ class TaskDistributionEngine:
             task_splits=task_splits,
             dependencies=dependency_graph,
             execution_plan=execution_plan,
+            success=True,
+            original_task_id=str(task.id),
+            processing_time=0.01,  # Placeholder processing time
         )
 
     async def split_complex_task(self, task: Task) -> List[TaskSplit]:
@@ -224,7 +227,6 @@ class TaskDistributionEngine:
             cost_estimate=total_cost,
             estimated_total_time=total_time,
             estimated_cost=total_cost,
-            parallelization_factor=dependency_graph.parallelization_potential,
         )
 
     def _calculate_execution_levels(

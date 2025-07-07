@@ -108,3 +108,6 @@ class DistributionResult:
     task_splits: List[TaskSplit]
     dependencies: DependencyGraph
     execution_plan: ExecutionPlan
+    success: bool = True
+    original_task_id: Optional[str] = None
+    processing_time: float = 0.0
