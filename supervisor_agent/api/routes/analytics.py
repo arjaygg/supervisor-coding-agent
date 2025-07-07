@@ -325,7 +325,6 @@ async def get_provider_performance_comparison(
             multi_provider_service,
         )
 
-        analytics = await multi_provider_service.get_analytics()
         provider_status = await multi_provider_service.get_provider_status()
 
         providers = provider_status.get("providers", {})
