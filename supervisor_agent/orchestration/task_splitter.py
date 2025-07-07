@@ -126,11 +126,45 @@ class IntelligentTaskSplitter:
         """
         content = self._extract_task_content(task)
         complexity_score = self._calculate_complexity_score(content)
+        estimated_steps = self._estimate_steps(content)
+        identified_dependencies = self._identify_dependencies(content)
+        
+        # Determine complexity level from score and steps
+        complexity_level = self._determine_complexity_level(complexity_score, estimated_steps)
+        
+        # Get splitting recommendation
+        splitting_recommendation = self._recommend_splitting_strategy(
+            complexity_level, content, identified_dependencies
+        )
 
         # Task requires splitting if complexity score is above threshold
         requires_splitting = complexity_score > 1.0
+        
+        # Calculate estimated execution time (simple heuristic)
+        estimated_execution_time = estimated_steps * 30.0  # 30 seconds per step
+        
+        # Basic resource requirements
+        resource_requirements = {
+            "cpu": "standard",
+            "memory": "standard" if complexity_score <= 2.0 else "high",
+            "disk": "standard"
+        }
+        
+        # Calculate confidence score
+        confidence_score = min(0.9, 0.5 + (0.1 * estimated_steps))
+        
+        # Generate reasoning
+        reasoning = f"Task complexity score: {complexity_score:.2f}, estimated steps: {estimated_steps}, dependencies: {len(identified_dependencies)}"
 
         return ComplexityAnalysis(
+            complexity_level=complexity_level,
+            estimated_steps=estimated_steps,
+            identified_dependencies=identified_dependencies,
+            splitting_recommendation=splitting_recommendation,
+            estimated_execution_time=estimated_execution_time,
+            resource_requirements=resource_requirements,
+            confidence_score=confidence_score,
+            reasoning=reasoning,
             complexity_score=complexity_score,
             requires_splitting=requires_splitting,
         )

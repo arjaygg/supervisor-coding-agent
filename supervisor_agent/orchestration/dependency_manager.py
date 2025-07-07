@@ -99,12 +99,12 @@ class DependencyManager:
         """
         Builds a dependency graph for a list of tasks.
         """
-        nodes = [task.task_id for task in tasks]
+        nodes = [task.id for task in tasks]
         edges = []
 
         # Simple dependency logic: sequential execution by default
         if len(tasks) > 1:
-            edges.append((tasks[0].task_id, tasks[1].task_id))
+            edges.append((tasks[0].id, tasks[1].id))
 
         # Calculate critical path (simplified)
         critical_path = nodes if nodes else []

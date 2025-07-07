@@ -29,6 +29,7 @@ from supervisor_agent.orchestration.task_distribution_engine import (
     TaskDistributionEngine,
     TaskSplit,
     create_task_distribution_engine,
+    task_split_to_task,
 )
 from supervisor_agent.providers.base_provider import (
     ProviderType,
@@ -244,7 +245,9 @@ class TestDependencyManager:
 
     def test_build_dependency_graph(self, dependency_manager, sample_task_splits):
         """Test dependency graph building."""
-        graph = dependency_manager.build_dependency_graph(sample_task_splits)
+        # Convert TaskSplit objects to Task objects for dependency manager
+        tasks = [task_split_to_task(ts) for ts in sample_task_splits]
+        graph = dependency_manager.build_dependency_graph(tasks)
 
         assert isinstance(graph, DependencyGraph)
         assert len(graph.nodes) == 3
