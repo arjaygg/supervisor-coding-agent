@@ -60,6 +60,8 @@ class DependencyGraph:
     edges: List[tuple[str, str]]
     critical_path: List[str] = field(default_factory=list)
     parallelization_potential: float = 0.0
+    execution_levels: List[List[str]] = field(default_factory=list)
+    total_estimated_time: float = 0.0
 
 
 @dataclass
