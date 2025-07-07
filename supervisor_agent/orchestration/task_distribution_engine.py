@@ -347,6 +347,71 @@ class TaskDistributionEngine:
             "recommendations": recommendations,
         }
 
+    def _create_task_splits_by_strategy(
+        self, task: Task, analysis: ComplexityAnalysis
+    ) -> List[TaskSplit]:
+        """Create task splits based on the recommended splitting strategy."""
+        strategy = analysis.splitting_recommendation
+        
+        if strategy == SplittingStrategy.NO_SPLIT:
+            # Return empty list for no splits
+            return []
+            
+        elif strategy == SplittingStrategy.LINEAR_SPLIT:
+            # Split into sequential subtasks
+            splits = []
+            for i in range(analysis.estimated_steps):
+                dependencies = []
+                if i > 0:
+                    # Each step depends on the previous step
+                    dependencies.append(f"{task.id}_{i-1}")
+                    
+                splits.append(TaskSplit(
+                    task_id=f"{task.id}_{i}",
+                    parent_task_id=task.id,
+                    dependencies=dependencies,
+                    parallelizable=False  # Linear tasks are not parallelizable
+                ))
+            return splits
+            
+        elif strategy == SplittingStrategy.PARALLEL_SPLIT:
+            # Split into parallel subtasks
+            splits = []
+            for i in range(min(analysis.estimated_steps, 4)):  # Max 4 parallel tasks
+                splits.append(TaskSplit(
+                    task_id=f"{task.id}_parallel_{i+1}",
+                    parent_task_id=task.id,
+                    dependencies=[],  # No dependencies for parallel tasks
+                    parallelizable=True
+                ))
+            return splits
+            
+        elif strategy == SplittingStrategy.HIERARCHICAL_SPLIT:
+            # Split into hierarchical subtasks
+            splits = []
+            # Create phases: planning, implementation, validation
+            phases = ["plan", "implement", "validate"]
+            
+            for i, phase in enumerate(phases):
+                phase_id = f"{task.id}_{phase}"
+                dependencies = []
+                if i > 0:
+                    # Each phase depends on the previous phase
+                    dependencies.append(f"{task.id}_{phases[i-1]}")
+                    
+                splits.append(TaskSplit(
+                    task_id=phase_id,
+                    parent_task_id=task.id,
+                    dependencies=dependencies,
+                    parallelizable=False,
+                    split_id=phase_id
+                ))
+            return splits
+            
+        else:
+            # Default: return single split
+            return [TaskSplit(task_id=task.id, parent_task_id=task.id)]
+
 
 def task_split_to_task(task_split: TaskSplit) -> Task:
     """Converts a TaskSplit to a Task."""

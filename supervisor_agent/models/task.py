@@ -15,12 +15,29 @@ class TaskSplit:
     task_id: str
     parent_task_id: str
     config: Dict[str, Any] = field(default_factory=dict)
+    dependencies: List[str] = field(default_factory=list)
+    parallelizable: bool = True
+    split_id: Optional[str] = None
+    
+    def __post_init__(self):
+        # Set split_id to task_id if not provided
+        if self.split_id is None:
+            self.split_id = self.task_id
 
 
 @dataclass
 class ComplexityAnalysis:
-    complexity_score: float
-    requires_splitting: bool
+    complexity_level: "TaskComplexity"
+    estimated_steps: int
+    identified_dependencies: List[str]
+    splitting_recommendation: "SplittingStrategy"
+    estimated_execution_time: float
+    resource_requirements: Dict[str, Any]
+    confidence_score: float
+    reasoning: str
+    # Legacy fields for backward compatibility
+    complexity_score: float = 0.0
+    requires_splitting: bool = False
 
 
 @dataclass
@@ -30,6 +47,10 @@ class SubtaskGraph:
 
 
 class SplittingStrategy(Enum):
+    NO_SPLIT = "no_split"
+    LINEAR_SPLIT = "linear_split" 
+    PARALLEL_SPLIT = "parallel_split"
+    HIERARCHICAL_SPLIT = "hierarchical_split"
     DEFAULT = "default"
 
 

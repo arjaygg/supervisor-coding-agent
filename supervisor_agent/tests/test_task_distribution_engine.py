@@ -347,7 +347,7 @@ class TestTaskDistributionEngine:
         """Create a sample task for testing."""
         return Task(
             id=123,
-            type=TaskType.PROCESSING,
+            type=TaskType.REFACTOR,
             status=TaskStatus.PENDING,
             payload={
                 "description": "Create a new feature with validation and testing. "
@@ -556,7 +556,7 @@ class TestTaskSplitGeneration:
         """Create sample task."""
         return Task(
             id=789,
-            type=TaskType.PROCESSING,
+            type=TaskType.REFACTOR,
             status=TaskStatus.PENDING,
             payload={"description": "Multi-step processing task"},
             priority=5,
@@ -807,7 +807,7 @@ class TestIntegration:
         # Create a real task
         task = Task(
             id=999,
-            type=TaskType.PROCESSING,
+            type=TaskType.REFACTOR,
             status=TaskStatus.PENDING,
             payload={
                 "description": "Implement a comprehensive user authentication system. "
@@ -929,7 +929,7 @@ class TestIntegration:
 
             task = Task(
                 id=100 + len(complexity.value),
-                type=TaskType.PROCESSING,
+                type=TaskType.REFACTOR,
                 status=TaskStatus.PENDING,
                 payload={"description": f"Test {complexity.value} task"},
                 priority=5,
