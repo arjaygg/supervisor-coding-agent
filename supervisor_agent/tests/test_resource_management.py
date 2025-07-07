@@ -25,7 +25,7 @@ from supervisor_agent.core.resource_allocation_engine import (
     ScalingAction,
     ScalingRecommendation,
 )
-from supervisor_agent.models.task import Task
+from supervisor_agent.db.models import Task
 
 
 class TestDynamicResourceAllocator:
@@ -40,8 +40,8 @@ class TestDynamicResourceAllocator:
     def sample_task(self):
         """Create a sample task for testing."""
         return Task(
-            id="test_task_001",
-            config={
+            type="CODE_ANALYSIS",
+            payload={
                 "description": "Analyze data and optimize machine learning models for performance",
                 "complexity": "high",
             },
