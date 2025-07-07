@@ -99,12 +99,12 @@ class DependencyManager:
         """
         Builds a dependency graph for a list of tasks.
         """
-        nodes = [task.id for task in tasks]
+        nodes = [task.task_id for task in tasks]
         edges = []
 
         # Simple dependency logic: sequential execution by default
         if len(tasks) > 1:
-            edges.append((tasks[0].id, tasks[1].id))
+            edges.append((tasks[0].task_id, tasks[1].task_id))
 
         # Calculate critical path (simplified)
         critical_path = nodes if nodes else []
@@ -121,12 +121,19 @@ class DependencyManager:
         parallelization_potential = self._calculate_parallelization_potential(
             levels, tasks
         )
+        
+        # Calculate total estimated time from task configs
+        total_estimated_time = sum(
+            task.config.get("estimated_duration", 0) for task in tasks
+        )
 
         return DependencyGraph(
             nodes=nodes,
             edges=edges,
             critical_path=critical_path,
             parallelization_potential=parallelization_potential,
+            execution_levels=levels,
+            total_estimated_time=total_estimated_time,
         )
 
     def resolve_execution_order(self, graph: DependencyGraph) -> ExecutionOrder:
