@@ -298,16 +298,16 @@ class ProviderCoordinator:
                     "provider_id": provider_id,
                     "provider_name": provider.name,
                     "health_status": health.status,
-                    "health_score": health.score,
-                    "estimated_cost_usd": float(cost_estimate.total_cost_usd),
-                    "estimated_duration_seconds": cost_estimate.estimated_duration_seconds,
+                    "health_score": health.success_rate,
+                    "estimated_cost_usd": cost_estimate.estimated_cost_usd,
+                    "estimated_duration_seconds": 60.0,  # Default estimate
                     "performance_score": performance_score,
-                    "capabilities": provider.get_capabilities().supported_task_types,
-                    "current_load": health.metrics.get("current_tasks", 0),
+                    "capabilities": [cap.value for cap in provider.get_capabilities().supported_tasks],
+                    "current_load": 0,  # Default load
                     "recommendation_score": self._calculate_recommendation_score(
-                        health.score,
+                        health.success_rate,
                         performance_score,
-                        float(cost_estimate.total_cost_usd),
+                        cost_estimate.estimated_cost_usd,
                     ),
                 }
 
@@ -392,7 +392,7 @@ class ProviderCoordinator:
                 continue
 
             cost_estimate = provider.estimate_cost(task)
-            if float(cost_estimate.total_cost_usd) <= max_cost_usd:
+            if cost_estimate.estimated_cost_usd <= max_cost_usd:
                 cost_viable_providers.append(provider_id)
 
         return cost_viable_providers
@@ -454,7 +454,7 @@ class ProviderCoordinator:
                 continue
 
             health = await provider.get_health_status()
-            current_load = health.metrics.get("current_tasks", 0)
+            current_load = 0  # Default to 0 since ProviderHealth doesn't have metrics yet
 
             if current_load < min_load:
                 min_load = current_load
@@ -508,7 +508,7 @@ class ProviderCoordinator:
             capability_score = 1.0  # Base score for capability match
 
             # Bonus for specialized capabilities
-            if len(capabilities.supported_task_types) <= 3:
+            if len(capabilities.supported_tasks) <= 3:
                 capability_score += 0.2  # Specialist bonus
 
             # Factor in performance score
@@ -538,15 +538,12 @@ class ProviderCoordinator:
 
         try:
             health = await provider.get_health_status(use_cache=False)
-            is_healthy = health.status in [
-                "healthy",
-                "degraded",
-            ]  # Allow degraded providers
+            is_healthy = health.is_healthy  # Use the built-in health check logic
 
             # Cache the result
             self._provider_cache[provider_id] = (
                 datetime.now(timezone.utc),
-                {"healthy": is_healthy, "health_score": health.score},
+                {"healthy": is_healthy, "health_score": health.success_rate},
             )
 
             return is_healthy

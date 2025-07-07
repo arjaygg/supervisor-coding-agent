@@ -359,11 +359,9 @@ class TestTaskDistributionEngine:
     @pytest.mark.asyncio
     async def test_distribute_task_simple(self, distribution_engine, sample_task):
         """Test task distribution for simple case."""
-        # Mock task loading
-        with patch.object(distribution_engine, "_load_task", return_value=sample_task):
-            result = await distribution_engine.distribute_task(
-                sample_task, strategy=DistributionStrategy.DEPENDENCY_AWARE
-            )
+        result = await distribution_engine.distribute_task(
+            sample_task, strategy=DistributionStrategy.PARALLEL
+        )
 
         assert isinstance(result, DistributionResult)
         assert result.success is True
@@ -409,13 +407,13 @@ class TestTaskDistributionEngine:
         with patch.object(distribution_engine, "_load_task", return_value=sample_task):
             result_cost = await distribution_engine.distribute_task(
                 sample_task,
-                strategy=DistributionStrategy.DEPENDENCY_AWARE,
+                strategy=DistributionStrategy.PARALLEL,
                 constraints=constraints_cost,
             )
 
             result_performance = await distribution_engine.distribute_task(
                 sample_task,
-                strategy=DistributionStrategy.DEPENDENCY_AWARE,
+                strategy=DistributionStrategy.PARALLEL,
                 constraints=constraints_performance,
             )
 
@@ -725,7 +723,7 @@ class TestDistributionStrategies:
         optimized = asyncio.run(
             distribution_engine._optimize_distribution_strategy(
                 complex_task,
-                DistributionStrategy.DEPENDENCY_AWARE,
+                DistributionStrategy.PARALLEL,
                 analysis,
                 dependency_graph,
             )
@@ -748,7 +746,7 @@ class TestDistributionStrategies:
         cost_optimized = asyncio.run(
             distribution_engine._optimize_distribution_strategy(
                 task,
-                DistributionStrategy.DEPENDENCY_AWARE,
+                DistributionStrategy.PARALLEL,
                 analysis,
                 dependency_graph,
                 {"optimize_cost": True},
@@ -761,7 +759,7 @@ class TestDistributionStrategies:
         perf_optimized = asyncio.run(
             distribution_engine._optimize_distribution_strategy(
                 task,
-                DistributionStrategy.DEPENDENCY_AWARE,
+                DistributionStrategy.PARALLEL,
                 analysis,
                 dependency_graph,
                 {"optimize_performance": True},
@@ -830,7 +828,7 @@ class TestIntegration:
         with patch.object(engine, "_load_task", return_value=task):
             result = await engine.distribute_task(
                 task,
-                strategy=DistributionStrategy.DEPENDENCY_AWARE,
+                strategy=DistributionStrategy.PARALLEL,
                 providers=[ProviderType.CLAUDE_CLI],
             )
 
@@ -880,7 +878,7 @@ class TestIntegration:
 
         task = Task(
             id=888,
-            type=TaskType.ANALYSIS,
+            type=TaskType.CODE_ANALYSIS,
             status=TaskStatus.PENDING,
             payload={"description": "Simple analysis task"},
             priority=3,

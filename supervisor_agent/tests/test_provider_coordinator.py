@@ -194,7 +194,7 @@ class TestProviderCoordinator:
         # Mock provider that doesn't support the task type
         mock_provider = Mock(spec=AIProvider)
         mock_provider.get_capabilities.return_value = ProviderCapabilities(
-            supported_task_types=["DIFFERENT_TYPE"], max_concurrent_tasks=10
+            supported_tasks=[], max_concurrent_requests=10
         )
         mock_registry.get_provider.return_value = mock_provider
 

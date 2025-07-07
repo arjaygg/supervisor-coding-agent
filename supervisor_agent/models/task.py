@@ -77,6 +77,7 @@ class TaskComplexity(Enum):
     MODERATE = "moderate"
     COMPLEX = "complex"
     VERY_COMPLEX = "very_complex"
+    HIGHLY_COMPLEX = "highly_complex"
 
 
 @dataclass
