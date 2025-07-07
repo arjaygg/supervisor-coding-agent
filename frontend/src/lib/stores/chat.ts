@@ -233,9 +233,28 @@ function createChatStore() {
       }
     },
 
-    async sendMessage(threadId: string, content: string): Promise<ChatMessage> {
+    async sendMessage(threadId: string, content: string, messageData?: any): Promise<ChatMessage> {
       try {
-        const newMessage = await api.sendChatMessage(threadId, { content });
+        // Prepare message payload with optional file attachments
+        const payload = {
+          content,
+          message_type: "TEXT",
+          metadata: {
+            ...((messageData && messageData.metadata) || {}),
+            ...(messageData && messageData.files && messageData.files.length > 0 ? {
+              attachments: messageData.files.map((file: any) => ({
+                id: file.id,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                category: file.category,
+                uploadedAt: file.uploadedAt
+              }))
+            } : {})
+          }
+        };
+
+        const newMessage = await api.sendChatMessage(threadId, payload);
 
         update((state) => ({
           ...state,
@@ -262,6 +281,17 @@ function createChatStore() {
     // Notification management (delegated to notification service)
     async fetchNotifications(): Promise<void> {
       await notificationService.fetchNotifications(true);
+    },
+
+    // Add message to store (for streaming completion)
+    addMessage(threadId: string, message: ChatMessage): void {
+      update((state) => ({
+        ...state,
+        messages: {
+          ...state.messages,
+          [threadId]: [...(state.messages[threadId] || []), message],
+        },
+      }));
     },
 
     // Utility methods

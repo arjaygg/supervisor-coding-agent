@@ -4,6 +4,8 @@
   import type { ChatThread, ChatMessage } from "$lib/stores/chat";
   import MessageBubble from "./MessageBubble.svelte";
   import MessageInput from "./MessageInput.svelte";
+  import { streamingService } from "$lib/services/streamingService";
+  import type { StreamingChunk } from "$lib/services/streamingService";
 
   export let thread: ChatThread;
   export let messages: ChatMessage[] = [];
@@ -13,6 +15,12 @@
   let messagesContainer: HTMLDivElement;
   let autoScroll = true;
   let isNearBottom = true;
+
+  // Streaming state
+  let isStreaming = false;
+  let streamingMessageId: string | null = null;
+  let streamingContent = "";
+  let streamingAbortController: AbortController | null = null;
 
   // Auto-scroll to bottom when new messages arrive
   afterUpdate(async () => {
@@ -46,19 +54,93 @@
   }
 
   async function handleSendMessage(event: CustomEvent) {
-    const { content } = event.detail;
+    const { content, files } = event.detail;
 
     try {
-      await chat.sendMessage(thread.id, content);
+      // Prepare message data with files if provided
+      const messageData = {
+        content,
+        files: files || [],
+        metadata: files && files.length > 0 ? { hasAttachments: true, fileCount: files.length } : {}
+      };
+
+      // First, send the user message normally
+      const userMessage = await chat.sendMessage(thread.id, content, messageData);
 
       // Ensure we scroll to bottom after sending
       autoScroll = true;
       isNearBottom = true;
       await tick();
       scrollToBottom();
+
+      // Then start streaming the AI response
+      await startStreamingResponse(thread.id);
+
     } catch (error) {
       console.error("Failed to send message:", error);
     }
+  }
+
+  async function startStreamingResponse(threadId: string) {
+    if (isStreaming) {
+      // Cancel existing stream
+      streamingAbortController?.abort();
+    }
+
+    isStreaming = true;
+    streamingContent = "";
+    streamingMessageId = `streaming_${Date.now()}`;
+    streamingAbortController = new AbortController();
+
+    try {
+      await streamingService.sendMessageWithStream(
+        threadId,
+        "", // Empty content for AI response
+        {
+          signal: streamingAbortController.signal,
+          onChunk: (chunk: StreamingChunk) => {
+            streamingContent += chunk.delta || chunk.content;
+            
+            // Auto-scroll during streaming
+            if (autoScroll && isNearBottom) {
+              setTimeout(scrollToBottom, 50);
+            }
+          },
+          onComplete: (finalMessage: ChatMessage) => {
+            // Replace streaming message with final message
+            isStreaming = false;
+            streamingMessageId = null;
+            streamingContent = "";
+            
+            // Update the chat store with the final message
+            chat.addMessage(threadId, finalMessage);
+            
+            // Final scroll
+            setTimeout(scrollToBottom, 100);
+          },
+          onError: (error: Error) => {
+            console.error("Streaming error:", error);
+            isStreaming = false;
+            streamingMessageId = null;
+            streamingContent = "";
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Failed to start streaming:", error);
+      isStreaming = false;
+      streamingMessageId = null;
+      streamingContent = "";
+    }
+  }
+
+  function cancelStreaming() {
+    if (streamingAbortController) {
+      streamingAbortController.abort();
+    }
+    isStreaming = false;
+    streamingMessageId = null;
+    streamingContent = "";
   }
 
   function formatMessageTime(timestamp: string): string {
@@ -168,8 +250,28 @@
           {message}
           showTimestamp={true}
           time={formatMessageTime(message.created_at)}
+          isStreaming={false}
         />
       {/each}
+
+      <!-- Streaming message (shown while AI is responding) -->
+      {#if isStreaming && streamingMessageId}
+        <MessageBubble
+          message={{
+            id: streamingMessageId,
+            thread_id: thread.id,
+            role: "ASSISTANT",
+            content: streamingContent,
+            message_type: "TEXT",
+            metadata: {},
+            created_at: new Date().toISOString(),
+          }}
+          showTimestamp={true}
+          time="Now"
+          isStreaming={true}
+          {streamingContent}
+        />
+      {/if}
 
       <!-- Loading indicator for new messages -->
       {#if loading}
@@ -236,10 +338,49 @@
 
   <!-- Message input -->
   <div class="border-t border-gray-700 bg-gray-800">
+    <!-- Streaming indicator and cancel button -->
+    {#if isStreaming}
+      <div class="px-4 py-2 bg-blue-900/20 border-b border-blue-800/30">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2 text-blue-300">
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              />
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            <span class="text-sm">AI is responding...</span>
+            <span class="text-xs opacity-75">({streamingContent.length} chars)</span>
+          </div>
+          <button
+            class="px-3 py-1 text-xs bg-red-900/50 hover:bg-red-900/70 text-red-300 hover:text-red-200 border border-red-800/50 rounded transition-colors"
+            on:click={cancelStreaming}
+            title="Cancel response"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    {/if}
+
     <MessageInput
-      {loading}
-      placeholder="Type your message..."
+      loading={loading || isStreaming}
+      placeholder={isStreaming ? "Wait for AI response..." : "Type your message..."}
+      allowFileUpload={true}
       on:send={handleSendMessage}
+      on:file-download={(e) => {
+        // Handle file download events if needed
+        console.log('File download requested:', e.detail);
+      }}
     />
   </div>
 </div>

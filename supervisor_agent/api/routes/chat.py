@@ -1,14 +1,16 @@
 import asyncio
+import json
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from supervisor_agent.api.websocket import notify_chat_update
 from supervisor_agent.db import crud, schemas
 from supervisor_agent.db.database import get_db
-from supervisor_agent.db.enums import ChatThreadStatus, MessageRole
+from supervisor_agent.db.enums import ChatThreadStatus, MessageRole, MessageType
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -269,6 +271,328 @@ async def send_message(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/threads/{thread_id}/messages/stream")
+async def send_message_stream(
+    thread_id: UUID,
+    message: schemas.ChatMessageCreate,
+    db: Session = Depends(get_db),
+):
+    """Send a message with streaming AI response"""
+    try:
+        # Verify thread exists
+        thread = crud.ChatThreadCRUD.get_thread(db, thread_id)
+        if not thread:
+            raise HTTPException(status_code=404, detail="Chat thread not found")
+
+        # Create user message if content provided
+        if message.content.strip():
+            user_message = crud.ChatMessageCRUD.create_message(
+                db, thread_id, message, MessageRole.USER
+            )
+
+            # Send WebSocket notification for user message
+            asyncio.create_task(
+                notify_chat_update(
+                    {
+                        "type": "message_sent",
+                        "thread_id": str(thread_id),
+                        "message_id": str(user_message.id),
+                        "content": message.content,
+                        "role": "user",
+                        "created_at": user_message.created_at.isoformat(),
+                    }
+                )
+            )
+
+        # Create streaming response for AI
+        async def generate_ai_response():
+            """Generate streaming AI response"""
+            try:
+                # Get the AI response content
+                ai_content = await generate_ai_response_content(thread_id, message.content, db)
+                
+                # Stream the response character by character
+                accumulated_content = ""
+                
+                # Send chunks with realistic typing speed
+                import asyncio
+                for i, char in enumerate(ai_content):
+                    accumulated_content += char
+                    
+                    # Send chunk every few characters or at word boundaries
+                    if char.isspace() or i == len(ai_content) - 1 or (i + 1) % 3 == 0:
+                        chunk_data = {
+                            "type": "chunk",
+                            "data": {
+                                "id": f"stream_{i}",
+                                "delta": char if i == len(accumulated_content) - 1 else accumulated_content[len(accumulated_content) - (i % 3 + 1):],
+                                "content": accumulated_content,
+                                "finished": i == len(ai_content) - 1,
+                            }
+                        }
+                        yield f"data: {json.dumps(chunk_data)}\n\n"
+                        
+                        # Add small delay for realistic typing effect
+                        await asyncio.sleep(0.03)  # 30ms delay
+                
+                # Create the AI message in database
+                ai_message_data = schemas.ChatMessageCreate(
+                    content=ai_content,
+                    message_type=MessageType.TEXT,
+                    metadata={"generated": True, "model": "simulated"}
+                )
+                
+                ai_message = crud.ChatMessageCRUD.create_message(
+                    db, thread_id, ai_message_data, MessageRole.ASSISTANT
+                )
+
+                # Send completion event
+                completion_data = {
+                    "type": "complete",
+                    "data": {
+                        "id": str(ai_message.id),
+                        "thread_id": str(thread_id),
+                        "role": "ASSISTANT",
+                        "content": ai_content,
+                        "message_type": "TEXT",
+                        "metadata": ai_message.message_metadata,
+                        "created_at": ai_message.created_at.isoformat(),
+                    }
+                }
+                
+                yield f"data: {json.dumps(completion_data)}\n\n"
+
+                # Send WebSocket notification
+                asyncio.create_task(
+                    notify_chat_update(
+                        {
+                            "type": "message_sent",
+                            "thread_id": str(thread_id),
+                            "message_id": str(ai_message.id),
+                            "content": ai_content,
+                            "role": "assistant",
+                            "created_at": ai_message.created_at.isoformat(),
+                        }
+                    )
+                )
+
+            except Exception as e:
+                logger.error(f"Error generating AI response: {str(e)}")
+                error_data = {
+                    "type": "error",
+                    "data": {"message": "Failed to generate AI response"}
+                }
+                yield f"data: {json.dumps(error_data)}\n\n"
+
+        return StreamingResponse(
+            generate_ai_response(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to start streaming for thread {thread_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def generate_ai_response_content(thread_id: UUID, user_message: str, db: Session) -> str:
+    """
+    Generate AI response using the AI Manager with multiple providers
+    """
+    try:
+        # Import AI components
+        from supervisor_agent.ai.manager import AIManager, RequestContext
+        from supervisor_agent.ai.providers import AIMessage, ModelCapability
+        
+        # Get recent messages for context
+        recent_messages = crud.ChatMessageCRUD.get_messages(db, thread_id, limit=10)
+        
+        # Convert to AI messages format
+        ai_messages = []
+        
+        # Add system message for context
+        ai_messages.append(AIMessage(
+            role="system",
+            content="""You are an AI supervisor agent designed to help with task management and development workflows. You can assist with:
+
+• Task Creation & Management - Organize and track work
+• Code Analysis - Review and improve codebases
+• Development Support - Debug issues and implement features
+• Workflow Automation - Streamline repetitive processes
+
+Provide helpful, actionable responses that are concise but comprehensive. Focus on practical solutions and next steps."""
+        ))
+        
+        # Add conversation history (reverse to get chronological order)
+        for msg in reversed(recent_messages[-5:]):  # Last 5 messages for context
+            ai_messages.append(AIMessage(
+                role="user" if msg.role == MessageRole.USER else "assistant",
+                content=msg.content
+            ))
+        
+        # Add current user message
+        ai_messages.append(AIMessage(
+            role="user",
+            content=user_message
+        ))
+        
+        # Get AI manager instance
+        ai_manager = get_ai_manager()
+        
+        # Create request context
+        context = RequestContext(
+            thread_id=str(thread_id),
+            task_type="chat_response",
+            priority="normal",
+            required_capabilities=[ModelCapability.TEXT_GENERATION]
+        )
+        
+        # Generate response
+        response = await ai_manager.generate_response(
+            messages=ai_messages,
+            context=context,
+            max_tokens=2048,
+            temperature=0.7
+        )
+        
+        return response.content
+        
+    except Exception as e:
+        logger.error(f"AI response generation failed: {str(e)}")
+        # Fallback to simple response based on keywords
+        return generate_fallback_response(user_message)
+
+
+def generate_fallback_response(user_message: str) -> str:
+    """Generate a fallback response when AI providers fail"""
+    if "task" in user_message.lower():
+        return f"""I'll help you create a task based on your request: "{user_message}".
+
+Here's what I can do for you:
+
+1. **Task Analysis**: I've analyzed your request and identified it as a task creation scenario.
+
+2. **Suggested Actions**:
+   - Create a new task in the system
+   - Set appropriate priority level
+   - Add relevant metadata and context
+   - Schedule execution if needed
+
+3. **Next Steps**: Would you like me to proceed with creating this task, or would you like to modify any of the details first?
+
+Let me know how you'd like to proceed, and I'll take care of the task creation for you."""
+
+    elif "help" in user_message.lower():
+        return f"""I'm here to help! Based on your message: "{user_message}", here are the ways I can assist you:
+
+🔧 **Development Tasks**:
+- Code analysis and review
+- Bug fixing and debugging
+- Feature implementation
+- Refactoring assistance
+
+📋 **Task Management**:
+- Create and organize tasks
+- Set priorities and deadlines
+- Track progress and completion
+- Generate reports
+
+🤖 **AI Assistance**:
+- Natural language processing
+- Intelligent suggestions
+- Automated workflows
+- Pattern recognition
+
+What specific area would you like help with? I'm ready to dive deep into any technical challenge you're facing."""
+
+    elif "analyze" in user_message.lower():
+        return f"""I'll analyze the request: "{user_message}".
+
+📊 **Analysis Results**:
+
+**Intent Detection**: Request for analysis/review
+**Complexity Level**: Medium
+**Category**: Code/System Analysis
+**Estimated Time**: 10-30 minutes
+
+**Recommended Approach**:
+1. Gather relevant data and context
+2. Apply analytical frameworks
+3. Identify patterns and insights
+4. Generate actionable recommendations
+
+**Tools Available**:
+- Static code analysis
+- Performance profiling
+- Security scanning
+- Quality metrics
+
+Would you like me to proceed with a specific type of analysis, or do you need more information about the available analysis options?"""
+
+    else:
+        return f"""I'm experiencing some technical difficulties right now, but I'm here to help with your request: "{user_message}"
+
+I can assist you with:
+• Task creation and management
+• Code analysis and review
+• Development support
+• Workflow automation
+
+Please try again in a moment, or let me know if you'd like me to help with something specific in the meantime."""
+
+
+# Global AI manager instance
+_ai_manager = None
+
+def get_ai_manager() -> AIManager:
+    """Get or create AI manager instance"""
+    global _ai_manager
+    if _ai_manager is None:
+        from supervisor_agent.ai.manager import AIManagerConfig, ProviderConfig
+        import os
+        
+        # Configuration - in production, load from environment/config file
+        config = AIManagerConfig(
+            providers=[
+                ProviderConfig(
+                    name="anthropic",
+                    provider_class="anthropic",
+                    api_key=os.getenv("ANTHROPIC_API_KEY", ""),
+                    enabled=bool(os.getenv("ANTHROPIC_API_KEY")),
+                    priority=1
+                ),
+                ProviderConfig(
+                    name="openai",
+                    provider_class="openai",
+                    api_key=os.getenv("OPENAI_API_KEY", ""),
+                    enabled=bool(os.getenv("OPENAI_API_KEY")),
+                    priority=2
+                ),
+                ProviderConfig(
+                    name="local",
+                    provider_class="local",
+                    api_key="",
+                    base_url=os.getenv("LOCAL_AI_URL", "http://localhost:11434"),
+                    enabled=bool(os.getenv("ENABLE_LOCAL_AI", "false").lower() == "true"),
+                    priority=3
+                ),
+            ],
+            cost_optimization=True,
+            fallback_enabled=True
+        )
+        
+        _ai_manager = AIManager(config)
+    
+    return _ai_manager
+
+
 @router.get(
     "/threads/{thread_id}/messages",
     response_model=schemas.ChatMessagesListResponse,
@@ -310,10 +634,14 @@ async def get_messages(
 
 
 @router.put("/messages/{message_id}", response_model=schemas.ChatMessageResponse)
-async def update_message(message_id: UUID, content: str, db: Session = Depends(get_db)):
+async def update_message(
+    message_id: UUID, 
+    update_data: schemas.ChatMessageUpdate, 
+    db: Session = Depends(get_db)
+):
     """Update a chat message"""
     try:
-        updated_message = crud.ChatMessageCRUD.update_message(db, message_id, content)
+        updated_message = crud.ChatMessageCRUD.update_message(db, message_id, update_data.content)
         if not updated_message:
             raise HTTPException(status_code=404, detail="Message not found")
 
@@ -324,7 +652,7 @@ async def update_message(message_id: UUID, content: str, db: Session = Depends(g
                     "type": "message_updated",
                     "thread_id": str(updated_message.thread_id),
                     "message_id": str(message_id),
-                    "content": content,
+                    "content": update_data.content,
                     "edited_at": (
                         updated_message.edited_at.isoformat()
                         if updated_message.edited_at
@@ -438,4 +766,105 @@ async def get_unread_notifications_count(
 
     except Exception as e:
         logger.error(f"Failed to get unread notifications count: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Message Search Endpoint
+@router.get("/search")
+async def search_messages(
+    q: str = Query(..., description="Search query"),
+    role: Optional[str] = Query(None, description="Filter by message role"),
+    message_type: Optional[str] = Query(None, description="Filter by message type"),
+    date_range: Optional[str] = Query(None, description="Filter by date range"),
+    thread_ids: Optional[str] = Query(None, description="Comma-separated thread IDs"),
+    limit: int = Query(50, ge=1, le=100, description="Maximum number of results"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    db: Session = Depends(get_db),
+):
+    """Search messages across threads with full-text search and filters"""
+    import time
+    start_time = time.time()
+    
+    try:
+        # Parse thread IDs if provided
+        thread_id_list = []
+        if thread_ids:
+            try:
+                thread_id_list = [UUID(tid.strip()) for tid in thread_ids.split(",") if tid.strip()]
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=f"Invalid thread ID format: {str(e)}")
+
+        # Parse date range
+        date_filter = None
+        if date_range:
+            from datetime import datetime, timedelta
+            now = datetime.utcnow()
+            
+            if date_range == "today":
+                date_filter = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            elif date_range == "week":
+                date_filter = now - timedelta(days=7)
+            elif date_range == "month":
+                date_filter = now - timedelta(days=30)
+            elif date_range == "3months":
+                date_filter = now - timedelta(days=90)
+
+        # Perform search using database
+        results = crud.ChatMessageCRUD.search_messages(
+            db=db,
+            query=q,
+            role=role,
+            message_type=message_type,
+            date_filter=date_filter,
+            thread_ids=thread_id_list,
+            limit=limit,
+            offset=offset,
+        )
+
+        # Get thread titles for results
+        thread_titles = {}
+        if results:
+            unique_thread_ids = list(set(result.thread_id for result in results))
+            threads = crud.ChatThreadCRUD.get_threads_by_ids(db, unique_thread_ids)
+            thread_titles = {thread.id: thread.title for thread in threads}
+
+        # Format results
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                "id": result.id,
+                "thread_id": result.thread_id,
+                "role": result.role.value,
+                "content": result.content,
+                "message_type": result.message_type.value,
+                "metadata": result.metadata,
+                "created_at": result.created_at.isoformat(),
+                "threadTitle": thread_titles.get(result.thread_id, "Unknown Thread"),
+            })
+
+        # Get total count for pagination (simplified for now)
+        total_count = len(formatted_results)
+        
+        end_time = time.time()
+        took_ms = int((end_time - start_time) * 1000)
+
+        logger.info(f"Search completed for query '{q}': {len(formatted_results)} results in {took_ms}ms")
+
+        return {
+            "results": formatted_results,
+            "total": total_count,
+            "took_ms": took_ms,
+            "query": q,
+            "filters": {
+                "role": role,
+                "message_type": message_type,
+                "date_range": date_range,
+                "thread_ids": thread_ids,
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to search messages: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

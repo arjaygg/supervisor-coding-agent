@@ -278,3 +278,67 @@ class TaskCreateFromChat(BaseModel):
     message_id: Optional[UUID] = None
     task_type: Optional[TaskType] = None
     priority: Optional[int] = 5
+
+
+# Prompt Template Schemas
+class TemplateVariable(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: str = Field(..., min_length=1, max_length=500)
+    type: str = Field(..., regex=r"^(text|number|select|multiline)$")
+    required: bool = False
+    default_value: Optional[str] = None
+    options: Optional[List[str]] = None
+    placeholder: Optional[str] = None
+
+
+class PromptTemplateCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str = Field(..., min_length=1, max_length=1000)
+    template: str = Field(..., min_length=1)
+    category: str = Field(..., min_length=1, max_length=100)
+    tags: List[str] = Field(default_factory=list)
+    variables: List[TemplateVariable] = Field(default_factory=list)
+    is_active: bool = True
+
+
+class PromptTemplateUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, min_length=1, max_length=1000)
+    template: Optional[str] = Field(None, min_length=1)
+    category: Optional[str] = Field(None, min_length=1, max_length=100)
+    tags: Optional[List[str]] = None
+    variables: Optional[List[TemplateVariable]] = None
+    is_active: Optional[bool] = None
+
+
+class PromptTemplateResponse(BaseModel):
+    id: UUID
+    name: str
+    description: str
+    template: str
+    category: str
+    tags: List[str]
+    type: str  # system, user, community
+    variables: List[TemplateVariable]
+    usage_count: int
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime]
+    created_by: Optional[str]
+
+    model_config = {"from_attributes": True}
+
+
+class PromptTemplateListResponse(BaseModel):
+    user_templates: List[PromptTemplateResponse]
+    community_templates: List[PromptTemplateResponse]
+
+
+class PromptTemplateUsageCreate(BaseModel):
+    template_id: UUID
+    variables: Dict[str, Any] = Field(default_factory=dict)
+    rendered_prompt: str
+
+
+class ChatMessageUpdate(BaseModel):
+    content: str = Field(..., min_length=1)

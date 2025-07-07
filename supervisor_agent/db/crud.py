@@ -536,6 +536,15 @@ class ChatThreadCRUD:
 
         return threads
 
+    @staticmethod
+    def get_threads_by_ids(db: Session, thread_ids: List[UUID]) -> List[models.ChatThread]:
+        """Get threads by a list of IDs"""
+        return (
+            db.query(models.ChatThread)
+            .filter(models.ChatThread.id.in_(thread_ids))
+            .all()
+        )
+
 
 class ChatMessageCRUD:
     @staticmethod
@@ -639,6 +648,61 @@ class ChatMessageCRUD:
             .filter(models.ChatMessage.thread_id == thread_id)
             .count()
         )
+
+    @staticmethod
+    def search_messages(
+        db: Session,
+        query: str,
+        role: Optional[str] = None,
+        message_type: Optional[str] = None,
+        date_filter: Optional[datetime] = None,
+        thread_ids: Optional[List[UUID]] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[models.ChatMessage]:
+        """
+        Search messages with full-text search and filters
+        """
+        db_query = db.query(models.ChatMessage)
+
+        # Full-text search on content
+        if query.strip():
+            # Use ILIKE for case-insensitive search (PostgreSQL) or LIKE for SQLite
+            search_terms = query.lower().split()
+            for term in search_terms:
+                db_query = db_query.filter(
+                    func.lower(models.ChatMessage.content).contains(term)
+                )
+
+        # Role filter
+        if role and role != "all":
+            try:
+                role_enum = MessageRole(role)
+                db_query = db_query.filter(models.ChatMessage.role == role_enum)
+            except ValueError:
+                pass  # Invalid role, ignore filter
+
+        # Message type filter
+        if message_type and message_type != "all":
+            try:
+                type_enum = MessageType(message_type)
+                db_query = db_query.filter(models.ChatMessage.message_type == type_enum)
+            except ValueError:
+                pass  # Invalid message type, ignore filter
+
+        # Date filter
+        if date_filter:
+            db_query = db_query.filter(models.ChatMessage.created_at >= date_filter)
+
+        # Thread IDs filter
+        if thread_ids:
+            db_query = db_query.filter(models.ChatMessage.thread_id.in_(thread_ids))
+
+        # Order by relevance (newer messages first for now, could be enhanced with proper scoring)
+        db_query = db_query.order_by(desc(models.ChatMessage.created_at))
+
+        # Apply pagination
+        return db_query.offset(offset).limit(limit).all()
 
 
 class ChatNotificationCRUD:

@@ -11,11 +11,19 @@
   import ChatSidebar from "./ChatSidebar.svelte";
   import ChatArea from "./ChatArea.svelte";
   import NewChatModal from "./NewChatModal.svelte";
+  import MessageSearch from "./MessageSearch.svelte";
+  import { messageSearchService } from "$lib/services/messageSearchService";
+  import type { SearchResult } from "$lib/services/messageSearchService";
 
   // Component state
   let showNewChatModal = false;
   let sidebarCollapsed = false;
   let isMobile = false;
+
+  // Search state
+  let showSearchModal = false;
+  let searchLoading = false;
+  let searchComponent: MessageSearch;
 
   // Check screen size
   function checkScreenSize() {
@@ -59,9 +67,33 @@
   onDestroy(() => {
     if (typeof window !== "undefined") {
       window.removeEventListener("resize", checkScreenSize);
+      window.removeEventListener("keydown", handleGlobalKeydown);
     }
     websocket.disconnect();
   });
+
+  // Global keyboard shortcuts
+  function handleGlobalKeydown(event: KeyboardEvent) {
+    // Ctrl+K or Cmd+K to open search
+    if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+      event.preventDefault();
+      showSearchModal = true;
+    }
+    
+    // Escape to close modals
+    if (event.key === "Escape") {
+      if (showSearchModal) {
+        showSearchModal = false;
+      } else if (showNewChatModal) {
+        showNewChatModal = false;
+      }
+    }
+  }
+
+  // Initialize global keyboard shortcuts
+  if (typeof window !== "undefined") {
+    window.addEventListener("keydown", handleGlobalKeydown);
+  }
 
   // Handle new thread creation
   async function handleCreateThread(event: CustomEvent) {
@@ -100,6 +132,73 @@
   // Toggle sidebar
   function toggleSidebar() {
     sidebarCollapsed = !sidebarCollapsed;
+  }
+
+  // Search functionality
+  async function handleSearch(event: CustomEvent) {
+    const { query, filters } = event.detail;
+    searchLoading = true;
+
+    try {
+      const results = await messageSearchService.searchMessages(
+        query,
+        filters,
+        $activeThreads,
+        $chat.messages
+      );
+
+      searchComponent?.setSearchResults(results);
+    } catch (error) {
+      console.error("Search failed:", error);
+    } finally {
+      searchLoading = false;
+    }
+  }
+
+  function handleSearchSelectMessage(event: CustomEvent) {
+    const { message, threadId } = event.detail;
+    
+    // Switch to the thread containing the message
+    chat.selectThread(threadId);
+    
+    // Close search modal
+    showSearchModal = false;
+
+    // Scroll to message (implementation would depend on ChatArea component)
+    // This could be enhanced to highlight the specific message
+  }
+
+  function handleSearchExport(event: CustomEvent) {
+    const { format, results, query } = event.detail;
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    if (format === "json") {
+      const content = messageSearchService.exportToJSON(query, {
+        threads: [],
+        dateRange: "",
+        messageType: "all",
+        role: "all",
+      }, results);
+      
+      messageSearchService.downloadExport(
+        content,
+        `message-search-${timestamp}.json`,
+        "application/json"
+      );
+    } else if (format === "markdown") {
+      const content = messageSearchService.exportToMarkdown(query, {
+        threads: [],
+        dateRange: "",
+        messageType: "all",
+        role: "all",
+      }, results);
+      
+      messageSearchService.downloadExport(
+        content,
+        `message-search-${timestamp}.md`,
+        "text/markdown"
+      );
+    }
   }
 </script>
 
@@ -200,6 +299,27 @@
 
       <!-- Action buttons -->
       <div class="flex items-center space-x-2">
+        <!-- Search button -->
+        <button
+          class="p-2 rounded-lg hover:bg-gray-700 transition-colors text-gray-400 hover:text-white"
+          title="Search messages (Ctrl+K)"
+          on:click={() => (showSearchModal = true)}
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </button>
+
         {#if $currentThread}
           <button
             class="p-2 rounded-lg hover:bg-gray-700 transition-colors text-gray-400 hover:text-white"
@@ -326,6 +446,18 @@
     on:close={() => (showNewChatModal = false)}
   />
 {/if}
+
+<!-- Message search modal -->
+<MessageSearch
+  bind:this={searchComponent}
+  bind:isOpen={showSearchModal}
+  bind:loading={searchLoading}
+  threads={$activeThreads}
+  on:search={handleSearch}
+  on:selectMessage={handleSearchSelectMessage}
+  on:export={handleSearchExport}
+  on:close={() => (showSearchModal = false)}
+/>
 
 <style>
   /* Custom scrollbar for webkit browsers */
