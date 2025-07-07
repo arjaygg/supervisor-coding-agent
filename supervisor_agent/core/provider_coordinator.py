@@ -364,7 +364,7 @@ class ProviderCoordinator:
                 continue
 
             capabilities = provider.get_capabilities()
-            if str(task.type) in capabilities.supported_task_types:
+            if capabilities.supports_task(task.type.value if hasattr(task.type, 'value') else str(task.type)):
                 capable_providers.append(provider_id)
 
         return capable_providers

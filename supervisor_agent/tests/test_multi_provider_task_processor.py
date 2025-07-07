@@ -70,13 +70,11 @@ def mock_provider():
         return_value=ProviderResponse(
             success=True,
             result="Task completed successfully",
-            cost_estimate=CostEstimate(
-                base_cost_usd="0.05",
-                token_cost_usd="0.02",
-                total_cost_usd="0.07",
-                estimated_tokens=1000,
-            ),
+            provider_id="provider-1",
+            execution_time_ms=1500,
             tokens_used=950,
+            cost_usd=0.02,
+            model_used="claude-3-sonnet",
             metadata={"provider_id": "provider-1"},
         )
     )
@@ -233,8 +231,11 @@ class TestMultiProviderTaskProcessor:
                 ProviderResponse(
                     success=True,
                     result="Retry succeeded",
-                    cost_estimate=CostEstimate("0.05", "0.02", "0.07", 1000),
+                    provider_id="retry-provider",
+                    execution_time_ms=2000,
                     tokens_used=950,
+                    cost_usd=0.02,
+                    model_used="claude-3-sonnet",
                 ),
             ]
         )

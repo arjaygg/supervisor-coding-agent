@@ -25,6 +25,8 @@ from supervisor_agent.providers.base_provider import (
     ProviderError,
     ProviderHealth,
     ProviderResponse,
+    ProviderStatus,
+    TaskCapability,
 )
 from supervisor_agent.providers.provider_registry import (
     LoadBalancingStrategy,
@@ -38,29 +40,25 @@ def mock_provider():
     provider = Mock(spec=AIProvider)
     provider.name = "test-provider"
     provider.get_capabilities.return_value = ProviderCapabilities(
-        supported_task_types=["PR_REVIEW", "CODE_ANALYSIS", "BUG_FIX"],
-        max_concurrent_tasks=10,
-        supports_batch_processing=True,
+        supported_tasks=[TaskCapability.CODE_REVIEW, TaskCapability.CODE_ANALYSIS, TaskCapability.BUG_FIX, TaskCapability.GENERAL_CODING],
+        max_concurrent_requests=10,
+        supports_batching=True,
     )
     provider.get_health_status = AsyncMock(
         return_value=ProviderHealth(
-            status="healthy",
-            score=0.95,
-            last_check=datetime.now(timezone.utc),
-            metrics={
-                "current_tasks": 2,
-                "success_rate": 0.98,
-                "average_response_time": 5.2,
-            },
+            status=ProviderStatus.ACTIVE,
+            response_time_ms=5200.0,
+            success_rate=0.98,
+            error_count=2,
+            last_check_time=datetime.now(timezone.utc),
         )
     )
     provider.estimate_cost = Mock(
         return_value=CostEstimate(
-            base_cost_usd="0.05",
-            token_cost_usd="0.02",
-            total_cost_usd="0.07",
             estimated_tokens=1000,
-            estimated_duration_seconds=8.5,
+            cost_per_token=0.00002,
+            estimated_cost_usd=0.02,
+            model_used="test-model",
         )
     )
     return provider
