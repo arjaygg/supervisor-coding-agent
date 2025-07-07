@@ -94,23 +94,29 @@ class IntelligentTaskSplitter:
 
         return list(set(dependencies))  # Remove duplicates
 
-    def _determine_complexity_level(self, score: float) -> TaskComplexity:
-        """Determine complexity level from score."""
+    def _determine_complexity_level(self, score: float, steps: int = 0) -> TaskComplexity:
+        """Determine complexity level from score and steps."""
         if score <= 0.5:
             return TaskComplexity.SIMPLE
         elif score <= 1.0:
             return TaskComplexity.MODERATE
         elif score <= 2.0:
             return TaskComplexity.COMPLEX
-        else:
+        elif score <= 2.5 and steps <= 20:
             return TaskComplexity.VERY_COMPLEX
+        else:
+            return TaskComplexity.HIGHLY_COMPLEX
 
     def _recommend_splitting_strategy(
-        self, complexity: TaskComplexity, steps: int
+        self, complexity: TaskComplexity, content: str, dependencies: list
     ) -> SplittingStrategy:
-        """Recommend a splitting strategy based on complexity and steps."""
-        if complexity == TaskComplexity.SIMPLE or steps <= 2:
-            return SplittingStrategy.DEFAULT
+        """Recommend a splitting strategy based on complexity, content, and dependencies."""
+        if complexity == TaskComplexity.SIMPLE:
+            return SplittingStrategy.NO_SPLIT
+        elif complexity == TaskComplexity.COMPLEX and len(dependencies) >= 3:
+            return SplittingStrategy.HIERARCHICAL_SPLIT
+        elif complexity == TaskComplexity.HIGHLY_COMPLEX:
+            return SplittingStrategy.HIERARCHICAL_SPLIT
         else:
             return SplittingStrategy.DEFAULT  # For now, only DEFAULT is implemented
 
