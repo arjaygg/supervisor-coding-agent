@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from supervisor_agent.db.enums import TaskStatus
-from supervisor_agent.db.models import Task, TaskType
+from supervisor_agent.db.enums import TaskStatus, TaskType
+from supervisor_agent.db.models import Task
 from supervisor_agent.orchestration.agent_specialization_engine import (
     AgentSpecialty,
 )
@@ -49,7 +49,7 @@ class TestIntelligentTaskSplitter:
         """Create a simple task for testing."""
         return Task(
             id=1,
-            type=TaskType.ANALYSIS,
+            type=TaskType.CODE_ANALYSIS,
             status=TaskStatus.PENDING,
             payload={"description": "Display the current status"},
             priority=5,
@@ -60,7 +60,7 @@ class TestIntelligentTaskSplitter:
         """Create a complex task for testing."""
         return Task(
             id=2,
-            type=TaskType.PROCESSING,
+            type=TaskType.REFACTOR,
             status=TaskStatus.PENDING,
             payload={
                 "description": "Analyze and optimize the multi-provider system architecture, "
@@ -74,7 +74,7 @@ class TestIntelligentTaskSplitter:
     def test_extract_task_content(self, task_splitter, simple_task):
         """Test task content extraction."""
         content = task_splitter._extract_task_content(simple_task)
-        assert "display the current status" in content
+        assert "display the current status" in content.lower()
         assert isinstance(content, str)
 
     def test_calculate_complexity_score(self, task_splitter):

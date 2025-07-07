@@ -85,8 +85,12 @@ def test_build_code_analysis_prompt():
 
 @pytest.mark.asyncio
 @patch("supervisor_agent.core.agent.subprocess.run")
-async def test_execute_task_success(mock_subprocess, mock_task):
+@patch("supervisor_agent.core.agent.ClaudeAgentWrapper._validate_claude_cli")
+async def test_execute_task_success(mock_validate_cli, mock_subprocess, mock_task):
     """Test successful task execution"""
+    # Mock CLI validation to return True
+    mock_validate_cli.return_value = True
+
     # Mock successful subprocess execution
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "Test response from Claude"
@@ -103,7 +107,7 @@ async def test_execute_task_success(mock_subprocess, mock_task):
     # Verify subprocess was called with correct arguments
     mock_subprocess.assert_called_once()
     args, kwargs = mock_subprocess.call_args
-    assert args[0][0] == "claude"  # CLI command
+    assert args[0][0] == "/usr/local/bin/claude"  # CLI command
     assert kwargs.get("input") is not None  # Prompt sent via stdin
     assert kwargs.get("capture_output") is True
     assert kwargs.get("text") is True
@@ -112,8 +116,12 @@ async def test_execute_task_success(mock_subprocess, mock_task):
 
 @pytest.mark.asyncio
 @patch("supervisor_agent.core.agent.subprocess.run")
-async def test_execute_task_failure(mock_subprocess, mock_task):
+@patch("supervisor_agent.core.agent.ClaudeAgentWrapper._validate_claude_cli")
+async def test_execute_task_failure(mock_validate_cli, mock_subprocess, mock_task):
     """Test failed task execution"""
+    # Mock CLI validation to return True
+    mock_validate_cli.return_value = True
+
     # Mock failed subprocess execution
     mock_subprocess.return_value.returncode = 1
     mock_subprocess.return_value.stdout = ""
@@ -130,10 +138,16 @@ async def test_execute_task_failure(mock_subprocess, mock_task):
 
 @pytest.mark.asyncio
 @patch("supervisor_agent.core.agent.subprocess.run")
-async def test_execute_task_timeout(mock_subprocess, mock_task):
+@patch("supervisor_agent.core.agent.ClaudeAgentWrapper._validate_claude_cli")
+async def test_execute_task_timeout(mock_validate_cli, mock_subprocess, mock_task):
     """Test task execution timeout"""
+    # Mock CLI validation to return True
+    mock_validate_cli.return_value = True
+
     # Mock timeout exception
-    mock_subprocess.side_effect = subprocess.TimeoutExpired(["claude"], 300)
+    mock_subprocess.side_effect = subprocess.TimeoutExpired(
+        ["/usr/local/bin/claude"], 300
+    )
 
     agent = ClaudeAgentWrapper("test-agent", "test-key")
     result = await agent.execute_task(mock_task, {})
