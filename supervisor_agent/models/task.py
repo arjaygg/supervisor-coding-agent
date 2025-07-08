@@ -111,3 +111,4 @@ class DistributionResult:
     success: bool = True
     original_task_id: Optional[str] = None
     processing_time: float = 0.0
+    error_message: Optional[str] = None

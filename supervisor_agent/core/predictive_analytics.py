@@ -208,7 +208,14 @@ class PredictiveAnalyticsEngine:
 
         # Workflow complexity features
         features["task_count"] = workflow_data.get("task_count", 0.0)
-        features["dependency_count"] = workflow_data.get("dependency_count", 0.0)
+        
+        # Handle dependency count - can be provided directly or as a list
+        dependencies = workflow_data.get("dependencies", [])
+        if isinstance(dependencies, list):
+            features["dependency_count"] = float(len(dependencies))
+        else:
+            features["dependency_count"] = workflow_data.get("dependency_count", 0.0)
+            
         features["parallel_stages"] = workflow_data.get("parallel_stages", 0.0)
         features["execution_time"] = workflow_data.get("execution_time", 0.0)
 
@@ -269,9 +276,19 @@ class PredictiveAnalyticsEngine:
                 ]
             )
 
+        # Calculate probability with higher sensitivity for extreme values
+        base_probability = risk_score / 100
+        # Apply exponential scaling for high risk scores to reach higher probabilities
+        if risk_score >= 80:
+            probability = min(base_probability * 1.2, 0.98)
+        elif risk_score >= 60:
+            probability = min(base_probability * 1.1, 0.95)
+        else:
+            probability = min(base_probability, 0.95)
+            
         return RiskAssessment(
             risk_level=risk_level,
-            probability=min(risk_score / 100, 0.95),
+            probability=probability,
             risk_factors=risk_factors,
             mitigation_strategies=mitigation_strategies,
             confidence=0.8,
@@ -342,9 +359,18 @@ class PredictiveAnalyticsEngine:
                 ]
             )
 
+        # Calculate probability with higher sensitivity for extreme values
+        base_probability = risk_score / 100
+        if risk_score >= 75:
+            probability = min(base_probability * 1.2, 0.98)
+        elif risk_score >= 50:
+            probability = min(base_probability * 1.1, 0.9)
+        else:
+            probability = min(base_probability, 0.9)
+            
         return RiskAssessment(
             risk_level=risk_level,
-            probability=min(risk_score / 100, 0.9),
+            probability=probability,
             risk_factors=risk_factors,
             mitigation_strategies=mitigation_strategies,
             confidence=0.75,
@@ -407,9 +433,18 @@ class PredictiveAnalyticsEngine:
                 ]
             )
 
+        # Calculate probability with higher sensitivity for extreme values
+        base_probability = risk_score / 80  # Different scale for dependency risk
+        if risk_score >= 60:
+            probability = min(base_probability * 1.3, 0.95)
+        elif risk_score >= 40:
+            probability = min(base_probability * 1.15, 0.8)
+        else:
+            probability = min(base_probability, 0.8)
+            
         return RiskAssessment(
             risk_level=risk_level,
-            probability=min(risk_score / 80, 0.8),
+            probability=probability,
             risk_factors=risk_factors,
             mitigation_strategies=mitigation_strategies,
             confidence=0.7,
@@ -478,9 +513,18 @@ class PredictiveAnalyticsEngine:
                 ]
             )
 
+        # Calculate probability with higher sensitivity for extreme values
+        base_probability = risk_score / 100
+        if risk_score >= 70:
+            probability = min(base_probability * 1.25, 0.95)
+        elif risk_score >= 50:
+            probability = min(base_probability * 1.15, 0.85)
+        else:
+            probability = min(base_probability, 0.85)
+            
         return RiskAssessment(
             risk_level=risk_level,
-            probability=min(risk_score / 100, 0.85),
+            probability=probability,
             risk_factors=risk_factors,
             mitigation_strategies=mitigation_strategies,
             confidence=0.65,
@@ -539,13 +583,13 @@ class PredictiveAnalyticsEngine:
                 max_impact_severity = "medium"
 
         # Determine overall risk level
-        if weighted_probability >= 0.8:
+        if weighted_probability >= 0.7:
             overall_risk_level = RiskLevel.CRITICAL
-        elif weighted_probability >= 0.6:
+        elif weighted_probability >= 0.5:
             overall_risk_level = RiskLevel.HIGH
-        elif weighted_probability >= 0.4:
+        elif weighted_probability >= 0.3:
             overall_risk_level = RiskLevel.MEDIUM
-        elif weighted_probability >= 0.2:
+        elif weighted_probability >= 0.15:
             overall_risk_level = RiskLevel.LOW
         else:
             overall_risk_level = RiskLevel.VERY_LOW

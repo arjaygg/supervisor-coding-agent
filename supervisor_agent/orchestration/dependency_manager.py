@@ -99,12 +99,23 @@ class DependencyManager:
         """
         Builds a dependency graph for a list of tasks.
         """
-        nodes = [task.id for task in tasks]
+        # Handle both Task objects (with id) and TaskSplit objects (with task_id)
+        nodes = []
+        for task in tasks:
+            if hasattr(task, 'id'):
+                nodes.append(task.id)
+            elif hasattr(task, 'task_id'):
+                nodes.append(task.task_id)
+            else:
+                nodes.append(str(task))
+        
         edges = []
 
         # Simple dependency logic: sequential execution by default
         if len(tasks) > 1:
-            edges.append((tasks[0].id, tasks[1].id))
+            first_id = tasks[0].id if hasattr(tasks[0], 'id') else tasks[0].task_id
+            second_id = tasks[1].id if hasattr(tasks[1], 'id') else tasks[1].task_id
+            edges.append((first_id, second_id))
 
         # Calculate critical path (simplified)
         critical_path = nodes if nodes else []
