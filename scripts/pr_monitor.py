@@ -22,16 +22,12 @@ from typing import Dict, List, Optional, Any
 import aiohttp
 import requests
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('pr_monitor.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
+# Add parent directory to Python path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from supervisor_agent.utils.log_config import setup_script_logging
+
+# Configure logging with centralized configuration
+logger = setup_script_logging('pr_monitor', 'pr_monitor.log')
 
 class GitHubPRMonitor:
     """Automated GitHub PR monitoring and workflow execution."""
