@@ -65,41 +65,74 @@ class TaskDistributionEngine:
             )
 
     async def distribute_task(
-        self, task: Task, strategy: DistributionStrategy
+        self, task: Task, strategy: DistributionStrategy = DistributionStrategy.PARALLEL
     ) -> DistributionResult:
         """
         Distributes a task by splitting it and analyzing dependencies.
         """
-        # 1. Split the task if necessary
-        complexity_analysis = self.task_splitter.analyze_task_complexity(task)
-        if complexity_analysis.requires_splitting:
-            subtask_graph = self.task_splitter.generate_subtask_graph(task)
-            task_splits = subtask_graph.subtasks
-        else:
-            # If not splitting, treat the original task as a single split
-            task_splits = [
-                TaskSplit(task_id=str(task.id), parent_task_id=str(task.id), config=task.payload or {})
-            ]
+        try:
+            # Handle both Task objects and string IDs
+            if isinstance(task, str):
+                # Create a minimal Task object for string IDs
+                task_obj = Task(id=task, config={"description": f"Task {task}"})
+                task_id = task
+            else:
+                task_obj = task
+                task_id = str(task.id) if task.id is not None else "unknown"
+                
+                # Validate task object
+                if task.id is None:
+                    raise ValueError("Task ID cannot be None")
+        
+            # 1. Split the task if necessary
+            complexity_analysis = self.task_splitter.analyze_task_complexity(task_obj)
+            if complexity_analysis.requires_splitting:
+                subtask_graph = self.task_splitter.generate_subtask_graph(task_obj)
+                task_splits = subtask_graph.subtasks
+            else:
+                # If not splitting, treat the original task as a single split
+                if hasattr(task_obj, 'payload') and task_obj.payload:
+                    config = task_obj.payload
+                elif hasattr(task_obj, 'config') and task_obj.config:
+                    config = task_obj.config
+                else:
+                    config = {"description": f"Task {task_id}"}
+                
+                task_splits = [
+                    TaskSplit(task_id=task_id, parent_task_id=task_id, config=config)
+                ]
 
-        # 2. Analyze dependencies
-        dependency_graph = self.dependency_manager.build_dependency_graph(
-            [task_split_to_task(ts) for ts in task_splits]
-        )
+            # 2. Analyze dependencies
+            dependency_graph = self.dependency_manager.build_dependency_graph(
+                [task_split_to_task(ts) for ts in task_splits]
+            )
 
-        # 3. Optimize distribution strategy (placeholder)
-        optimized_strategy = await self.optimize_distribution_strategy(task, [])
+            # 3. Optimize distribution strategy (placeholder)
+            optimized_strategy = await self.optimize_distribution_strategy(task, [])
 
-        # 4. Coordinate parallel execution (placeholder)
-        execution_plan = await self.coordinate_parallel_execution(task_splits)
+            # 4. Coordinate parallel execution (placeholder)
+            execution_plan = await self.coordinate_parallel_execution(task_splits)
 
-        return DistributionResult(
-            task_splits=task_splits,
-            dependencies=dependency_graph,
-            execution_plan=execution_plan,
-            success=True,
-            original_task_id=str(task.id),
-            processing_time=0.01,  # Placeholder processing time
-        )
+            return DistributionResult(
+                task_splits=task_splits,
+                dependencies=dependency_graph,
+                execution_plan=execution_plan,
+                success=True,
+                original_task_id=task_id,
+                processing_time=0.01,  # Placeholder processing time
+            )
+        except Exception as e:
+            # Handle errors gracefully
+            error_message = f"Task distribution failed: {str(e)}"
+            return DistributionResult(
+                task_splits=[],
+                dependencies=DependencyGraph(nodes=[], edges=[], critical_path=[], parallelization_potential=0.0, execution_levels=[], total_estimated_time=0.0),
+                execution_plan=ExecutionPlan(steps=[], estimated_time=0.0),
+                success=False,
+                original_task_id=task_id if 'task_id' in locals() else "unknown",
+                processing_time=0.01,
+                error_message=error_message
+            )
 
     async def split_complex_task(self, task: Task) -> List[TaskSplit]:
         """

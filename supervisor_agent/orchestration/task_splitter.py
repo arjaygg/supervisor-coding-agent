@@ -16,7 +16,10 @@ from supervisor_agent.models.task import (
 class IntelligentTaskSplitter:
     def _extract_task_content(self, task) -> str:
         """Extract task content from either Task or DbTask object."""
-        if hasattr(task, "payload") and isinstance(task.payload, dict):
+        if hasattr(task, "payload") and task.payload is None:
+            # Handle invalid tasks - return special marker for error cases
+            return "INVALID_TASK"
+        elif hasattr(task, "payload") and isinstance(task.payload, dict):
             return task.payload.get("description", "")
         elif hasattr(task, "config") and isinstance(task.config, dict):
             return task.config.get("description", "")
@@ -26,6 +29,10 @@ class IntelligentTaskSplitter:
         """Calculate complexity score based on task content."""
         if not content:
             return 0.0
+        
+        # Handle invalid tasks with moderate complexity (defensive programming)
+        if content == "INVALID_TASK":
+            return 0.8  # This will map to MODERATE complexity level
 
         # Factors that increase complexity
         word_count = len(content.split())
@@ -151,10 +158,16 @@ class IntelligentTaskSplitter:
         }
         
         # Calculate confidence score
-        confidence_score = min(0.9, 0.5 + (0.1 * estimated_steps))
+        if content == "INVALID_TASK":
+            confidence_score = 0.3  # Low confidence for invalid tasks
+        else:
+            confidence_score = min(0.9, 0.5 + (0.1 * estimated_steps))
         
         # Generate reasoning
-        reasoning = f"Task complexity score: {complexity_score:.2f}, estimated steps: {estimated_steps}, dependencies: {len(identified_dependencies)}"
+        if content == "INVALID_TASK":
+            reasoning = "Error handling: Invalid task detected, using default moderate complexity analysis"
+        else:
+            reasoning = f"Task complexity score: {complexity_score:.2f}, estimated steps: {estimated_steps}, dependencies: {len(identified_dependencies)}"
 
         return ComplexityAnalysis(
             complexity_level=complexity_level,
