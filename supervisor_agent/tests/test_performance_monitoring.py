@@ -108,7 +108,7 @@ class TestRealTimeMonitor:
             (b for b in bottlenecks if b["type"] == "cpu_bottleneck"), None
         )
         assert cpu_bottleneck is not None
-        assert cpu_bottleneck["severity"] in ["high", "critical"]
+        assert cpu_bottleneck["severity"] in ["warning", "critical"]
 
     @pytest.mark.asyncio
     async def test_generate_performance_alerts(self, monitor):
@@ -116,7 +116,7 @@ class TestRealTimeMonitor:
         # Create a test alert
         alert = PerformanceAlert(
             alert_id="test_alert_001",
-            severity=AlertSeverity.HIGH,
+            severity=AlertSeverity.CRITICAL,
             metric_type=MetricType.RESPONSE_TIME,
             message="High response time detected",
             threshold_value=3000.0,
@@ -129,7 +129,7 @@ class TestRealTimeMonitor:
         assert len(alerts) == 1
         generated_alert = alerts[0]
         assert generated_alert["alert_id"] == "test_alert_001"
-        assert generated_alert["severity"] == "high"
+        assert generated_alert["severity"] == "critical"
         assert generated_alert["metric"] == "response_time"
 
     @pytest.mark.asyncio
@@ -186,7 +186,7 @@ class TestRealTimeMonitor:
         """Test alert acknowledgment functionality."""
         alert = PerformanceAlert(
             alert_id="ack_test_001",
-            severity=AlertSeverity.MEDIUM,
+            severity=AlertSeverity.WARNING,
             metric_type=MetricType.CPU_USAGE,
             message="Test alert",
             threshold_value=80.0,
@@ -400,7 +400,7 @@ class TestBottleneckDetector:
             {
                 "type": "cpu_bottleneck",
                 "component": "api_gateway",
-                "severity": "high",
+                "severity": "warning",
                 "description": "High CPU usage detected",
             },
             {
@@ -412,7 +412,7 @@ class TestBottleneckDetector:
             {
                 "type": "queue_bottleneck",
                 "component": "worker_queue",
-                "severity": "medium",
+                "severity": "warning",
                 "description": "Queue depth increasing",
             },
         ]
@@ -563,7 +563,7 @@ class TestPerformanceOptimizer:
             None,
         )
         assert cpu_bottleneck is not None
-        assert cpu_bottleneck["severity"] == "high"
+        assert cpu_bottleneck["severity"] == "warning"
 
         response_bottleneck = next(
             (b for b in bottlenecks if b["type"] == "high_response_time"), None
