@@ -2,6 +2,7 @@ import { writable, derived, get } from "svelte/store";
 import { api, ApiError } from "../utils/api";
 import { chatWebSocketHandler, type ChatUpdateHandlers } from "../services/chatWebSocketHandler";
 import { notificationService } from "../services/notificationService";
+import type { ContextOptimization } from "../services/contextService";
 import type { UUID } from "crypto";
 
 // Types
@@ -55,6 +56,7 @@ interface ChatState {
   loading: boolean;
   error: string | null;
   connected: boolean;
+  contextOptimization: Record<string, ContextOptimization>; // threadId -> optimization data
 }
 
 
@@ -68,6 +70,7 @@ function createChatStore() {
     loading: false,
     error: null,
     connected: false,
+    contextOptimization: {},
   });
 
   return {
@@ -292,6 +295,28 @@ function createChatStore() {
           [threadId]: [...(state.messages[threadId] || []), message],
         },
       }));
+      
+      // Check for context optimization metadata
+      if (message.metadata && message.metadata.context_optimization) {
+        this.updateContextOptimization(threadId, message.metadata.context_optimization);
+      }
+    },
+
+    // Update context optimization data
+    updateContextOptimization(threadId: string, optimization: ContextOptimization): void {
+      update((state) => ({
+        ...state,
+        contextOptimization: {
+          ...state.contextOptimization,
+          [threadId]: optimization,
+        },
+      }));
+    },
+
+    // Get context optimization for a thread
+    getContextOptimization(threadId: string): ContextOptimization | null {
+      const state = get({ subscribe });
+      return state.contextOptimization[threadId] || null;
     },
 
     // Utility methods
@@ -373,6 +398,10 @@ export const currentThread = derived(
 
 export const currentMessages = derived(chat, ($chat) =>
   $chat.currentThreadId ? $chat.messages[$chat.currentThreadId] || [] : []
+);
+
+export const currentContextOptimization = derived(chat, ($chat) =>
+  $chat.currentThreadId ? $chat.contextOptimization[$chat.currentThreadId] || null : null
 );
 
 export const activeThreads = derived(chat, ($chat) =>

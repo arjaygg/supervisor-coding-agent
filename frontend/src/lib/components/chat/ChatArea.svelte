@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { onMount, afterUpdate, tick } from "svelte";
-  import { chat } from "$lib/stores/chat";
+  import { onMount, afterUpdate, tick, createEventDispatcher } from "svelte";
+  import { chat, currentContextOptimization } from "$lib/stores/chat";
   import type { ChatThread, ChatMessage } from "$lib/stores/chat";
   import MessageBubble from "./MessageBubble.svelte";
   import MessageInput from "./MessageInput.svelte";
+  import ContextIndicator from "./ContextIndicator.svelte";
   import { streamingService } from "$lib/services/streamingService";
   import type { StreamingChunk } from "$lib/services/streamingService";
 
@@ -11,6 +12,8 @@
   export let messages: ChatMessage[] = [];
   export let loading: boolean = false;
   export let error: string | null = null;
+
+  const dispatch = createEventDispatcher();
 
   let messagesContainer: HTMLDivElement;
   let autoScroll = true;
@@ -141,6 +144,11 @@
     isStreaming = false;
     streamingMessageId = null;
     streamingContent = "";
+  }
+
+  function handleNewConversation() {
+    // Dispatch event to parent to create new conversation
+    dispatch('new-conversation', { currentThreadId: thread.id });
   }
 
   function formatMessageTime(timestamp: string): string {
@@ -369,6 +377,17 @@
             Cancel
           </button>
         </div>
+      </div>
+    {/if}
+
+    <!-- Context Optimization Indicator -->
+    {#if $currentContextOptimization}
+      <div class="px-4 py-2 border-b border-gray-700">
+        <ContextIndicator
+          optimization={$currentContextOptimization}
+          compact={true}
+          on:new-conversation={handleNewConversation}
+        />
       </div>
     {/if}
 

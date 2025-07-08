@@ -134,6 +134,27 @@
     sidebarCollapsed = !sidebarCollapsed;
   }
 
+  // Handle creating new conversation from context optimization
+  async function handleCreateNewConversation(event: CustomEvent) {
+    const { currentThreadId } = event.detail;
+    
+    try {
+      // Create a new thread with a title indicating it's a continuation
+      const currentThread = $activeThreads.find(t => t.id === currentThreadId);
+      const newTitle = currentThread ? `${currentThread.title} (continued)` : "New Conversation";
+      
+      await chat.createThread(newTitle);
+      
+      // The new thread will be automatically selected
+      // On mobile, collapse sidebar when new thread is created
+      if (isMobile) {
+        sidebarCollapsed = true;
+      }
+    } catch (error) {
+      console.error("Failed to create new conversation:", error);
+    }
+  }
+
   // Search functionality
   async function handleSearch(event: CustomEvent) {
     const { query, filters } = event.detail;
@@ -358,6 +379,7 @@
           messages={$currentMessages}
           loading={$chat.loading}
           error={$chat.error}
+          on:new-conversation={handleCreateNewConversation}
         />
       {:else}
         <!-- Welcome screen -->
