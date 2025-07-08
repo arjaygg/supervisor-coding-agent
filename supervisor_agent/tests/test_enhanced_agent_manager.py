@@ -163,7 +163,9 @@ class TestTaskExecution:
                 }
             )
 
-            result = await enhanced_manager_with_providers.execute_task(sample_task, prefer_provider=False)
+            result = await enhanced_manager_with_providers.execute_task(
+                sample_task, prefer_provider=False
+            )
 
             assert result["success"] is True
             mock_service.get_provider_status.assert_called_once()

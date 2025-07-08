@@ -302,7 +302,9 @@ class ProviderCoordinator:
                     "estimated_cost_usd": cost_estimate.estimated_cost_usd,
                     "estimated_duration_seconds": 60.0,  # Default estimate
                     "performance_score": performance_score,
-                    "capabilities": [cap.value for cap in provider.get_capabilities().supported_tasks],
+                    "capabilities": [
+                        cap.value for cap in provider.get_capabilities().supported_tasks
+                    ],
                     "current_load": 0,  # Default load
                     "recommendation_score": self._calculate_recommendation_score(
                         health.success_rate,
@@ -364,7 +366,9 @@ class ProviderCoordinator:
                 continue
 
             capabilities = provider.get_capabilities()
-            if capabilities.supports_task(task.type.value if hasattr(task.type, 'value') else str(task.type)):
+            if capabilities.supports_task(
+                task.type.value if hasattr(task.type, "value") else str(task.type)
+            ):
                 capable_providers.append(provider_id)
 
         return capable_providers
@@ -454,7 +458,9 @@ class ProviderCoordinator:
                 continue
 
             health = await provider.get_health_status()
-            current_load = 0  # Default to 0 since ProviderHealth doesn't have metrics yet
+            current_load = (
+                0  # Default to 0 since ProviderHealth doesn't have metrics yet
+            )
 
             if current_load < min_load:
                 min_load = current_load

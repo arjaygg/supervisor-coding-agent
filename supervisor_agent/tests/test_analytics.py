@@ -333,9 +333,13 @@ class TestAnalyticsIntegration:
         # Mock database operations and caching
         with patch.object(collector, "session_factory") as mock_collector_session:
             with patch.object(engine, "session_factory") as mock_engine_session:
-                with patch.object(engine, "_get_cached_result", new_callable=AsyncMock) as mock_cache:
+                with patch.object(
+                    engine, "_get_cached_result", new_callable=AsyncMock
+                ) as mock_cache:
                     mock_db = Mock()
-                    mock_collector_session.return_value.__aenter__.return_value = mock_db
+                    mock_collector_session.return_value.__aenter__.return_value = (
+                        mock_db
+                    )
                     mock_engine_session.return_value.__aenter__.return_value = mock_db
                     mock_cache.return_value = None  # Ensure cache miss
 
@@ -414,11 +418,13 @@ class TestAnalyticsIntegration:
         )
 
         with patch.object(engine, "session_factory") as mock_session:
-            with patch.object(engine, "_get_cached_result", new_callable=AsyncMock) as mock_cache:
+            with patch.object(
+                engine, "_get_cached_result", new_callable=AsyncMock
+            ) as mock_cache:
                 mock_db = Mock()
                 mock_session.return_value = mock_db
                 mock_cache.return_value = None  # No cache hit
-                
+
                 # Mock the query chain properly for count aggregation
                 mock_query_chain = Mock()
                 mock_db.query.return_value.filter.return_value = mock_query_chain

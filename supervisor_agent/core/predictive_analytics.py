@@ -208,14 +208,14 @@ class PredictiveAnalyticsEngine:
 
         # Workflow complexity features
         features["task_count"] = workflow_data.get("task_count", 0.0)
-        
+
         # Handle dependency count - can be provided directly or as a list
         dependencies = workflow_data.get("dependencies", [])
         if isinstance(dependencies, list):
             features["dependency_count"] = float(len(dependencies))
         else:
             features["dependency_count"] = workflow_data.get("dependency_count", 0.0)
-            
+
         features["parallel_stages"] = workflow_data.get("parallel_stages", 0.0)
         features["execution_time"] = workflow_data.get("execution_time", 0.0)
 
@@ -285,7 +285,7 @@ class PredictiveAnalyticsEngine:
             probability = min(base_probability * 1.1, 0.95)
         else:
             probability = min(base_probability, 0.95)
-            
+
         return RiskAssessment(
             risk_level=risk_level,
             probability=probability,
@@ -367,7 +367,7 @@ class PredictiveAnalyticsEngine:
             probability = min(base_probability * 1.1, 0.9)
         else:
             probability = min(base_probability, 0.9)
-            
+
         return RiskAssessment(
             risk_level=risk_level,
             probability=probability,
@@ -441,7 +441,7 @@ class PredictiveAnalyticsEngine:
             probability = min(base_probability * 1.15, 0.8)
         else:
             probability = min(base_probability, 0.8)
-            
+
         return RiskAssessment(
             risk_level=risk_level,
             probability=probability,
@@ -521,7 +521,7 @@ class PredictiveAnalyticsEngine:
             probability = min(base_probability * 1.15, 0.85)
         else:
             probability = min(base_probability, 0.85)
-            
+
         return RiskAssessment(
             risk_level=risk_level,
             probability=probability,

@@ -223,7 +223,7 @@ class TestDependencyManager:
             ),
             TaskSplit(
                 task_id="task_1_1",
-                parent_task_id="1", 
+                parent_task_id="1",
                 config={
                     "task_type": "BUG_FIX",
                     "priority": 5,

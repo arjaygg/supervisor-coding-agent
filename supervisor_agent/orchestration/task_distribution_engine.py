@@ -79,11 +79,11 @@ class TaskDistributionEngine:
             else:
                 task_obj = task
                 task_id = str(task.id) if task.id is not None else "unknown"
-                
+
                 # Validate task object
                 if task.id is None:
                     raise ValueError("Task ID cannot be None")
-        
+
             # 1. Split the task if necessary
             complexity_analysis = self.task_splitter.analyze_task_complexity(task_obj)
             if complexity_analysis.requires_splitting:
@@ -91,13 +91,13 @@ class TaskDistributionEngine:
                 task_splits = subtask_graph.subtasks
             else:
                 # If not splitting, treat the original task as a single split
-                if hasattr(task_obj, 'payload') and task_obj.payload:
+                if hasattr(task_obj, "payload") and task_obj.payload:
                     config = task_obj.payload
-                elif hasattr(task_obj, 'config') and task_obj.config:
+                elif hasattr(task_obj, "config") and task_obj.config:
                     config = task_obj.config
                 else:
                     config = {"description": f"Task {task_id}"}
-                
+
                 task_splits = [
                     TaskSplit(task_id=task_id, parent_task_id=task_id, config=config)
                 ]
@@ -126,12 +126,19 @@ class TaskDistributionEngine:
             error_message = f"Task distribution failed: {str(e)}"
             return DistributionResult(
                 task_splits=[],
-                dependencies=DependencyGraph(nodes=[], edges=[], critical_path=[], parallelization_potential=0.0, execution_levels=[], total_estimated_time=0.0),
+                dependencies=DependencyGraph(
+                    nodes=[],
+                    edges=[],
+                    critical_path=[],
+                    parallelization_potential=0.0,
+                    execution_levels=[],
+                    total_estimated_time=0.0,
+                ),
                 execution_plan=ExecutionPlan(steps=[], estimated_time=0.0),
                 success=False,
-                original_task_id=task_id if 'task_id' in locals() else "unknown",
+                original_task_id=task_id if "task_id" in locals() else "unknown",
                 processing_time=0.01,
-                error_message=error_message
+                error_message=error_message,
             )
 
     async def split_complex_task(self, task: Task) -> List[TaskSplit]:
@@ -387,11 +394,11 @@ class TaskDistributionEngine:
     ) -> List[TaskSplit]:
         """Create task splits based on the recommended splitting strategy."""
         strategy = analysis.splitting_recommendation
-        
+
         if strategy == SplittingStrategy.NO_SPLIT:
             # Return empty list for no splits
             return []
-            
+
         elif strategy == SplittingStrategy.LINEAR_SPLIT:
             # Split into sequential subtasks
             splits = []
@@ -400,49 +407,55 @@ class TaskDistributionEngine:
                 if i > 0:
                     # Each step depends on the previous step
                     dependencies.append(f"{task.id}_{i-1}")
-                    
-                splits.append(TaskSplit(
-                    task_id=f"{task.id}_{i}",
-                    parent_task_id=task.id,
-                    dependencies=dependencies,
-                    parallelizable=False  # Linear tasks are not parallelizable
-                ))
+
+                splits.append(
+                    TaskSplit(
+                        task_id=f"{task.id}_{i}",
+                        parent_task_id=task.id,
+                        dependencies=dependencies,
+                        parallelizable=False,  # Linear tasks are not parallelizable
+                    )
+                )
             return splits
-            
+
         elif strategy == SplittingStrategy.PARALLEL_SPLIT:
             # Split into parallel subtasks
             splits = []
             for i in range(min(analysis.estimated_steps, 4)):  # Max 4 parallel tasks
-                splits.append(TaskSplit(
-                    task_id=f"{task.id}_parallel_{i+1}",
-                    parent_task_id=task.id,
-                    dependencies=[],  # No dependencies for parallel tasks
-                    parallelizable=True
-                ))
+                splits.append(
+                    TaskSplit(
+                        task_id=f"{task.id}_parallel_{i+1}",
+                        parent_task_id=task.id,
+                        dependencies=[],  # No dependencies for parallel tasks
+                        parallelizable=True,
+                    )
+                )
             return splits
-            
+
         elif strategy == SplittingStrategy.HIERARCHICAL_SPLIT:
             # Split into hierarchical subtasks
             splits = []
             # Create phases: planning, implementation, validation
             phases = ["plan", "implement", "validate"]
-            
+
             for i, phase in enumerate(phases):
                 phase_id = f"{task.id}_{phase}"
                 dependencies = []
                 if i > 0:
                     # Each phase depends on the previous phase
                     dependencies.append(f"{task.id}_{phases[i-1]}")
-                    
-                splits.append(TaskSplit(
-                    task_id=phase_id,
-                    parent_task_id=task.id,
-                    dependencies=dependencies,
-                    parallelizable=False,
-                    split_id=phase_id
-                ))
+
+                splits.append(
+                    TaskSplit(
+                        task_id=phase_id,
+                        parent_task_id=task.id,
+                        dependencies=dependencies,
+                        parallelizable=False,
+                        split_id=phase_id,
+                    )
+                )
             return splits
-            
+
         else:
             # Default: return single split
             return [TaskSplit(task_id=task.id, parent_task_id=task.id)]

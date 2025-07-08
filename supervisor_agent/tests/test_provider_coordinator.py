@@ -40,7 +40,12 @@ def mock_provider():
     provider = Mock(spec=AIProvider)
     provider.name = "test-provider"
     provider.get_capabilities.return_value = ProviderCapabilities(
-        supported_tasks=[TaskCapability.CODE_REVIEW, TaskCapability.CODE_ANALYSIS, TaskCapability.BUG_FIX, TaskCapability.GENERAL_CODING],
+        supported_tasks=[
+            TaskCapability.CODE_REVIEW,
+            TaskCapability.CODE_ANALYSIS,
+            TaskCapability.BUG_FIX,
+            TaskCapability.GENERAL_CODING,
+        ],
         max_concurrent_requests=10,
         supports_batching=True,
     )

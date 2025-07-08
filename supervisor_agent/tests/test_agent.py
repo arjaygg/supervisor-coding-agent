@@ -203,11 +203,13 @@ def test_agent_manager_get_available_agent_ids():
 @pytest.mark.asyncio
 @patch("supervisor_agent.core.agent.subprocess.run")
 @patch("supervisor_agent.core.agent.ClaudeAgentWrapper._validate_claude_cli")
-async def test_claude_cli_command_construction(mock_validate_cli, mock_subprocess, mock_task):
+async def test_claude_cli_command_construction(
+    mock_validate_cli, mock_subprocess, mock_task
+):
     """Test that Claude CLI commands are constructed correctly"""
     # Mock CLI validation to return True
     mock_validate_cli.return_value = True
-    
+
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "CLI response"
     mock_subprocess.return_value.stderr = ""
@@ -234,11 +236,13 @@ async def test_claude_cli_command_construction(mock_validate_cli, mock_subproces
 @pytest.mark.asyncio
 @patch("supervisor_agent.core.agent.subprocess.run")
 @patch("supervisor_agent.core.agent.ClaudeAgentWrapper._validate_claude_cli")
-async def test_claude_cli_environment_isolation(mock_validate_cli, mock_subprocess, mock_task):
+async def test_claude_cli_environment_isolation(
+    mock_validate_cli, mock_subprocess, mock_task
+):
     """Test that each agent has isolated environment"""
     # Mock CLI validation to return True
     mock_validate_cli.return_value = True
-    
+
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "Response"
     mock_subprocess.return_value.stderr = ""
@@ -266,7 +270,7 @@ async def test_claude_cli_environment_isolation(mock_validate_cli, mock_subproce
 async def test_claude_cli_prompt_content(mock_validate_cli, mock_subprocess, mock_task):
     """Test that prompts contain expected content"""
     mock_validate_cli.return_value = True
-    
+
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "Response"
     mock_subprocess.return_value.stderr = ""
@@ -300,7 +304,7 @@ async def test_claude_cli_prompt_content(mock_validate_cli, mock_subprocess, moc
 async def test_claude_cli_concurrent_execution(mock_validate_cli, mock_subprocess):
     """Test concurrent execution of multiple agents"""
     mock_validate_cli.return_value = True
-    
+
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "Response"
     mock_subprocess.return_value.stderr = ""
@@ -345,10 +349,12 @@ def test_claude_cli_path_configuration():
 @pytest.mark.asyncio
 @patch("supervisor_agent.core.agent.subprocess.run")
 @patch("supervisor_agent.core.agent.ClaudeAgentWrapper._validate_claude_cli")
-async def test_claude_cli_error_handling_details(mock_validate_cli, mock_subprocess, mock_task):
+async def test_claude_cli_error_handling_details(
+    mock_validate_cli, mock_subprocess, mock_task
+):
     """Test detailed error handling for different CLI failures"""
     mock_validate_cli.return_value = True
-    
+
     # Test different types of errors
     error_scenarios = [
         {
@@ -390,7 +396,7 @@ async def test_claude_cli_error_handling_details(mock_validate_cli, mock_subproc
 async def test_claude_cli_output_parsing(mock_validate_cli, mock_subprocess, mock_task):
     """Test parsing of Claude CLI output"""
     mock_validate_cli.return_value = True
-    
+
     # Test various output formats
     test_outputs = [
         "Simple response",
@@ -415,10 +421,12 @@ async def test_claude_cli_output_parsing(mock_validate_cli, mock_subprocess, moc
 @pytest.mark.asyncio
 @patch("supervisor_agent.core.agent.subprocess.run")
 @patch("supervisor_agent.core.agent.ClaudeAgentWrapper._validate_claude_cli")
-async def test_claude_cli_execution_time_tracking(mock_validate_cli, mock_subprocess, mock_task):
+async def test_claude_cli_execution_time_tracking(
+    mock_validate_cli, mock_subprocess, mock_task
+):
     """Test that execution time is accurately tracked"""
     mock_validate_cli.return_value = True
-    
+
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "Response"
     mock_subprocess.return_value.stderr = ""
@@ -426,7 +434,9 @@ async def test_claude_cli_execution_time_tracking(mock_validate_cli, mock_subpro
     # Mock time to control execution time measurement
     with patch("supervisor_agent.core.agent.datetime") as mock_datetime:
         start_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-        end_time = datetime(2024, 1, 1, 12, 0, 5, tzinfo=timezone.utc)  # 5 seconds later
+        end_time = datetime(
+            2024, 1, 1, 12, 0, 5, tzinfo=timezone.utc
+        )  # 5 seconds later
 
         mock_datetime.now.side_effect = [start_time, end_time]
 
