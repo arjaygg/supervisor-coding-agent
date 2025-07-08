@@ -20,6 +20,13 @@ from supervisor_agent.ai.providers import (
     OpenAIProvider,
     StreamingChunk,
 )
+from supervisor_agent.ai.context_manager import (
+    SmartContextManager,
+    ContextStrategy,
+    DEFAULT_CONTEXT_STRATEGY,
+    AGGRESSIVE_CONTEXT_STRATEGY,
+    CONSERVATIVE_CONTEXT_STRATEGY,
+)
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -46,6 +53,8 @@ class AIManagerConfig(BaseModel):
     max_retry_attempts: int = 3
     retry_delay_seconds: float = 1.0
     request_timeout_seconds: float = 60.0
+    context_strategy: ContextStrategy = DEFAULT_CONTEXT_STRATEGY
+    enable_smart_context: bool = True
 
 
 class RequestContext(BaseModel):
@@ -84,6 +93,7 @@ class AIManager:
         self.usage_stats: Dict[str, UsageStats] = {}
         self.rate_limits: Dict[str, List[datetime]] = {}
         self._initialized = False
+        self.context_manager = SmartContextManager(config.context_strategy) if config.enable_smart_context else None
         
     async def initialize(self) -> None:
         """Initialize all configured providers"""
@@ -145,6 +155,22 @@ class AIManager:
         if not provider or not model:
             raise RuntimeError("No suitable provider/model available")
         
+        # Apply smart context management if enabled
+        optimized_messages = messages
+        context_metrics = None
+        
+        if self.context_manager:
+            # Reserve tokens for completion
+            max_completion_tokens = kwargs.get("max_tokens", 2048)
+            target_context_tokens = model.context_window - max_completion_tokens
+            
+            optimized_messages, context_metrics = self.context_manager.optimize_context(
+                messages, model, target_context_tokens
+            )
+            
+            logger.info(f"Context optimization: {len(messages)} -> {len(optimized_messages)} messages, "
+                       f"context window usage: {context_metrics.context_window_used:.1%}")
+        
         # Track rate limiting
         await self._check_rate_limit(provider.provider_name)
         
@@ -156,10 +182,22 @@ class AIManager:
                 logger.info(f"Generating response with {provider.provider_name}:{model.id} (attempt {attempt + 1})")
                 
                 response = await provider.generate_response(
-                    messages=messages,
+                    messages=optimized_messages,
                     model=model.id,
                     **kwargs
                 )
+                
+                # Add context metrics to response metadata if available
+                if context_metrics:
+                    if not hasattr(response, 'metadata'):
+                        response.metadata = {}
+                    response.metadata['context_optimization'] = {
+                        'original_message_count': len(messages),
+                        'optimized_message_count': len(optimized_messages),
+                        'context_window_used': context_metrics.context_window_used,
+                        'truncated_messages': context_metrics.truncated_messages,
+                        'summarized_chunks': context_metrics.summarized_chunks
+                    }
                 
                 # Update usage statistics
                 await self._update_usage_stats(provider.provider_name, model.id, response, success=True)
@@ -210,6 +248,20 @@ class AIManager:
         if not provider or not model:
             raise RuntimeError("No suitable streaming provider/model available")
         
+        # Apply smart context management if enabled
+        optimized_messages = messages
+        
+        if self.context_manager:
+            # Reserve tokens for completion
+            max_completion_tokens = kwargs.get("max_tokens", 2048)
+            target_context_tokens = model.context_window - max_completion_tokens
+            
+            optimized_messages, context_metrics = self.context_manager.optimize_context(
+                messages, model, target_context_tokens
+            )
+            
+            logger.info(f"Context optimization for streaming: {len(messages)} -> {len(optimized_messages)} messages")
+        
         # Track rate limiting
         await self._check_rate_limit(provider.provider_name)
         
@@ -217,7 +269,7 @@ class AIManager:
             logger.info(f"Streaming response with {provider.provider_name}:{model.id}")
             
             async for chunk in provider.stream_response(
-                messages=messages,
+                messages=optimized_messages,
                 model=model.id,
                 **kwargs
             ):
@@ -467,6 +519,38 @@ class AIManager:
             models_by_provider[provider_name] = list(provider.get_available_models().values())
         
         return models_by_provider
+    
+    async def get_context_metrics(self) -> Optional[Dict[str, Any]]:
+        """Get current context management metrics"""
+        if self.context_manager:
+            metrics = self.context_manager.get_metrics()
+            return {
+                'total_tokens': metrics.total_tokens,
+                'context_window_used': metrics.context_window_used,
+                'truncated_messages': metrics.truncated_messages,
+                'summarized_chunks': metrics.summarized_chunks
+            }
+        return None
+    
+    def update_context_strategy(self, strategy: ContextStrategy) -> None:
+        """Update the context management strategy"""
+        if self.context_manager:
+            self.context_manager.strategy = strategy
+            logger.info("Updated context management strategy")
+        else:
+            logger.warning("Context management is disabled, cannot update strategy")
+    
+    def set_context_strategy_by_priority(self, priority: str) -> None:
+        """Set context strategy based on priority level"""
+        strategies = {
+            'aggressive': AGGRESSIVE_CONTEXT_STRATEGY,
+            'default': DEFAULT_CONTEXT_STRATEGY,
+            'conservative': CONSERVATIVE_CONTEXT_STRATEGY
+        }
+        
+        strategy = strategies.get(priority.lower(), DEFAULT_CONTEXT_STRATEGY)
+        self.update_context_strategy(strategy)
+        logger.info(f"Set context strategy to {priority}")
     
     async def cleanup(self) -> None:
         """Cleanup all providers"""

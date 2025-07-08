@@ -559,6 +559,8 @@ def get_ai_manager() -> AIManager:
         import os
         
         # Configuration - in production, load from environment/config file
+        from supervisor_agent.ai.context_manager import DEFAULT_CONTEXT_STRATEGY
+        
         config = AIManagerConfig(
             providers=[
                 ProviderConfig(
@@ -585,7 +587,9 @@ def get_ai_manager() -> AIManager:
                 ),
             ],
             cost_optimization=True,
-            fallback_enabled=True
+            fallback_enabled=True,
+            enable_smart_context=True,
+            context_strategy=DEFAULT_CONTEXT_STRATEGY
         )
         
         _ai_manager = AIManager(config)
