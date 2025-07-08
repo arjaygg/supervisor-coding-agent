@@ -143,19 +143,19 @@ claude "You are the Architect agent. Create a master plan in MULTI_AGENT_PLAN.md
 
 **Step 2: Launch Specialized Agents**
 
-**Terminal 2 - Builder Agent:**
+**Terminal 2 - Developer Agent:**
 ```bash
-claude "You are the Builder agent. Check MULTI_AGENT_PLAN.md for tasks assigned to you and begin implementation. Update your progress in the shared document."
+claude "You are the Developer agent. Check MULTI_AGENT_PLAN.md for tasks assigned to you and begin implementation. Update your progress in the shared document."
 ```
 
-**Terminal 3 - Validator Agent:**
+**Terminal 3 - QA Engineer Agent:**
 ```bash
-claude "You are the Validator agent. Monitor MULTI_AGENT_PLAN.md for completed work from Builder and perform comprehensive testing and quality assurance."
+claude "You are the QA Engineer agent. Monitor MULTI_AGENT_PLAN.md for completed work from Developer and perform comprehensive testing and quality assurance."
 ```
 
-**Terminal 4 - Scribe Agent:**
+**Terminal 4 - Tech Writer Agent:**
 ```bash
-claude "You are the Scribe agent. Document all architectural decisions, create API documentation, and maintain user guides as the system develops."
+claude "You are the Tech Writer agent. Document all architectural decisions, create API documentation, and maintain user guides as the system develops."
 ```
 
 ### Coordination Workflow
@@ -168,8 +168,8 @@ claude "Read MULTI_AGENT_PLAN.md, update your status, and coordinate next action
 
 **Handoff Example:**
 ```bash
-# Builder → Validator handoff
-claude "Builder has completed user authentication module. Validator, please review and test the implementation in supervisor_agent/auth/."
+# Developer → QA Engineer handoff
+claude "Developer has completed user authentication module. QA Engineer, please review and test the implementation in supervisor_agent/auth/."
 ```
 
 ### Agent Role Responsibilities
@@ -177,9 +177,9 @@ claude "Builder has completed user authentication module. Validator, please revi
 | Agent | Model | Primary Focus | Key Tools |
 |-------|-------|---------------|-----------|
 | **Architect** | Opus | Strategic planning, system design | Planning docs, architecture reviews |
-| **Builder** | Sonnet | Implementation, coding | File operations, git, testing |
-| **Validator** | Sonnet | Testing, quality assurance | Test execution, security scanning |
-| **Scribe** | Sonnet | Documentation, knowledge management | API docs, user guides |
+| **Developer** | Sonnet | Implementation, coding | File operations, git, testing |
+| **QA Engineer** | Sonnet | Testing, quality assurance | Test execution, security scanning |
+| **Tech Writer** | Sonnet | Documentation, knowledge management | API docs, user guides |
 
 ---
 
@@ -357,9 +357,9 @@ ls -la .claude/commands/
 **Agent Role Assignment:**
 ```bash
 # Lead Developer → Architect role
-# Senior Developers → Builder + Validator roles  
-# Technical Writers → Scribe role
-# Junior Developers → Builder role with Validator oversight
+# Senior Developers → Developer + QA Engineer roles  
+# Technical Writers → Tech Writer role
+# Junior Developers → Developer role with QA Engineer oversight
 ```
 
 **Communication Standards:**
@@ -379,16 +379,16 @@ ls -la .claude/commands/
 # Team Lead (Architect)
 claude "Create comprehensive plan for user analytics dashboard in MULTI_AGENT_PLAN.md"
 
-# Frontend Developer (Builder)
+# Frontend Developer (Developer)
 claude "Implement React components for analytics dashboard based on architect plan"
 
-# Backend Developer (Builder) 
+# Backend Developer (Developer) 
 claude "Implement analytics API endpoints and data processing logic"
 
-# QA Engineer (Validator)
+# QA Engineer (QA Engineer)
 claude "Validate all analytics functionality with comprehensive testing"
 
-# Technical Writer (Scribe)
+# Technical Writer (Tech Writer)
 claude "Create user documentation and API reference for analytics dashboard"
 ```
 
@@ -449,16 +449,16 @@ claude "Write tests for authentication"
 ```bash
 # Architect creates plan, then all agents work simultaneously
 # Terminal 1: claude "Architect: Plan microservices architecture"
-# Terminal 2: claude "Builder: Implement user service"  
-# Terminal 3: claude "Builder: Implement order service"
-# Terminal 4: claude "Validator: Test all services"
+# Terminal 2: claude "Developer: Implement user service"  
+# Terminal 3: claude "Developer: Implement order service"
+# Terminal 4: claude "QA Engineer: Test all services"
 ```
 
 **Specialized Task Distribution:**
 - **Architect**: Complex planning, architectural decisions
-- **Builder**: Implementation, feature development
-- **Validator**: Testing, quality assurance, security review
-- **Scribe**: Documentation, knowledge management
+- **Developer**: Implementation, feature development
+- **QA Engineer**: Testing, quality assurance, security review
+- **Tech Writer**: Documentation, knowledge management
 
 ---
 

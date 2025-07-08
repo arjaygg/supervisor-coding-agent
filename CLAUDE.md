@@ -290,7 +290,7 @@ When encountering failures:
 <decision_authority>Architecture, technology choices, integration strategies</decision_authority>
 </agent>
 
-<agent name="builder" model="sonnet">
+<agent name="developer" model="sonnet">
 <responsibilities>
 - Feature implementation and code development
 - Unit testing and immediate validation
@@ -302,7 +302,7 @@ When encountering failures:
 <quality_gates>All tests pass, code review standards met, security guidelines followed</quality_gates>
 </agent>
 
-<agent name="validator" model="sonnet">
+<agent name="qa-engineer" model="sonnet">
 <responsibilities>
 - Comprehensive testing and quality assurance
 - Security scanning and compliance verification
@@ -310,11 +310,11 @@ When encountering failures:
 - Integration testing across components
 </responsibilities>
 <tools>Test execution, linting, security scanning, performance profiling</tools>
-<coordination>Validates builder output, ensures all quality gates pass before approval</coordination>
+<coordination>Validates developer output, ensures all quality gates pass before approval</coordination>
 <authority>Can block merges if quality standards not met</authority>
 </agent>
 
-<agent name="scribe" model="sonnet">
+<agent name="tech-writer" model="sonnet">
 <responsibilities>
 - Documentation creation and maintenance
 - API documentation and examples
@@ -332,12 +332,12 @@ When encountering failures:
 - **Status Updates**: Each agent updates progress with timestamps and status
 - **Sync Points**: Every 30 minutes, all agents re-read shared context and update status
 - **Conflict Resolution**: Architect agent has final decision authority on technical disputes
-- **Quality Gates**: Validator agent must approve before any main branch merge
+- **Quality Gates**: QA-Engineer agent must approve before any main branch merge
 
 ## Communication Format
 ```markdown
 ## Agent Status Update - [TIMESTAMP]
-**Agent**: [architect|builder|validator|scribe]
+**Agent**: [architect|developer|qa-engineer|tech-writer]
 **Current Task**: [Brief description]
 **Progress**: [Percentage or status]
 **Next Action**: [What's planned next]

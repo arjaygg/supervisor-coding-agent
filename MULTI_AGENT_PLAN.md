@@ -25,7 +25,7 @@
 
 ### 🎯 Key Achievements
 1. **Enterprise-Grade Constitution**: Comprehensive CLAUDE.md with advanced agentic protocols
-2. **Multi-Agent Framework**: Specialized roles (Architect, Builder, Validator, Scribe)
+2. **Multi-Agent Framework**: Specialized roles (Architect, Developer, QA Engineer, Tech Writer)
 3. **Self-Correction Protocols**: Automated Generate→Test→Reflect→Refine workflows
 4. **Custom Command Library**: 7 essential slash commands in `.claude/commands/`
 5. **Security Boundaries**: Robust safety protocols with human-in-the-loop controls
