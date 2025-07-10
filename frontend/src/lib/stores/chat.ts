@@ -5,7 +5,7 @@ import { notificationService } from "../services/notificationService";
 import type { ContextOptimization } from "../services/contextService";
 import type { UUID } from "crypto";
 
-// Types
+// Types (Updated to match backend schemas)
 export interface ChatThread {
   id: string;
   title: string;
@@ -14,7 +14,7 @@ export interface ChatThread {
   created_at: string;
   updated_at?: string;
   user_id?: string;
-  metadata: Record<string, any>;
+  thread_metadata: Record<string, any>;
   unread_count?: number;
   last_message?: string;
   last_message_at?: string;
@@ -31,7 +31,7 @@ export interface ChatMessage {
     | "PROGRESS"
     | "NOTIFICATION"
     | "ERROR";
-  metadata: Record<string, any>;
+  message_metadata: Record<string, any>;
   created_at: string;
   edited_at?: string;
   parent_message_id?: string;
@@ -45,7 +45,7 @@ export interface ChatNotification {
   message?: string;
   is_read: boolean;
   created_at: string;
-  metadata: Record<string, any>;
+  notification_metadata: Record<string, any>;
 }
 
 interface ChatState {
@@ -297,8 +297,8 @@ function createChatStore() {
       }));
       
       // Check for context optimization metadata
-      if (message.metadata && message.metadata.context_optimization) {
-        this.updateContextOptimization(threadId, message.metadata.context_optimization);
+      if (message.message_metadata && message.message_metadata.context_optimization) {
+        this.updateContextOptimization(threadId, message.message_metadata.context_optimization);
       }
     },
 

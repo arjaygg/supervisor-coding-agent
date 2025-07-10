@@ -65,7 +65,7 @@ describe("Chat Store", () => {
           title: "Test Thread",
           status: "ACTIVE",
           created_at: "2023-01-01T00:00:00Z",
-          metadata: {},
+          thread_metadata: {},
         };
 
         vi.mocked(api.createChatThread).mockResolvedValue(mockThread);
@@ -103,7 +103,7 @@ describe("Chat Store", () => {
           title: "Test Thread",
           status: "ACTIVE",
           created_at: "2023-01-01T00:00:00Z",
-          metadata: {},
+          thread_metadata: {},
         };
 
         let loadingDuringCall = false;
@@ -127,14 +127,14 @@ describe("Chat Store", () => {
             title: "Thread 1",
             status: "ACTIVE",
             created_at: "2023-01-01T00:00:00Z",
-            metadata: {},
+            thread_metadata: {},
           },
           {
             id: "thread-2",
             title: "Thread 2", 
             status: "ACTIVE",
             created_at: "2023-01-02T00:00:00Z",
-            metadata: {},
+            thread_metadata: {},
           },
         ];
 
@@ -193,7 +193,7 @@ describe("Chat Store", () => {
           title: "Updated Title",
           status: "ACTIVE",
           created_at: "2023-01-01T00:00:00Z",
-          metadata: {},
+          thread_metadata: {},
         };
 
         vi.mocked(api.updateChatThread).mockResolvedValue(updatedThread);
@@ -205,7 +205,7 @@ describe("Chat Store", () => {
             title: "Original Title",
             status: "ACTIVE",
             created_at: "2023-01-01T00:00:00Z",
-            metadata: {},
+            thread_metadata: {},
           },
         ];
 
@@ -237,8 +237,8 @@ describe("Chat Store", () => {
         // Set initial state
         const initialState = {
           threads: [
-            { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", metadata: {} },
-            { id: "thread-2", title: "Thread 2", status: "ACTIVE", created_at: "2023-01-02T00:00:00Z", metadata: {} },
+            { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", thread_metadata: {} },
+            { id: "thread-2", title: "Thread 2", status: "ACTIVE", created_at: "2023-01-02T00:00:00Z", thread_metadata: {} },
           ],
           currentThreadId: "thread-1",
           messages: { "thread-1": [], "thread-2": [] },
@@ -275,7 +275,7 @@ describe("Chat Store", () => {
             role: "USER",
             content: "Hello",
             message_type: "TEXT",
-            metadata: {},
+            thread_metadata: {},
             created_at: "2023-01-01T00:00:00Z",
           },
           {
@@ -284,7 +284,7 @@ describe("Chat Store", () => {
             role: "ASSISTANT",
             content: "Hi there!",
             message_type: "TEXT",
-            metadata: {},
+            thread_metadata: {},
             created_at: "2023-01-01T00:01:00Z",
           },
         ];
@@ -317,7 +317,7 @@ describe("Chat Store", () => {
             role: "USER",
             content: "More messages",
             message_type: "TEXT",
-            metadata: {},
+            thread_metadata: {},
             created_at: "2023-01-01T00:02:00Z",
           },
         ];
@@ -332,7 +332,7 @@ describe("Chat Store", () => {
             role: "USER",
             content: "Hello",
             message_type: "TEXT",
-            metadata: {},
+            thread_metadata: {},
             created_at: "2023-01-01T00:00:00Z",
           },
         ];
@@ -351,7 +351,7 @@ describe("Chat Store", () => {
           role: "USER",
           content: "Hello",
           message_type: "TEXT",
-          metadata: {},
+          message_thread_metadata: {},
           created_at: "2023-01-01T00:00:00Z",
         };
 
@@ -359,7 +359,11 @@ describe("Chat Store", () => {
 
         const result = await chat.sendMessage("thread-1", "Hello");
 
-        expect(api.sendChatMessage).toHaveBeenCalledWith("thread-1", { content: "Hello" });
+        expect(api.sendChatMessage).toHaveBeenCalledWith("thread-1", { 
+          content: "Hello", 
+          message_type: "TEXT", 
+          thread_metadata: {} 
+        });
         expect(result).toEqual(mockMessage);
       });
 
@@ -402,8 +406,8 @@ describe("Chat Store", () => {
     describe("currentThread", () => {
       it("should return the currently selected thread", () => {
         const threads = [
-          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", metadata: {} },
-          { id: "thread-2", title: "Thread 2", status: "ACTIVE", created_at: "2023-01-02T00:00:00Z", metadata: {} },
+          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", thread_metadata: {} },
+          { id: "thread-2", title: "Thread 2", status: "ACTIVE", created_at: "2023-01-02T00:00:00Z", thread_metadata: {} },
         ];
 
         // Manually set state for testing
@@ -420,7 +424,7 @@ describe("Chat Store", () => {
 
       it("should return null when no thread is selected", () => {
         const threads = [
-          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", metadata: {} },
+          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", thread_metadata: {} },
         ];
 
         chat.subscribe((state) => ({
@@ -443,7 +447,7 @@ describe("Chat Store", () => {
             role: "USER",
             content: "Hello",
             message_type: "TEXT",
-            metadata: {},
+            thread_metadata: {},
             created_at: "2023-01-01T00:00:00Z",
           },
         ];
@@ -473,9 +477,9 @@ describe("Chat Store", () => {
     describe("activeThreads", () => {
       it("should return only active threads", () => {
         const threads = [
-          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", metadata: {} },
-          { id: "thread-2", title: "Thread 2", status: "ARCHIVED", created_at: "2023-01-02T00:00:00Z", metadata: {} },
-          { id: "thread-3", title: "Thread 3", status: "ACTIVE", created_at: "2023-01-03T00:00:00Z", metadata: {} },
+          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", thread_metadata: {} },
+          { id: "thread-2", title: "Thread 2", status: "ARCHIVED", created_at: "2023-01-02T00:00:00Z", thread_metadata: {} },
+          { id: "thread-3", title: "Thread 3", status: "ACTIVE", created_at: "2023-01-03T00:00:00Z", thread_metadata: {} },
         ];
 
         chat.subscribe((state) => ({ ...state, threads }));
@@ -489,9 +493,9 @@ describe("Chat Store", () => {
     describe("totalUnreadCount", () => {
       it("should calculate total unread count", () => {
         const threads = [
-          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", metadata: {}, unread_count: 3 },
-          { id: "thread-2", title: "Thread 2", status: "ACTIVE", created_at: "2023-01-02T00:00:00Z", metadata: {}, unread_count: 2 },
-          { id: "thread-3", title: "Thread 3", status: "ACTIVE", created_at: "2023-01-03T00:00:00Z", metadata: {} }, // no unread_count
+          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", thread_metadata: {}, unread_count: 3 },
+          { id: "thread-2", title: "Thread 2", status: "ACTIVE", created_at: "2023-01-02T00:00:00Z", thread_metadata: {}, unread_count: 2 },
+          { id: "thread-3", title: "Thread 3", status: "ACTIVE", created_at: "2023-01-03T00:00:00Z", thread_metadata: {} }, // no unread_count
         ];
 
         chat.subscribe((state) => ({ ...state, threads }));
@@ -502,8 +506,8 @@ describe("Chat Store", () => {
 
       it("should return 0 when no threads have unread messages", () => {
         const threads = [
-          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", metadata: {} },
-          { id: "thread-2", title: "Thread 2", status: "ACTIVE", created_at: "2023-01-02T00:00:00Z", metadata: {}, unread_count: 0 },
+          { id: "thread-1", title: "Thread 1", status: "ACTIVE", created_at: "2023-01-01T00:00:00Z", thread_metadata: {} },
+          { id: "thread-2", title: "Thread 2", status: "ACTIVE", created_at: "2023-01-02T00:00:00Z", thread_metadata: {}, unread_count: 0 },
         ];
 
         chat.subscribe((state) => ({ ...state, threads }));

@@ -36,7 +36,7 @@ class StreamingService {
       : controller.signal;
 
     try {
-      const response = await fetch(`/api/v1/chat/threads/${threadId}/messages/stream`, {
+      const response = await fetch(`/api/v1/chat/threads/${threadId}/stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
