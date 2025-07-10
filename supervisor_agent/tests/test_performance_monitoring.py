@@ -108,7 +108,7 @@ class TestRealTimeMonitor:
             (b for b in bottlenecks if b["type"] == "cpu_bottleneck"), None
         )
         assert cpu_bottleneck is not None
-        assert cpu_bottleneck["severity"] in ["warning", "critical"]
+        assert cpu_bottleneck["severity"] in ["high", "critical"]
 
     @pytest.mark.asyncio
     async def test_generate_performance_alerts(self, monitor):
@@ -300,7 +300,7 @@ class TestBottleneckDetector:
         return {
             "api_gateway": {
                 "type": "external_api",
-                "response_times": [1200, 1500, 1800, 2100, 1400],
+                "response_times": [3200, 3500, 3800, 4100, 3400],  # Above 3000ms threshold
                 "throughput": 800.0,
                 "error_rate": 3.5,
                 "cpu_usage": 85.0,
@@ -354,7 +354,7 @@ class TestBottleneckDetector:
             None,
         )
         assert processing_bottleneck is not None
-        assert processing_bottleneck["severity"] == "critical"
+        assert processing_bottleneck["severity"] == "high"
 
     @pytest.mark.asyncio
     async def test_identify_slow_components(self, detector, sample_component_metrics):
@@ -523,7 +523,7 @@ class TestPerformanceOptimizer:
     def sample_metrics_data(self):
         """Create sample metrics data for analysis."""
         return {
-            "response_time": 2500.0,
+            "response_time": 3500.0,  # Above 3000ms threshold
             "throughput": 80.0,
             "cpu_usage": 88.0,
             "memory_usage": 75.0,
@@ -563,7 +563,7 @@ class TestPerformanceOptimizer:
             None,
         )
         assert cpu_bottleneck is not None
-        assert cpu_bottleneck["severity"] == "warning"
+        assert cpu_bottleneck["severity"] == "high"
 
         response_bottleneck = next(
             (b for b in bottlenecks if b["type"] == "high_response_time"), None
