@@ -80,7 +80,6 @@ class ProviderCapabilities:
                 "FEATURE_DEVELOPMENT": TaskCapability.FEATURE_DEVELOPMENT,
                 "GENERAL_CODING": TaskCapability.GENERAL_CODING,
             }
-            
             task_type = task_mappings.get(task_type)
             if task_type is None:
                 try:

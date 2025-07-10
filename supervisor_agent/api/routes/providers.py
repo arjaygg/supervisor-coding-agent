@@ -7,12 +7,10 @@ Provides endpoints for managing and monitoring the multi-provider system.
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
 
 from supervisor_agent.core.multi_provider_service import multi_provider_service
-from supervisor_agent.db.database import get_db
 from supervisor_agent.db.enums import TaskType
 from supervisor_agent.db.models import Task
 

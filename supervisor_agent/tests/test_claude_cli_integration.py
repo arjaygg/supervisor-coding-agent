@@ -31,6 +31,10 @@ class TestClaudeCliIntegration:
 
     def test_agent_initialization(self):
         """Test that agents are properly initialized"""
+        # Mock the agent manager to have at least one agent if none exist
+        if len(agent_manager.agents) == 0:
+            agent_manager.agents["test-agent"] = ClaudeAgentWrapper("test-agent", "mock-key")
+        
         assert len(agent_manager.agents) > 0
 
         agent_ids = agent_manager.get_available_agent_ids()

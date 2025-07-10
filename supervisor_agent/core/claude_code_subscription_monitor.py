@@ -11,23 +11,13 @@ Monitors Claude Code CLI subscription usage and ensures work continuity:
 """
 
 import asyncio
-import json
-import subprocess
-import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
-from celery import Celery
-from sqlalchemy.orm import Session
-
-from supervisor_agent.config import settings
 from supervisor_agent.core.advanced_usage_predictor import AdvancedUsagePredictor
-from supervisor_agent.db import crud
-from supervisor_agent.db.database import get_db
-from supervisor_agent.db.enums import TaskStatus
 from supervisor_agent.queue.celery_app import celery_app
 from supervisor_agent.utils.logger import get_logger
 

@@ -102,19 +102,18 @@ class DependencyManager:
         # Handle both Task objects (with id) and TaskSplit objects (with task_id)
         nodes = []
         for task in tasks:
-            if hasattr(task, 'id'):
+            if hasattr(task, "id"):
                 nodes.append(task.id)
-            elif hasattr(task, 'task_id'):
+            elif hasattr(task, "task_id"):
                 nodes.append(task.task_id)
             else:
                 nodes.append(str(task))
-        
         edges = []
 
         # Simple dependency logic: sequential execution by default
         if len(tasks) > 1:
-            first_id = tasks[0].id if hasattr(tasks[0], 'id') else tasks[0].task_id
-            second_id = tasks[1].id if hasattr(tasks[1], 'id') else tasks[1].task_id
+            first_id = tasks[0].id if hasattr(tasks[0], "id") else tasks[0].task_id
+            second_id = tasks[1].id if hasattr(tasks[1], "id") else tasks[1].task_id
             edges.append((first_id, second_id))
 
         # Calculate critical path (simplified)
@@ -133,6 +132,11 @@ class DependencyManager:
             levels, tasks
         )
         
+        # Calculate total estimated time from task configs
+        total_estimated_time = sum(
+            task.config.get("estimated_duration", 0) for task in tasks
+        )
+
         # Calculate total estimated time from task configs
         total_estimated_time = sum(
             task.config.get("estimated_duration", 0) for task in tasks
