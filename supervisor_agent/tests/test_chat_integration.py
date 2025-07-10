@@ -126,7 +126,10 @@ class TestChatIntegration:
         assert "has_more" in data
         assert "total_count" in data
         assert len(data["messages"]) >= 1
-        assert data["messages"][0]["content"] == message_data["content"]
+        # Check that the user message exists in the messages list
+        user_messages = [msg for msg in data["messages"] if msg["role"] == "USER"]
+        assert len(user_messages) >= 1
+        assert user_messages[0]["content"] == message_data["content"]
 
     def test_chat_thread_with_initial_message(self, client):
         """Test creating a chat thread with an initial message"""

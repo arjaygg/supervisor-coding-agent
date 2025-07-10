@@ -84,7 +84,7 @@ async def get_chat_threads(
     try:
         # Use organization filter if any organization parameters are provided
         use_organization_filter = any([folder_id, tag_ids, is_pinned, is_favorited])
-        
+
         if use_organization_filter:
             # Use the organization-aware search
             filter_request = schemas.ConversationFilterRequest(
@@ -94,11 +94,11 @@ async def get_chat_threads(
                 is_favorited=is_favorited,
                 status=status.value if status else None
             )
-            
+
             threads_data = crud.ConversationOrganizationCRUD.get_organized_conversations(
                 db, filter_request, user_id=None, skip=skip, limit=limit
             )
-            
+
             # Convert to organized response format
             threads = []
             for thread in threads_data:
@@ -132,7 +132,7 @@ async def get_chat_threads(
                     is_favorited=crud.FavoriteCRUD.is_conversation_favorited(db, thread.id, None)
                 )
                 threads.append(organized_response)
-            
+
         else:
             # Use traditional method for basic requests
             threads_data = crud.ChatThreadCRUD.get_threads_with_stats(
@@ -322,25 +322,22 @@ async def send_message(
         )
 
         # Generate AI response if needed
-        if not message.metadata.get("suppress_ai_response", False):
+        if not (message.metadata or {}).get("suppress_ai_response", False):
             try:
-                # Get AI manager
-                ai_manager = get_ai_manager()
-                
                 # Generate AI response
                 ai_content = await generate_ai_response_content(thread_id, message.content, db)
-                
+
                 # Create AI response message
                 ai_message_data = schemas.ChatMessageCreate(
                     content=ai_content,
                     message_type=MessageType.TEXT,
                     metadata={"generated_by": "ai_manager", "has_function_calls": False}
                 )
-                
+
                 ai_db_message = crud.ChatMessageCRUD.create_message(
                     db, thread_id, ai_message_data, MessageRole.ASSISTANT
                 )
-                
+
                 # Send WebSocket notification for AI response
                 asyncio.create_task(
                     notify_chat_update(
@@ -354,7 +351,7 @@ async def send_message(
                         }
                     )
                 )
-                
+
             except Exception as e:
                 logger.error(f"Failed to generate AI response: {str(e)}")
                 # Continue without AI response
@@ -408,15 +405,15 @@ async def send_message_stream(
             try:
                 # Get the AI response content
                 ai_content = await generate_ai_response_content(thread_id, message.content, db)
-                
+
                 # Stream the response character by character
                 accumulated_content = ""
-                
+
                 # Send chunks with realistic typing speed
                 import asyncio
                 for i, char in enumerate(ai_content):
                     accumulated_content += char
-                    
+
                     # Send chunk every few characters or at word boundaries
                     if char.isspace() or i == len(ai_content) - 1 or (i + 1) % 3 == 0:
                         chunk_data = {
@@ -429,17 +426,17 @@ async def send_message_stream(
                             }
                         }
                         yield f"data: {json.dumps(chunk_data)}\n\n"
-                        
+
                         # Add small delay for realistic typing effect
                         await asyncio.sleep(0.03)  # 30ms delay
-                
+
                 # Create the AI message in database
                 ai_message_data = schemas.ChatMessageCreate(
                     content=ai_content,
                     message_type=MessageType.TEXT,
                     metadata={"generated": True, "model": "simulated"}
                 )
-                
+
                 ai_message = crud.ChatMessageCRUD.create_message(
                     db, thread_id, ai_message_data, MessageRole.ASSISTANT
                 )
@@ -457,7 +454,7 @@ async def send_message_stream(
                         "created_at": ai_message.created_at.isoformat(),
                     }
                 }
-                
+
                 yield f"data: {json.dumps(completion_data)}\n\n"
 
                 # Send WebSocket notification
@@ -507,13 +504,13 @@ async def generate_ai_response_content(thread_id: UUID, user_message: str, db: S
     try:
         # Import AI components
         from supervisor_agent.ai.providers import AIMessage, ModelCapability
-        
+
         # Get recent messages for context
         recent_messages = crud.ChatMessageCRUD.get_messages(db, thread_id, limit=10)
-        
+
         # Convert to AI messages format
         ai_messages = []
-        
+
         # Add system message for context
         ai_messages.append(AIMessage(
             role="system",
@@ -526,23 +523,23 @@ async def generate_ai_response_content(thread_id: UUID, user_message: str, db: S
 
 Provide helpful, actionable responses that are concise but comprehensive. Focus on practical solutions and next steps."""
         ))
-        
+
         # Add conversation history (reverse to get chronological order)
         for msg in reversed(recent_messages[-5:]):  # Last 5 messages for context
             ai_messages.append(AIMessage(
                 role="user" if msg.role == MessageRole.USER else "assistant",
                 content=msg.content
             ))
-        
+
         # Add current user message
         ai_messages.append(AIMessage(
             role="user",
             content=user_message
         ))
-        
+
         # Get AI manager instance
         ai_manager = get_ai_manager()
-        
+
         # Create request context
         context = RequestContext(
             thread_id=str(thread_id),
@@ -550,7 +547,7 @@ Provide helpful, actionable responses that are concise but comprehensive. Focus 
             priority="normal",
             required_capabilities=[ModelCapability.TEXT_GENERATION]
         )
-        
+
         # Generate response with function calling support
         try:
             response = await ai_manager.generate_with_functions(
@@ -559,7 +556,7 @@ Provide helpful, actionable responses that are concise but comprehensive. Focus 
                 auto_execute_functions=True,
                 max_function_calls=3
             )
-            
+
             return response.content
         except AttributeError:
             # Fallback to regular generation if function calling not available
@@ -569,9 +566,9 @@ Provide helpful, actionable responses that are concise but comprehensive. Focus 
                 max_tokens=2048,
                 temperature=0.7
             )
-            
+
             return response.content
-        
+
     except Exception as e:
         logger.error(f"AI response generation failed: {str(e)}")
         # Fallback to simple response based on keywords
@@ -659,6 +656,7 @@ Please try again in a moment, or let me know if you'd like me to help with somet
 # Global AI manager instance
 _ai_manager = None
 
+
 async def get_plugin_manager() -> PluginManager:
     """Get or create plugin manager instance"""
     global _plugin_manager
@@ -673,10 +671,10 @@ def get_ai_manager() -> AIManager:
     global _ai_manager
     if _ai_manager is None:
         import os
-        
+
         # Configuration - in production, load from environment/config file
         from supervisor_agent.ai.context_manager import DEFAULT_CONTEXT_STRATEGY
-        
+
         config = AIManagerConfig(
             providers=[
                 ProviderConfig(
@@ -707,16 +705,16 @@ def get_ai_manager() -> AIManager:
             enable_smart_context=True,
             context_strategy=DEFAULT_CONTEXT_STRATEGY
         )
-        
+
         # Get plugin manager and pass to AI manager
         try:
             import asyncio
             plugin_manager = asyncio.get_event_loop().run_until_complete(get_plugin_manager())
             _ai_manager = AIManager(config, plugin_manager)
-        except:
+        except Exception:
             # Fallback without plugin manager if initialization fails
             _ai_manager = AIManager(config)
-    
+
     return _ai_manager
 
 
@@ -762,8 +760,8 @@ async def get_messages(
 
 @router.put("/messages/{message_id}", response_model=schemas.ChatMessageResponse)
 async def update_message(
-    message_id: UUID, 
-    update_data: schemas.ChatMessageUpdate, 
+    message_id: UUID,
+    update_data: schemas.ChatMessageUpdate,
     db: Session = Depends(get_db)
 ):
     """Update a chat message"""
@@ -911,7 +909,7 @@ async def search_messages(
     """Search messages across threads with full-text search and filters"""
     import time
     start_time = time.time()
-    
+
     try:
         # Parse thread IDs if provided
         thread_id_list = []
@@ -926,7 +924,7 @@ async def search_messages(
         if date_range:
             from datetime import datetime, timedelta
             now = datetime.utcnow()
-            
+
             if date_range == "today":
                 date_filter = now.replace(hour=0, minute=0, second=0, microsecond=0)
             elif date_range == "week":
@@ -971,7 +969,7 @@ async def search_messages(
 
         # Get total count for pagination (simplified for now)
         total_count = len(formatted_results)
-        
+
         end_time = time.time()
         took_ms = int((end_time - start_time) * 1000)
 
@@ -1005,7 +1003,7 @@ async def get_available_functions():
     try:
         ai_manager = get_ai_manager()
         functions = await ai_manager.get_available_functions()
-        
+
         return {
             "functions": functions,
             "count": len(functions),
@@ -1025,7 +1023,7 @@ async def call_function(
     """Call a specific function through the plugin system"""
     try:
         ai_manager = get_ai_manager()
-        
+
         # Create request context
         from supervisor_agent.ai.manager import RequestContext
         context = RequestContext(
@@ -1033,9 +1031,9 @@ async def call_function(
             task_type="function_call",
             priority="normal"
         )
-        
+
         result = await ai_manager.call_function(function_name, function_args, context)
-        
+
         return {
             "function_name": function_name,
             "arguments": function_args,
@@ -1052,7 +1050,7 @@ async def get_plugins():
     try:
         plugin_manager = await get_plugin_manager()
         plugins = plugin_manager.list_plugins()
-        
+
         return {
             "plugins": plugins,
             "count": len(plugins),
@@ -1069,7 +1067,7 @@ async def activate_plugin(plugin_name: str):
     try:
         plugin_manager = await get_plugin_manager()
         success = await plugin_manager.activate_plugin(plugin_name)
-        
+
         if success:
             return {"status": "activated", "plugin": plugin_name}
         else:
@@ -1085,7 +1083,7 @@ async def deactivate_plugin(plugin_name: str):
     try:
         plugin_manager = await get_plugin_manager()
         success = await plugin_manager.deactivate_plugin(plugin_name)
-        
+
         if success:
             return {"status": "deactivated", "plugin": plugin_name}
         else:
@@ -1101,12 +1099,12 @@ async def check_plugin_health(plugin_name: str):
     try:
         plugin_manager = await get_plugin_manager()
         plugin = plugin_manager.get_plugin(plugin_name)
-        
+
         if not plugin:
             raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} not found")
-        
+
         health_result = await plugin.health_check()
-        
+
         return {
             "plugin": plugin_name,
             "health": health_result.data if health_result.success else None,
@@ -1130,10 +1128,10 @@ async def analyze_thread_with_plugins(
         thread = crud.ChatThreadCRUD.get_thread(db, thread_id)
         if not thread:
             raise HTTPException(status_code=404, detail="Chat thread not found")
-        
+
         # Get messages from the thread
         messages = crud.ChatMessageCRUD.get_messages(db, thread_id, limit=100)
-        
+
         # Extract code from messages
         code_blocks = []
         for message in messages:
@@ -1144,7 +1142,7 @@ async def analyze_thread_with_plugins(
                 code_pattern = r'```(?:\w+)?\n(.*?)\n```'
                 matches = re.findall(code_pattern, content, re.DOTALL)
                 code_blocks.extend(matches)
-        
+
         if not code_blocks:
             return {
                 "thread_id": str(thread_id),
@@ -1152,11 +1150,11 @@ async def analyze_thread_with_plugins(
                 "result": "No code blocks found in conversation",
                 "code_blocks_found": 0
             }
-        
+
         # Use plugin system to analyze code
         plugin_manager = await get_plugin_manager()
         analysis_results = []
-        
+
         for i, code_block in enumerate(code_blocks):
             # Find code analysis processor
             processor = None
@@ -1164,7 +1162,7 @@ async def analyze_thread_with_plugins(
                 if plugin.can_handle_task("code_analysis"):
                     processor = plugin
                     break
-            
+
             if processor:
                 task_data = {
                     "analysis_type": analysis_type,
@@ -1172,21 +1170,21 @@ async def analyze_thread_with_plugins(
                     "language": "python",  # Default, could be detected
                     "options": {}
                 }
-                
+
                 result = await processor.process_task(task_data)
                 analysis_results.append({
                     "code_block_index": i,
                     "analysis": result.data if result.success else None,
                     "error": result.error if not result.success else None
                 })
-        
+
         return {
             "thread_id": str(thread_id),
             "analysis_type": analysis_type,
             "code_blocks_found": len(code_blocks),
             "analysis_results": analysis_results
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to analyze thread {thread_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
