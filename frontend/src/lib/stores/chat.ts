@@ -2,9 +2,10 @@ import { writable, derived, get } from "svelte/store";
 import { api, ApiError } from "../utils/api";
 import { chatWebSocketHandler, type ChatUpdateHandlers } from "../services/chatWebSocketHandler";
 import { notificationService } from "../services/notificationService";
+import type { ContextOptimization } from "../services/contextService";
 import type { UUID } from "crypto";
 
-// Types
+// Types (Updated to match backend schemas)
 export interface ChatThread {
   id: string;
   title: string;
@@ -13,7 +14,7 @@ export interface ChatThread {
   created_at: string;
   updated_at?: string;
   user_id?: string;
-  metadata: Record<string, any>;
+  thread_metadata: Record<string, any>;
   unread_count?: number;
   last_message?: string;
   last_message_at?: string;
@@ -30,7 +31,7 @@ export interface ChatMessage {
     | "PROGRESS"
     | "NOTIFICATION"
     | "ERROR";
-  metadata: Record<string, any>;
+  message_metadata: Record<string, any>;
   created_at: string;
   edited_at?: string;
   parent_message_id?: string;
@@ -44,7 +45,7 @@ export interface ChatNotification {
   message?: string;
   is_read: boolean;
   created_at: string;
-  metadata: Record<string, any>;
+  notification_metadata: Record<string, any>;
 }
 
 interface ChatState {
@@ -55,6 +56,7 @@ interface ChatState {
   loading: boolean;
   error: string | null;
   connected: boolean;
+  contextOptimization: Record<string, ContextOptimization>; // threadId -> optimization data
 }
 
 
@@ -68,6 +70,7 @@ function createChatStore() {
     loading: false,
     error: null,
     connected: false,
+    contextOptimization: {},
   });
 
   return {
@@ -233,9 +236,28 @@ function createChatStore() {
       }
     },
 
-    async sendMessage(threadId: string, content: string): Promise<ChatMessage> {
+    async sendMessage(threadId: string, content: string, messageData?: any): Promise<ChatMessage> {
       try {
-        const newMessage = await api.sendChatMessage(threadId, { content });
+        // Prepare message payload with optional file attachments
+        const payload = {
+          content,
+          message_type: "TEXT",
+          metadata: {
+            ...((messageData && messageData.metadata) || {}),
+            ...(messageData && messageData.files && messageData.files.length > 0 ? {
+              attachments: messageData.files.map((file: any) => ({
+                id: file.id,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                category: file.category,
+                uploadedAt: file.uploadedAt
+              }))
+            } : {})
+          }
+        };
+
+        const newMessage = await api.sendChatMessage(threadId, payload);
 
         update((state) => ({
           ...state,
@@ -262,6 +284,39 @@ function createChatStore() {
     // Notification management (delegated to notification service)
     async fetchNotifications(): Promise<void> {
       await notificationService.fetchNotifications(true);
+    },
+
+    // Add message to store (for streaming completion)
+    addMessage(threadId: string, message: ChatMessage): void {
+      update((state) => ({
+        ...state,
+        messages: {
+          ...state.messages,
+          [threadId]: [...(state.messages[threadId] || []), message],
+        },
+      }));
+      
+      // Check for context optimization metadata
+      if (message.message_metadata && message.message_metadata.context_optimization) {
+        this.updateContextOptimization(threadId, message.message_metadata.context_optimization);
+      }
+    },
+
+    // Update context optimization data
+    updateContextOptimization(threadId: string, optimization: ContextOptimization): void {
+      update((state) => ({
+        ...state,
+        contextOptimization: {
+          ...state.contextOptimization,
+          [threadId]: optimization,
+        },
+      }));
+    },
+
+    // Get context optimization for a thread
+    getContextOptimization(threadId: string): ContextOptimization | null {
+      const state = get({ subscribe });
+      return state.contextOptimization[threadId] || null;
     },
 
     // Utility methods
@@ -343,6 +398,10 @@ export const currentThread = derived(
 
 export const currentMessages = derived(chat, ($chat) =>
   $chat.currentThreadId ? $chat.messages[$chat.currentThreadId] || [] : []
+);
+
+export const currentContextOptimization = derived(chat, ($chat) =>
+  $chat.currentThreadId ? $chat.contextOptimization[$chat.currentThreadId] || null : null
 );
 
 export const activeThreads = derived(chat, ($chat) =>

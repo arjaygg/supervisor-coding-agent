@@ -13,12 +13,14 @@ export interface ChatWebSocketEvent {
     role?: string;
     status?: string;
     created_at?: string;
+    edited_at?: string;
   };
 }
 
 export interface ChatUpdateHandlers {
   onThreadCreated: (threadData: Partial<ChatThread>) => void;
   onMessageSent: (messageData: Partial<ChatMessage>) => void;
+  onMessageUpdated: (messageData: any) => void;
   onThreadUpdated: (threadId: string, updates: Partial<ChatThread>) => void;
   onThreadDeleted: (threadId: string) => void;
   onNotificationsRead: (threadId: string) => void;
@@ -69,6 +71,15 @@ export class ChatWebSocketHandler {
             message_type: "TEXT" as const,
             metadata: {},
             created_at: data.created_at,
+          });
+          break;
+
+        case "message_updated":
+          this.handlers?.onMessageUpdated({
+            message_id: data.message_id,
+            thread_id: data.thread_id,
+            content: data.content,
+            edited_at: data.edited_at,
           });
           break;
 

@@ -35,7 +35,9 @@
       "Bash(git checkout:*)",
       "Bash(gh repo view:*)",
       "Bash(gh pr view:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(npm test:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   },

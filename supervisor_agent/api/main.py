@@ -10,6 +10,7 @@ from supervisor_agent.api.routes.advanced_analytics import router as advanced_an
 from supervisor_agent.api.routes.analytics import router as analytics_router
 from supervisor_agent.api.routes.chat import router as chat_router
 from supervisor_agent.api.routes.health import router as health_router
+from supervisor_agent.api.routes.organization import router as organization_router
 from supervisor_agent.api.routes.plugins import router as plugins_router
 from supervisor_agent.api.routes.providers import router as providers_router
 from supervisor_agent.api.routes.real_time_monitoring import router as monitoring_router
@@ -174,6 +175,7 @@ app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
 app.include_router(advanced_analytics_router, tags=["advanced-analytics"])
 app.include_router(workflows_router, prefix="/api/v1", tags=["workflows"])
 app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"])
+app.include_router(organization_router, tags=["organization"])
 app.include_router(providers_router, tags=["providers"])
 app.include_router(resources_router, tags=["resources"])
 app.include_router(plugins_router, tags=["plugins"])

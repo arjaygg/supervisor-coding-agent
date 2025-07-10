@@ -24,5 +24,55 @@
       "exponential_backoff": true,
       "max_delay": 300.0
     }
+  },
+  "function_calling_processor": {
+    "enabled": true,
+    "auto_start": true,
+    "configuration": {
+      "max_execution_time": 30,
+      "allowed_categories": ["general", "utility", "chat", "math", "text"],
+      "security_mode": "moderate"
+    },
+    "permissions": [
+      "function:call",
+      "system:execute"
+    ],
+    "resource_limits": {
+      "max_memory_mb": 200,
+      "max_cpu_percent": 20,
+      "max_concurrent_operations": 3
+    },
+    "retry_policy": {
+      "max_retries": 2,
+      "retry_delay": 0.5,
+      "exponential_backoff": false,
+      "max_delay": 10.0
+    }
+  },
+  "code_analysis_processor": {
+    "enabled": true,
+    "auto_start": true,
+    "configuration": {
+      "supported_languages": ["python", "javascript", "typescript"],
+      "analysis_timeout": 300,
+      "enable_security_scan": true,
+      "max_file_size_mb": 10
+    },
+    "permissions": [
+      "file:read",
+      "process:execute",
+      "network:http"
+    ],
+    "resource_limits": {
+      "max_memory_mb": 500,
+      "max_cpu_percent": 50,
+      "max_concurrent_operations": 2
+    },
+    "retry_policy": {
+      "max_retries": 1,
+      "retry_delay": 2.0,
+      "exponential_backoff": false,
+      "max_delay": 30.0
+    }
   }
 }
