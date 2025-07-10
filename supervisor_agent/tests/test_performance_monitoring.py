@@ -11,6 +11,7 @@ from supervisor_agent.core.performance_optimizer import (
     OptimizationTarget,
     OptimizationTechnique,
     PerformanceLevel,
+    PerformanceMetric,
     PerformanceOptimizer,
 )
 from supervisor_agent.models.task import Task
@@ -620,7 +621,7 @@ class TestPerformanceOptimizer:
                 load_multiplier = 1.5 if 9 <= hour <= 17 else 1.0
 
                 optimizer.performance_metrics["cpu_usage"].append(
-                    optimizer.PerformanceMetric(
+                    PerformanceMetric(
                         name="cpu_usage",
                         value=50.0 * load_multiplier + (i % 5) * 2,
                         unit="percent",
@@ -657,17 +658,17 @@ class TestPerformanceOptimizer:
 
         # Add current metrics that show regression
         optimizer.performance_metrics["response_time"].append(
-            optimizer.PerformanceMetric(
+            PerformanceMetric(
                 name="response_time", value=1500.0, unit="ms"
             )  # 50% worse
         )
         optimizer.performance_metrics["throughput"].append(
-            optimizer.PerformanceMetric(
+            PerformanceMetric(
                 name="throughput", value=750.0, unit="rps"
             )  # 25% worse
         )
         optimizer.performance_metrics["error_rate"].append(
-            optimizer.PerformanceMetric(
+            PerformanceMetric(
                 name="error_rate", value=2.0, unit="percent"
             )  # 300% worse
         )
@@ -752,12 +753,12 @@ class TestPerformanceOptimizer:
             response_value = 1000.0 + i * 10  # Correlated with CPU
 
             optimizer.performance_metrics["cpu_usage"].append(
-                optimizer.PerformanceMetric(
+                PerformanceMetric(
                     name="cpu_usage", value=cpu_value, unit="percent"
                 )
             )
             optimizer.performance_metrics["response_time"].append(
-                optimizer.PerformanceMetric(
+                PerformanceMetric(
                     name="response_time", value=response_value, unit="ms"
                 )
             )
