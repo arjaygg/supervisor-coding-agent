@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from supervisor_agent.ai.manager import AIManager, AIManagerConfig, ProviderConfig, RequestContext
 from supervisor_agent.api.websocket import notify_chat_update
 from supervisor_agent.db import crud, schemas
 from supervisor_agent.db.database import get_db
@@ -505,7 +506,6 @@ async def generate_ai_response_content(thread_id: UUID, user_message: str, db: S
     """
     try:
         # Import AI components
-        from supervisor_agent.ai.manager import AIManager, RequestContext
         from supervisor_agent.ai.providers import AIMessage, ModelCapability
         
         # Get recent messages for context
@@ -672,7 +672,6 @@ def get_ai_manager() -> AIManager:
     """Get or create AI manager instance"""
     global _ai_manager
     if _ai_manager is None:
-        from supervisor_agent.ai.manager import AIManagerConfig, ProviderConfig
         import os
         
         # Configuration - in production, load from environment/config file
