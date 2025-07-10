@@ -18,7 +18,6 @@ class TaskSplit:
     dependencies: List[str] = field(default_factory=list)
     parallelizable: bool = True
     split_id: Optional[str] = None
-
     def __post_init__(self):
         # Set split_id to task_id if not provided
         if self.split_id is None:

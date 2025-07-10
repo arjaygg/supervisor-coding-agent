@@ -183,7 +183,10 @@ export const api = {
   getAnalyticsHealth: () => apiRequest<any>("/api/v1/analytics/health"),
 
   // Chat API methods
-  getChatThreads: () => apiRequest<any>("/api/v1/chat/threads"),
+  getChatThreads: () => apiRequest<{
+    threads: any[];
+    total_count: number;
+  }>("/api/v1/chat/threads"),
 
   createChatThread: (data: { title: string; initial_message?: string }) =>
     apiRequest<any>("/api/v1/chat/threads", {
@@ -208,14 +211,35 @@ export const api = {
   getChatMessages: (threadId: string, before?: string) => {
     const url = `/api/v1/chat/threads/${threadId}/messages`;
     const params = before ? `?before=${encodeURIComponent(before)}` : "";
-    return apiRequest<any>(`${url}${params}`);
+    return apiRequest<{
+      messages: any[];
+      has_more: boolean;
+      total_count: number;
+    }>(`${url}${params}`);
   },
 
-  sendChatMessage: (threadId: string, data: { content: string }) =>
+  sendChatMessage: (threadId: string, data: { content: string; message_type?: string; metadata?: any }) =>
     apiRequest<any>(`/api/v1/chat/threads/${threadId}/messages`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  updateChatMessage: (messageId: string, data: { content?: string; metadata?: any }) =>
+    apiRequest<any>(`/api/v1/chat/messages/${messageId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  // Streaming chat endpoint
+  streamChatResponse: (threadId: string, messageContent: string) => {
+    return fetch(`/api/v1/chat/threads/${threadId}/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content: messageContent }),
+    });
+  },
 
   getChatNotifications: (unreadOnly?: boolean) => {
     const params = unreadOnly ? "?unread_only=true" : "";
@@ -229,4 +253,101 @@ export const api = {
         method: "POST",
       }
     ),
+
+  // Message search
+  searchMessages: (params: {
+    q: string;
+    role?: string;
+    message_type?: string;
+    date_range?: string;
+    thread_ids?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") {
+        searchParams.append(key, String(value));
+      }
+    });
+    return apiRequest<{
+      results: any[];
+      total: number;
+      took_ms: number;
+    }>(`/api/v1/chat/search?${searchParams}`);
+  },
+
+  // Prompt Templates
+  getPromptTemplates: () =>
+    apiRequest<{
+      user_templates: any[];
+      community_templates: any[];
+    }>("/api/v1/prompt-templates"),
+
+  createPromptTemplate: (data: any) =>
+    apiRequest<any>("/api/v1/prompt-templates", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updatePromptTemplate: (templateId: string, data: any) =>
+    apiRequest<any>(`/api/v1/prompt-templates/${templateId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  deletePromptTemplate: (templateId: string) =>
+    apiRequest<{ message: string }>(`/api/v1/prompt-templates/${templateId}`, {
+      method: "DELETE",
+    }),
+
+  logPromptTemplateUsage: (data: {
+    template_id: string;
+    variables: Record<string, any>;
+    rendered_prompt: string;
+  }) =>
+    apiRequest<{ message: string }>("/api/v1/prompt-templates/usage", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // Plugin Management
+  getChatPlugins: () =>
+    apiRequest<{
+      plugins: any[];
+      count: number;
+      metrics: any;
+    }>("/api/v1/chat/plugins"),
+
+  getChatFunctions: () =>
+    apiRequest<{
+      functions: any[];
+      count: number;
+      categories: string[];
+    }>("/api/v1/chat/functions"),
+
+  callChatFunction: (functionName: string, args: Record<string, any>) =>
+    apiRequest<any>(`/api/v1/chat/functions/${functionName}/call`, {
+      method: "POST",
+      body: JSON.stringify({ args }),
+    }),
+
+  activatePlugin: (pluginName: string) =>
+    apiRequest<{ message: string }>(`/api/v1/chat/plugins/${pluginName}/activate`, {
+      method: "POST",
+    }),
+
+  deactivatePlugin: (pluginName: string) =>
+    apiRequest<{ message: string }>(`/api/v1/chat/plugins/${pluginName}/deactivate`, {
+      method: "POST",
+    }),
+
+  analyzeThread: (threadId: string) =>
+    apiRequest<{
+      analysis: any;
+      recommendations: any[];
+      metrics: any;
+    }>(`/api/v1/chat/threads/${threadId}/analyze`, {
+      method: "POST",
+    }),
 };

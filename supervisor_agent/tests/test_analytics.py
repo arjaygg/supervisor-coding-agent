@@ -429,7 +429,6 @@ class TestAnalyticsIntegration:
                 mock_query_chain = Mock()
                 mock_db.query.return_value.filter.return_value = mock_query_chain
                 mock_query_chain.count.return_value = 5  # Return actual integer
-
                 # This should not raise an exception but handle gracefully
                 try:
                     result = await engine.process_metrics(invalid_query)

@@ -108,7 +108,6 @@ class DependencyManager:
                 nodes.append(task.task_id)
             else:
                 nodes.append(str(task))
-
         edges = []
 
         # Simple dependency logic: sequential execution by default
@@ -131,6 +130,11 @@ class DependencyManager:
         levels = self._calculate_execution_levels(tasks, edge_dict)
         parallelization_potential = self._calculate_parallelization_potential(
             levels, tasks
+        )
+        
+        # Calculate total estimated time from task configs
+        total_estimated_time = sum(
+            task.config.get("estimated_duration", 0) for task in tasks
         )
 
         # Calculate total estimated time from task configs

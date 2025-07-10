@@ -209,7 +209,6 @@ async def test_claude_cli_command_construction(
     """Test that Claude CLI commands are constructed correctly"""
     # Mock CLI validation to return True
     mock_validate_cli.return_value = True
-
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "CLI response"
     mock_subprocess.return_value.stderr = ""
@@ -242,7 +241,6 @@ async def test_claude_cli_environment_isolation(
     """Test that each agent has isolated environment"""
     # Mock CLI validation to return True
     mock_validate_cli.return_value = True
-
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "Response"
     mock_subprocess.return_value.stderr = ""
@@ -270,7 +268,6 @@ async def test_claude_cli_environment_isolation(
 async def test_claude_cli_prompt_content(mock_validate_cli, mock_subprocess, mock_task):
     """Test that prompts contain expected content"""
     mock_validate_cli.return_value = True
-
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "Response"
     mock_subprocess.return_value.stderr = ""
@@ -304,7 +301,6 @@ async def test_claude_cli_prompt_content(mock_validate_cli, mock_subprocess, moc
 async def test_claude_cli_concurrent_execution(mock_validate_cli, mock_subprocess):
     """Test concurrent execution of multiple agents"""
     mock_validate_cli.return_value = True
-
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "Response"
     mock_subprocess.return_value.stderr = ""
@@ -354,7 +350,6 @@ async def test_claude_cli_error_handling_details(
 ):
     """Test detailed error handling for different CLI failures"""
     mock_validate_cli.return_value = True
-
     # Test different types of errors
     error_scenarios = [
         {
@@ -396,7 +391,6 @@ async def test_claude_cli_error_handling_details(
 async def test_claude_cli_output_parsing(mock_validate_cli, mock_subprocess, mock_task):
     """Test parsing of Claude CLI output"""
     mock_validate_cli.return_value = True
-
     # Test various output formats
     test_outputs = [
         "Simple response",
@@ -426,7 +420,6 @@ async def test_claude_cli_execution_time_tracking(
 ):
     """Test that execution time is accurately tracked"""
     mock_validate_cli.return_value = True
-
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "Response"
     mock_subprocess.return_value.stderr = ""

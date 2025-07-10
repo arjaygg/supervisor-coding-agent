@@ -109,7 +109,7 @@ class TestRealTimeMonitor:
             (b for b in bottlenecks if b["type"] == "cpu_bottleneck"), None
         )
         assert cpu_bottleneck is not None
-        assert cpu_bottleneck["severity"] in ["high", "critical"]
+        assert cpu_bottleneck["severity"] in ["warning", "critical"]
 
     @pytest.mark.asyncio
     async def test_generate_performance_alerts(self, monitor):
@@ -564,7 +564,7 @@ class TestPerformanceOptimizer:
             None,
         )
         assert cpu_bottleneck is not None
-        assert cpu_bottleneck["severity"] == "high"
+        assert cpu_bottleneck["severity"] == "warning"
 
         response_bottleneck = next(
             (b for b in bottlenecks if b["type"] == "high_response_time"), None

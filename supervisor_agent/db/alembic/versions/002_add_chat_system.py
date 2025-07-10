@@ -38,59 +38,89 @@ def upgrade():
     op.create_index(op.f("ix_users_id"), "users", ["id"], unique=False)
     op.create_index(op.f("ix_users_username"), "users", ["username"], unique=True)
 
-    # Create chat_sessions table
+    # Create chat_threads table
     op.create_table(
-        "chat_sessions",
+        "chat_threads",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("user_id", sa.String(), nullable=True),
-        sa.Column("title", sa.String(), nullable=True),
+        sa.Column("title", sa.String(255), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
         sa.Column("status", sa.String(), nullable=True, default="active"),
+        sa.Column("user_id", sa.String(255), nullable=True),
+        sa.Column("metadata", sa.Text(), nullable=True),
         sa.Column(
             "created_at",
-            sa.DateTime(),
+            sa.DateTime(timezone=True),
             server_default=sa.text("CURRENT_TIMESTAMP"),
             nullable=True,
         ),
-        sa.Column("updated_at", sa.DateTime(), nullable=True),
-        sa.Column("last_activity", sa.DateTime(), nullable=True),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["users.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_chat_sessions_id"), "chat_sessions", ["id"], unique=False)
+    op.create_index(op.f("ix_chat_threads_id"), "chat_threads", ["id"], unique=False)
 
     # Create chat_messages table
     op.create_table(
         "chat_messages",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("session_id", sa.String(), nullable=False),
+        sa.Column("thread_id", sa.String(), nullable=False),
         sa.Column("role", sa.String(), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
-        sa.Column("task_id", sa.Integer(), nullable=True),
+        sa.Column("message_type", sa.String(), nullable=True, default="text"),
+        sa.Column("metadata", sa.Text(), nullable=True),
+        sa.Column("parent_message_id", sa.String(), nullable=True),
         sa.Column(
-            "timestamp",
-            sa.DateTime(),
+            "created_at",
+            sa.DateTime(timezone=True),
             server_default=sa.text("CURRENT_TIMESTAMP"),
             nullable=True,
         ),
-        sa.Column("metadata", sa.Text(), nullable=True),
+        sa.Column("edited_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
-            ["session_id"],
-            ["chat_sessions.id"],
+            ["thread_id"],
+            ["chat_threads.id"],
+            ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["task_id"],
-            ["tasks.id"],
+            ["parent_message_id"],
+            ["chat_messages.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_chat_messages_id"), "chat_messages", ["id"], unique=False)
+    
+    # Create chat_notifications table
+    op.create_table(
+        "chat_notifications",
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("thread_id", sa.String(), nullable=False),
+        sa.Column("type", sa.String(), nullable=False),
+        sa.Column("title", sa.String(255), nullable=False),
+        sa.Column("message", sa.Text(), nullable=True),
+        sa.Column("is_read", sa.Boolean(), default=False),
+        sa.Column("metadata", sa.Text(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=True,
+        ),
+        sa.ForeignKeyConstraint(
+            ["thread_id"],
+            ["chat_threads.id"],
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_chat_notifications_id"), "chat_notifications", ["id"], unique=False)
 
 
 def downgrade():
     # Drop tables in reverse order
+    op.drop_table("chat_notifications")
     op.drop_table("chat_messages")
-    op.drop_table("chat_sessions")
+    op.drop_table("chat_threads")
     op.drop_table("users")

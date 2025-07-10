@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import JSON, Boolean, Column, DateTime
+from sqlalchemy import JSON, Boolean, Column, DateTime, Table
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -242,6 +242,15 @@ class UsageMetrics(Base):
     __table_args__ = {"extend_existing": True}
 
 
+# Association table for many-to-many relationship between conversations and tags
+conversation_tags = Table(
+    'conversation_tags',
+    Base.metadata,
+    Column('conversation_id', GUID(), ForeignKey('chat_threads.id'), primary_key=True),
+    Column('tag_id', GUID(), ForeignKey('tags.id'), primary_key=True)
+)
+
+
 class ChatThread(Base):
     __tablename__ = "chat_threads"
 
@@ -253,6 +262,11 @@ class ChatThread(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     user_id = Column(String(255), nullable=True)  # for future multi-user support
     thread_metadata = Column("metadata", JSON, default=dict)
+    
+    # Organization fields
+    folder_id = Column(GUID(), ForeignKey('folders.id'), nullable=True)
+    is_pinned = Column(Boolean, default=False)
+    priority = Column(Integer, default=0)  # 0=normal, 1=high, -1=low
 
     # Relationships
     messages = relationship(
@@ -267,6 +281,10 @@ class ChatThread(Base):
         back_populates="thread",
         cascade="all, delete-orphan",
     )
+    
+    # Organization relationships
+    folder = relationship("Folder", back_populates="conversations")
+    tags = relationship("Tag", secondary=conversation_tags, back_populates="conversations")
 
     # Indexes for performance
     __table_args__ = (
@@ -334,6 +352,79 @@ class ChatNotification(Base):
         Index("ix_chat_notifications_thread_unread", "thread_id", "is_read"),
         Index("ix_chat_notifications_type_created", "type", "created_at"),
     )
+
+
+class Folder(Base):
+    """
+    Folder for organizing conversations.
+    """
+    __tablename__ = "folders"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    color = Column(String(7), nullable=True)  # Hex color code
+    icon = Column(String(50), nullable=True)  # Icon identifier
+    
+    # Hierarchy support
+    parent_id = Column(GUID(), ForeignKey('folders.id'), nullable=True)
+    parent = relationship("Folder", remote_side=[id], backref="subfolders")
+    
+    # User association
+    user_id = Column(String(255), nullable=True)  # For multi-user support
+    
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Position for ordering
+    position = Column(Integer, default=0)
+    
+    # Relationships
+    conversations = relationship("ChatThread", back_populates="folder")
+
+
+class Tag(Base):
+    """
+    Tag for categorizing conversations.
+    """
+    __tablename__ = "tags"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    name = Column(String(50), nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+    color = Column(String(7), nullable=True)  # Hex color code
+    
+    # User association
+    user_id = Column(String(255), nullable=True)  # For multi-user support
+    
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    usage_count = Column(Integer, default=0)  # Track how often tag is used
+    
+    # Relationships
+    conversations = relationship("ChatThread", secondary=conversation_tags, back_populates="tags")
+
+
+class Favorite(Base):
+    """
+    Favorite conversations for quick access.
+    """
+    __tablename__ = "favorites"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    conversation_id = Column(GUID(), ForeignKey('chat_threads.id'), nullable=False)
+    user_id = Column(String(255), nullable=True)  # For multi-user support
+    
+    # Optional categorization
+    category = Column(String(50), nullable=True)  # e.g., "important", "reference", "todo"
+    notes = Column(Text, nullable=True)  # User notes about why this is favorited
+    
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    conversation = relationship("ChatThread", backref="favorite_entries")
 
 
 # Import analytics models to ensure they're included in Base metadata
