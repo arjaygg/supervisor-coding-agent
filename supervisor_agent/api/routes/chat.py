@@ -11,10 +11,15 @@ from supervisor_agent.api.websocket import notify_chat_update
 from supervisor_agent.db import crud, schemas
 from supervisor_agent.db.database import get_db
 from supervisor_agent.db.enums import ChatThreadStatus, MessageRole, MessageType
+from supervisor_agent.plugins.plugin_manager import PluginManager
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter()
+
+# Global instances
+_ai_manager = None
+_plugin_manager = None
 
 
 # Chat Thread Endpoints
@@ -68,23 +73,37 @@ async def get_chat_threads(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     status: Optional[ChatThreadStatus] = None,
+    folder_id: Optional[UUID] = Query(None, description="Filter by folder"),
+    tag_ids: Optional[List[UUID]] = Query(None, description="Filter by tags"),
+    is_pinned: Optional[bool] = Query(None, description="Filter by pinned status"),
+    is_favorited: Optional[bool] = Query(None, description="Filter by favorite status"),
     db: Session = Depends(get_db),
 ):
-    """Get list of chat threads with statistics"""
+    """Get list of chat threads with organization data"""
     try:
-        threads_data = crud.ChatThreadCRUD.get_threads_with_stats(
-            db, skip=skip, limit=limit, status=status
-        )
-
-        # Convert to response format
-        threads = []
-        for thread_data in threads_data:
-            # Get last message content for preview
-            last_message = None
-            if thread_data["last_message_at"]:
-                messages = crud.ChatMessageCRUD.get_messages(
-                    db, thread_data["id"], limit=1
-                )
+        # Use organization filter if any organization parameters are provided
+        use_organization_filter = any([folder_id, tag_ids, is_pinned, is_favorited])
+        
+        if use_organization_filter:
+            # Use the organization-aware search
+            filter_request = schemas.ConversationFilterRequest(
+                folder_id=folder_id,
+                tag_ids=tag_ids,
+                is_pinned=is_pinned,
+                is_favorited=is_favorited,
+                status=status.value if status else None
+            )
+            
+            threads_data = crud.ConversationOrganizationCRUD.get_organized_conversations(
+                db, filter_request, user_id=None, skip=skip, limit=limit
+            )
+            
+            # Convert to organized response format
+            threads = []
+            for thread in threads_data:
+                # Get last message content for preview
+                last_message = None
+                messages = crud.ChatMessageCRUD.get_messages(db, thread.id, limit=1)
                 if messages:
                     last_message = (
                         messages[0].content[:100] + "..."
@@ -92,20 +111,63 @@ async def get_chat_threads(
                         else messages[0].content
                     )
 
-            thread_response = schemas.ChatThreadResponse(
-                id=thread_data["id"],
-                title=thread_data["title"],
-                description=thread_data["description"],
-                status=thread_data["status"],
-                created_at=thread_data["created_at"],
-                updated_at=thread_data["updated_at"],
-                user_id=thread_data["user_id"],
-                metadata=thread_data["metadata"],
-                unread_count=thread_data["unread_count"],
-                last_message=last_message,
-                last_message_at=thread_data["last_message_at"],
+                # Build organized response
+                organized_response = schemas.OrganizedConversationResponse(
+                    id=thread.id,
+                    title=thread.title,
+                    description=thread.description,
+                    status=thread.status,
+                    created_at=thread.created_at,
+                    updated_at=thread.updated_at,
+                    user_id=thread.user_id,
+                    metadata=thread.metadata or {},
+                    unread_count=0,  # TODO: Calculate unread count
+                    last_message=last_message,
+                    last_message_at=thread.updated_at,
+                    folder=schemas.FolderResponse.model_validate(thread.folder) if thread.folder else None,
+                    tags=[schemas.TagResponse.model_validate(tag) for tag in thread.tags],
+                    is_pinned=thread.is_pinned or False,
+                    priority=thread.priority or 0,
+                    is_favorited=crud.FavoriteCRUD.is_conversation_favorited(db, thread.id, None)
+                )
+                threads.append(organized_response)
+            
+        else:
+            # Use traditional method for basic requests
+            threads_data = crud.ChatThreadCRUD.get_threads_with_stats(
+                db, skip=skip, limit=limit, status=status
             )
-            threads.append(thread_response)
+
+            # Convert to response format
+            threads = []
+            for thread_data in threads_data:
+                # Get last message content for preview
+                last_message = None
+                if thread_data["last_message_at"]:
+                    messages = crud.ChatMessageCRUD.get_messages(
+                        db, thread_data["id"], limit=1
+                    )
+                    if messages:
+                        last_message = (
+                            messages[0].content[:100] + "..."
+                            if len(messages[0].content) > 100
+                            else messages[0].content
+                        )
+
+                thread_response = schemas.ChatThreadResponse(
+                    id=thread_data["id"],
+                    title=thread_data["title"],
+                    description=thread_data["description"],
+                    status=thread_data["status"],
+                    created_at=thread_data["created_at"],
+                    updated_at=thread_data["updated_at"],
+                    user_id=thread_data["user_id"],
+                    metadata=thread_data["metadata"],
+                    unread_count=thread_data["unread_count"],
+                    last_message=last_message,
+                    last_message_at=thread_data["last_message_at"],
+                )
+                threads.append(thread_response)
 
         # Get total count for pagination
         total_count = len(
@@ -258,8 +320,43 @@ async def send_message(
             )
         )
 
-        # TODO: Process message for task generation if needed
-        # This will be implemented in the natural language processing phase
+        # Generate AI response if needed
+        if not message.metadata.get("suppress_ai_response", False):
+            try:
+                # Get AI manager
+                ai_manager = get_ai_manager()
+                
+                # Generate AI response
+                ai_content = await generate_ai_response_content(thread_id, message.content, db)
+                
+                # Create AI response message
+                ai_message_data = schemas.ChatMessageCreate(
+                    content=ai_content,
+                    message_type=MessageType.TEXT,
+                    metadata={"generated_by": "ai_manager", "has_function_calls": False}
+                )
+                
+                ai_db_message = crud.ChatMessageCRUD.create_message(
+                    db, thread_id, ai_message_data, MessageRole.ASSISTANT
+                )
+                
+                # Send WebSocket notification for AI response
+                asyncio.create_task(
+                    notify_chat_update(
+                        {
+                            "type": "message_sent",
+                            "thread_id": str(thread_id),
+                            "message_id": str(ai_db_message.id),
+                            "content": ai_content,
+                            "role": "assistant",
+                            "created_at": ai_db_message.created_at.isoformat(),
+                        }
+                    )
+                )
+                
+            except Exception as e:
+                logger.error(f"Failed to generate AI response: {str(e)}")
+                # Continue without AI response
 
         logger.info(f"Message sent to thread {thread_id}: {len(message.content)} chars")
         return db_message
@@ -454,15 +551,26 @@ Provide helpful, actionable responses that are concise but comprehensive. Focus 
             required_capabilities=[ModelCapability.TEXT_GENERATION]
         )
         
-        # Generate response
-        response = await ai_manager.generate_response(
-            messages=ai_messages,
-            context=context,
-            max_tokens=2048,
-            temperature=0.7
-        )
-        
-        return response.content
+        # Generate response with function calling support
+        try:
+            response = await ai_manager.generate_with_functions(
+                messages=ai_messages,
+                context=context,
+                auto_execute_functions=True,
+                max_function_calls=3
+            )
+            
+            return response.content
+        except AttributeError:
+            # Fallback to regular generation if function calling not available
+            response = await ai_manager.generate_response(
+                messages=ai_messages,
+                context=context,
+                max_tokens=2048,
+                temperature=0.7
+            )
+            
+            return response.content
         
     except Exception as e:
         logger.error(f"AI response generation failed: {str(e)}")
@@ -551,6 +659,15 @@ Please try again in a moment, or let me know if you'd like me to help with somet
 # Global AI manager instance
 _ai_manager = None
 
+async def get_plugin_manager() -> PluginManager:
+    """Get or create plugin manager instance"""
+    global _plugin_manager
+    if _plugin_manager is None:
+        _plugin_manager = PluginManager()
+        await _plugin_manager.initialize()
+    return _plugin_manager
+
+
 def get_ai_manager() -> AIManager:
     """Get or create AI manager instance"""
     global _ai_manager
@@ -592,7 +709,14 @@ def get_ai_manager() -> AIManager:
             context_strategy=DEFAULT_CONTEXT_STRATEGY
         )
         
-        _ai_manager = AIManager(config)
+        # Get plugin manager and pass to AI manager
+        try:
+            import asyncio
+            plugin_manager = asyncio.get_event_loop().run_until_complete(get_plugin_manager())
+            _ai_manager = AIManager(config, plugin_manager)
+        except:
+            # Fallback without plugin manager if initialization fails
+            _ai_manager = AIManager(config)
     
     return _ai_manager
 
@@ -871,4 +995,199 @@ async def search_messages(
         raise
     except Exception as e:
         logger.error(f"Failed to search messages: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Function Calling and Plugin Management Endpoints
+
+@router.get("/functions")
+async def get_available_functions():
+    """Get list of available functions from all plugins"""
+    try:
+        ai_manager = get_ai_manager()
+        functions = await ai_manager.get_available_functions()
+        
+        return {
+            "functions": functions,
+            "count": len(functions),
+            "enabled": ai_manager.function_calling_enabled
+        }
+    except Exception as e:
+        logger.error(f"Failed to get available functions: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/functions/{function_name}/call")
+async def call_function(
+    function_name: str,
+    function_args: dict,
+    thread_id: Optional[UUID] = None
+):
+    """Call a specific function through the plugin system"""
+    try:
+        ai_manager = get_ai_manager()
+        
+        # Create request context
+        from supervisor_agent.ai.manager import RequestContext
+        context = RequestContext(
+            thread_id=str(thread_id) if thread_id else None,
+            task_type="function_call",
+            priority="normal"
+        )
+        
+        result = await ai_manager.call_function(function_name, function_args, context)
+        
+        return {
+            "function_name": function_name,
+            "arguments": function_args,
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"Failed to call function {function_name}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/plugins")
+async def get_plugins():
+    """Get list of all loaded plugins"""
+    try:
+        plugin_manager = await get_plugin_manager()
+        plugins = plugin_manager.list_plugins()
+        
+        return {
+            "plugins": plugins,
+            "count": len(plugins),
+            "metrics": plugin_manager.get_system_metrics()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get plugins: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/plugins/{plugin_name}/activate")
+async def activate_plugin(plugin_name: str):
+    """Activate a specific plugin"""
+    try:
+        plugin_manager = await get_plugin_manager()
+        success = await plugin_manager.activate_plugin(plugin_name)
+        
+        if success:
+            return {"status": "activated", "plugin": plugin_name}
+        else:
+            raise HTTPException(status_code=400, detail=f"Failed to activate plugin {plugin_name}")
+    except Exception as e:
+        logger.error(f"Failed to activate plugin {plugin_name}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/plugins/{plugin_name}/deactivate")
+async def deactivate_plugin(plugin_name: str):
+    """Deactivate a specific plugin"""
+    try:
+        plugin_manager = await get_plugin_manager()
+        success = await plugin_manager.deactivate_plugin(plugin_name)
+        
+        if success:
+            return {"status": "deactivated", "plugin": plugin_name}
+        else:
+            raise HTTPException(status_code=400, detail=f"Failed to deactivate plugin {plugin_name}")
+    except Exception as e:
+        logger.error(f"Failed to deactivate plugin {plugin_name}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/plugins/{plugin_name}/health")
+async def check_plugin_health(plugin_name: str):
+    """Check health status of a specific plugin"""
+    try:
+        plugin_manager = await get_plugin_manager()
+        plugin = plugin_manager.get_plugin(plugin_name)
+        
+        if not plugin:
+            raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} not found")
+        
+        health_result = await plugin.health_check()
+        
+        return {
+            "plugin": plugin_name,
+            "health": health_result.data if health_result.success else None,
+            "status": "healthy" if health_result.success else "unhealthy",
+            "error": health_result.error if not health_result.success else None
+        }
+    except Exception as e:
+        logger.error(f"Failed to check health for plugin {plugin_name}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/threads/{thread_id}/analyze")
+async def analyze_thread_with_plugins(
+    thread_id: UUID,
+    analysis_type: str = "full",
+    db: Session = Depends(get_db)
+):
+    """Analyze a chat thread using code analysis plugins"""
+    try:
+        # Verify thread exists
+        thread = crud.ChatThreadCRUD.get_thread(db, thread_id)
+        if not thread:
+            raise HTTPException(status_code=404, detail="Chat thread not found")
+        
+        # Get messages from the thread
+        messages = crud.ChatMessageCRUD.get_messages(db, thread_id, limit=100)
+        
+        # Extract code from messages
+        code_blocks = []
+        for message in messages:
+            # Simple code extraction - look for code blocks
+            content = message.content
+            if "```" in content:
+                import re
+                code_pattern = r'```(?:\w+)?\n(.*?)\n```'
+                matches = re.findall(code_pattern, content, re.DOTALL)
+                code_blocks.extend(matches)
+        
+        if not code_blocks:
+            return {
+                "thread_id": str(thread_id),
+                "analysis_type": analysis_type,
+                "result": "No code blocks found in conversation",
+                "code_blocks_found": 0
+            }
+        
+        # Use plugin system to analyze code
+        plugin_manager = await get_plugin_manager()
+        analysis_results = []
+        
+        for i, code_block in enumerate(code_blocks):
+            # Find code analysis processor
+            processor = None
+            for plugin_name, plugin in plugin_manager.task_processors.items():
+                if plugin.can_handle_task("code_analysis"):
+                    processor = plugin
+                    break
+            
+            if processor:
+                task_data = {
+                    "analysis_type": analysis_type,
+                    "code_content": code_block,
+                    "language": "python",  # Default, could be detected
+                    "options": {}
+                }
+                
+                result = await processor.process_task(task_data)
+                analysis_results.append({
+                    "code_block_index": i,
+                    "analysis": result.data if result.success else None,
+                    "error": result.error if not result.success else None
+                })
+        
+        return {
+            "thread_id": str(thread_id),
+            "analysis_type": analysis_type,
+            "code_blocks_found": len(code_blocks),
+            "analysis_results": analysis_results
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to analyze thread {thread_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

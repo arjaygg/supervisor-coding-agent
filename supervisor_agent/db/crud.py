@@ -1092,3 +1092,498 @@ class ProviderUsageCRUD:
             "total_cost_usd": f"{total_cost:.4f}",
             "provider_breakdown": provider_summary,
         }
+
+
+# Organization CRUD Operations
+
+class FolderCRUD:
+    @staticmethod
+    def create_folder(
+        db: Session, folder: schemas.FolderCreate, user_id: Optional[str] = None
+    ) -> models.Folder:
+        """Create a new folder."""
+        db_folder = models.Folder(
+            name=folder.name,
+            description=folder.description,
+            color=folder.color,
+            icon=folder.icon,
+            parent_id=folder.parent_id,
+            position=folder.position,
+            user_id=user_id,
+        )
+        db.add(db_folder)
+        db.commit()
+        db.refresh(db_folder)
+        return db_folder
+
+    @staticmethod
+    def get_folder(db: Session, folder_id: UUID) -> Optional[models.Folder]:
+        """Get a folder by ID."""
+        return db.query(models.Folder).filter(models.Folder.id == folder_id).first()
+
+    @staticmethod
+    def get_folders(
+        db: Session,
+        user_id: Optional[str] = None,
+        parent_id: Optional[UUID] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[models.Folder]:
+        """Get folders with optional filtering."""
+        query = db.query(models.Folder)
+        
+        if user_id:
+            query = query.filter(models.Folder.user_id == user_id)
+        if parent_id:
+            query = query.filter(models.Folder.parent_id == parent_id)
+        else:
+            # If no parent_id specified, get root folders (parent_id is None)
+            query = query.filter(models.Folder.parent_id.is_(None))
+        
+        return (
+            query.order_by(models.Folder.position, models.Folder.name)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def update_folder(
+        db: Session, folder_id: UUID, folder_update: schemas.FolderUpdate
+    ) -> Optional[models.Folder]:
+        """Update a folder."""
+        db_folder = db.query(models.Folder).filter(models.Folder.id == folder_id).first()
+        if not db_folder:
+            return None
+        
+        update_data = folder_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_folder, field, value)
+        
+        db.commit()
+        db.refresh(db_folder)
+        return db_folder
+
+    @staticmethod
+    def delete_folder(db: Session, folder_id: UUID) -> bool:
+        """Delete a folder and move its conversations to parent or root."""
+        db_folder = db.query(models.Folder).filter(models.Folder.id == folder_id).first()
+        if not db_folder:
+            return False
+        
+        # Move conversations to parent folder or root (None)
+        db.query(models.ChatThread).filter(
+            models.ChatThread.folder_id == folder_id
+        ).update({models.ChatThread.folder_id: db_folder.parent_id})
+        
+        # Move subfolders to parent folder or root
+        db.query(models.Folder).filter(
+            models.Folder.parent_id == folder_id
+        ).update({models.Folder.parent_id: db_folder.parent_id})
+        
+        db.delete(db_folder)
+        db.commit()
+        return True
+
+    @staticmethod
+    def get_folder_conversation_count(db: Session, folder_id: UUID) -> int:
+        """Get the number of conversations in a folder."""
+        return (
+            db.query(models.ChatThread)
+            .filter(models.ChatThread.folder_id == folder_id)
+            .count()
+        )
+
+
+class TagCRUD:
+    @staticmethod
+    def create_tag(
+        db: Session, tag: schemas.TagCreate, user_id: Optional[str] = None
+    ) -> models.Tag:
+        """Create a new tag."""
+        db_tag = models.Tag(
+            name=tag.name,
+            description=tag.description,
+            color=tag.color,
+            user_id=user_id,
+        )
+        db.add(db_tag)
+        db.commit()
+        db.refresh(db_tag)
+        return db_tag
+
+    @staticmethod
+    def get_tag(db: Session, tag_id: UUID) -> Optional[models.Tag]:
+        """Get a tag by ID."""
+        return db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+
+    @staticmethod
+    def get_tag_by_name(db: Session, name: str, user_id: Optional[str] = None) -> Optional[models.Tag]:
+        """Get a tag by name."""
+        query = db.query(models.Tag).filter(models.Tag.name == name)
+        if user_id:
+            query = query.filter(models.Tag.user_id == user_id)
+        return query.first()
+
+    @staticmethod
+    def get_tags(
+        db: Session,
+        user_id: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[models.Tag]:
+        """Get tags with optional filtering."""
+        query = db.query(models.Tag)
+        
+        if user_id:
+            query = query.filter(models.Tag.user_id == user_id)
+        
+        return (
+            query.order_by(desc(models.Tag.usage_count), models.Tag.name)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def update_tag(
+        db: Session, tag_id: UUID, tag_update: schemas.TagUpdate
+    ) -> Optional[models.Tag]:
+        """Update a tag."""
+        db_tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+        if not db_tag:
+            return None
+        
+        update_data = tag_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_tag, field, value)
+        
+        db.commit()
+        db.refresh(db_tag)
+        return db_tag
+
+    @staticmethod
+    def delete_tag(db: Session, tag_id: UUID) -> bool:
+        """Delete a tag and remove it from all conversations."""
+        db_tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+        if not db_tag:
+            return False
+        
+        # Remove tag from all conversations
+        for conversation in db_tag.conversations:
+            conversation.tags.remove(db_tag)
+        
+        db.delete(db_tag)
+        db.commit()
+        return True
+
+    @staticmethod
+    def increment_usage_count(db: Session, tag_id: UUID) -> None:
+        """Increment the usage count for a tag."""
+        db.query(models.Tag).filter(models.Tag.id == tag_id).update(
+            {models.Tag.usage_count: models.Tag.usage_count + 1}
+        )
+        db.commit()
+
+    @staticmethod
+    def get_popular_tags(
+        db: Session, user_id: Optional[str] = None, limit: int = 10
+    ) -> List[models.Tag]:
+        """Get the most popular tags by usage count."""
+        query = db.query(models.Tag)
+        
+        if user_id:
+            query = query.filter(models.Tag.user_id == user_id)
+        
+        return (
+            query.filter(models.Tag.usage_count > 0)
+            .order_by(desc(models.Tag.usage_count))
+            .limit(limit)
+            .all()
+        )
+
+
+class FavoriteCRUD:
+    @staticmethod
+    def create_favorite(
+        db: Session, favorite: schemas.FavoriteCreate, user_id: Optional[str] = None
+    ) -> models.Favorite:
+        """Create a new favorite."""
+        db_favorite = models.Favorite(
+            conversation_id=favorite.conversation_id,
+            category=favorite.category,
+            notes=favorite.notes,
+            user_id=user_id,
+        )
+        db.add(db_favorite)
+        db.commit()
+        db.refresh(db_favorite)
+        return db_favorite
+
+    @staticmethod
+    def get_favorite(db: Session, favorite_id: UUID) -> Optional[models.Favorite]:
+        """Get a favorite by ID."""
+        return db.query(models.Favorite).filter(models.Favorite.id == favorite_id).first()
+
+    @staticmethod
+    def get_favorite_by_conversation(
+        db: Session, conversation_id: UUID, user_id: Optional[str] = None
+    ) -> Optional[models.Favorite]:
+        """Get a favorite by conversation ID."""
+        query = db.query(models.Favorite).filter(
+            models.Favorite.conversation_id == conversation_id
+        )
+        if user_id:
+            query = query.filter(models.Favorite.user_id == user_id)
+        return query.first()
+
+    @staticmethod
+    def get_favorites(
+        db: Session,
+        user_id: Optional[str] = None,
+        category: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[models.Favorite]:
+        """Get favorites with optional filtering."""
+        query = db.query(models.Favorite)
+        
+        if user_id:
+            query = query.filter(models.Favorite.user_id == user_id)
+        if category:
+            query = query.filter(models.Favorite.category == category)
+        
+        return (
+            query.order_by(desc(models.Favorite.created_at))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def update_favorite(
+        db: Session, favorite_id: UUID, favorite_update: schemas.FavoriteUpdate
+    ) -> Optional[models.Favorite]:
+        """Update a favorite."""
+        db_favorite = db.query(models.Favorite).filter(models.Favorite.id == favorite_id).first()
+        if not db_favorite:
+            return None
+        
+        update_data = favorite_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_favorite, field, value)
+        
+        db.commit()
+        db.refresh(db_favorite)
+        return db_favorite
+
+    @staticmethod
+    def delete_favorite(db: Session, favorite_id: UUID) -> bool:
+        """Delete a favorite."""
+        db_favorite = db.query(models.Favorite).filter(models.Favorite.id == favorite_id).first()
+        if not db_favorite:
+            return False
+        
+        db.delete(db_favorite)
+        db.commit()
+        return True
+
+    @staticmethod
+    def is_conversation_favorited(
+        db: Session, conversation_id: UUID, user_id: Optional[str] = None
+    ) -> bool:
+        """Check if a conversation is favorited by a user."""
+        query = db.query(models.Favorite).filter(
+            models.Favorite.conversation_id == conversation_id
+        )
+        if user_id:
+            query = query.filter(models.Favorite.user_id == user_id)
+        return query.first() is not None
+
+
+class ConversationOrganizationCRUD:
+    @staticmethod
+    def update_conversation_organization(
+        db: Session, 
+        conversation_id: UUID, 
+        organization_update: schemas.ConversationOrganizationUpdate
+    ) -> Optional[models.ChatThread]:
+        """Update conversation organization (folder, tags, pinning, priority)."""
+        db_conversation = (
+            db.query(models.ChatThread)
+            .filter(models.ChatThread.id == conversation_id)
+            .first()
+        )
+        if not db_conversation:
+            return None
+        
+        # Update basic organization fields
+        update_data = organization_update.model_dump(exclude_unset=True, exclude={'tag_ids'})
+        for field, value in update_data.items():
+            setattr(db_conversation, field, value)
+        
+        # Handle tag updates
+        if organization_update.tag_ids is not None:
+            # Clear existing tags
+            db_conversation.tags.clear()
+            
+            # Add new tags
+            if organization_update.tag_ids:
+                new_tags = (
+                    db.query(models.Tag)
+                    .filter(models.Tag.id.in_(organization_update.tag_ids))
+                    .all()
+                )
+                for tag in new_tags:
+                    db_conversation.tags.append(tag)
+                    # Increment usage count for each tag
+                    TagCRUD.increment_usage_count(db, tag.id)
+        
+        db.commit()
+        db.refresh(db_conversation)
+        return db_conversation
+
+    @staticmethod
+    def get_organized_conversations(
+        db: Session,
+        filter_request: schemas.ConversationFilterRequest,
+        user_id: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 20,
+    ) -> List[models.ChatThread]:
+        """Get conversations with organization filters applied."""
+        query = db.query(models.ChatThread)
+        
+        # User filter
+        if user_id:
+            query = query.filter(models.ChatThread.user_id == user_id)
+        
+        # Organization filters
+        if filter_request.folder_id is not None:
+            query = query.filter(models.ChatThread.folder_id == filter_request.folder_id)
+        
+        if filter_request.is_pinned is not None:
+            query = query.filter(models.ChatThread.is_pinned == filter_request.is_pinned)
+        
+        if filter_request.priority is not None:
+            query = query.filter(models.ChatThread.priority == filter_request.priority)
+        
+        if filter_request.status:
+            query = query.filter(models.ChatThread.status == filter_request.status)
+        
+        if filter_request.search_query:
+            search_term = f"%{filter_request.search_query}%"
+            query = query.filter(
+                or_(
+                    models.ChatThread.title.ilike(search_term),
+                    models.ChatThread.description.ilike(search_term),
+                )
+            )
+        
+        if filter_request.date_from:
+            query = query.filter(models.ChatThread.created_at >= filter_request.date_from)
+        
+        if filter_request.date_to:
+            query = query.filter(models.ChatThread.created_at <= filter_request.date_to)
+        
+        # Tag filter (requires join)
+        if filter_request.tag_ids:
+            query = query.join(models.ChatThread.tags).filter(
+                models.Tag.id.in_(filter_request.tag_ids)
+            )
+        
+        # Favorite filter (requires subquery)
+        if filter_request.is_favorited is not None:
+            favorite_subquery = db.query(models.Favorite.conversation_id)
+            if user_id:
+                favorite_subquery = favorite_subquery.filter(models.Favorite.user_id == user_id)
+            
+            if filter_request.is_favorited:
+                query = query.filter(models.ChatThread.id.in_(favorite_subquery))
+            else:
+                query = query.filter(~models.ChatThread.id.in_(favorite_subquery))
+        
+        # Order by priority, pinned status, then updated date
+        query = query.order_by(
+            desc(models.ChatThread.priority),
+            desc(models.ChatThread.is_pinned),
+            desc(models.ChatThread.updated_at)
+        )
+        
+        return query.offset(skip).limit(limit).all()
+
+    @staticmethod
+    def get_organization_stats(
+        db: Session, user_id: Optional[str] = None
+    ) -> schemas.OrganizationStatsResponse:
+        """Get organization statistics."""
+        # Base query for user's conversations
+        conversation_query = db.query(models.ChatThread)
+        if user_id:
+            conversation_query = conversation_query.filter(models.ChatThread.user_id == user_id)
+        
+        # Total counts
+        total_conversations = conversation_query.count()
+        
+        folder_query = db.query(models.Folder)
+        if user_id:
+            folder_query = folder_query.filter(models.Folder.user_id == user_id)
+        total_folders = folder_query.count()
+        
+        tag_query = db.query(models.Tag)
+        if user_id:
+            tag_query = tag_query.filter(models.Tag.user_id == user_id)
+        total_tags = tag_query.count()
+        
+        favorite_query = db.query(models.Favorite)
+        if user_id:
+            favorite_query = favorite_query.filter(models.Favorite.user_id == user_id)
+        total_favorites = favorite_query.count()
+        
+        # Conversations by folder
+        folder_stats = (
+            db.query(
+                models.Folder.name.label("folder_name"),
+                func.count(models.ChatThread.id).label("conversation_count")
+            )
+            .outerjoin(models.ChatThread, models.Folder.id == models.ChatThread.folder_id)
+        )
+        if user_id:
+            folder_stats = folder_stats.filter(models.Folder.user_id == user_id)
+        
+        conversations_by_folder = {
+            stat.folder_name: stat.conversation_count 
+            for stat in folder_stats.group_by(models.Folder.name).all()
+        }
+        
+        # Conversations by tag
+        tag_stats = (
+            db.query(
+                models.Tag.name.label("tag_name"),
+                func.count(models.ChatThread.id).label("conversation_count")
+            )
+            .join(models.conversation_tags, models.Tag.id == models.conversation_tags.c.tag_id)
+            .join(models.ChatThread, models.ChatThread.id == models.conversation_tags.c.conversation_id)
+        )
+        if user_id:
+            tag_stats = tag_stats.filter(models.Tag.user_id == user_id)
+        
+        conversations_by_tag = {
+            stat.tag_name: stat.conversation_count 
+            for stat in tag_stats.group_by(models.Tag.name).all()
+        }
+        
+        # Special counts
+        pinned_conversations = conversation_query.filter(models.ChatThread.is_pinned == True).count()
+        high_priority_conversations = conversation_query.filter(models.ChatThread.priority == 1).count()
+        
+        return schemas.OrganizationStatsResponse(
+            total_conversations=total_conversations,
+            total_folders=total_folders,
+            total_tags=total_tags,
+            total_favorites=total_favorites,
+            conversations_by_folder=conversations_by_folder,
+            conversations_by_tag=conversations_by_tag,
+            pinned_conversations=pinned_conversations,
+            high_priority_conversations=high_priority_conversations,
+        )
