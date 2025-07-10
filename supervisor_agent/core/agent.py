@@ -1,5 +1,4 @@
 import json
-import logging
 import subprocess
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -8,7 +7,7 @@ from supervisor_agent.config import settings
 
 # Removed unused imports TaskSessionCRUD, AgentCRUD to fix circular import issue
 from supervisor_agent.core.cost_tracker import cost_tracker
-from supervisor_agent.db.models import Agent, Task, TaskSession
+from supervisor_agent.db.models import Task
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -306,7 +305,6 @@ Please provide:
     def _generate_mock_response(self, prompt: str) -> str:
         """Generate a realistic mock response for testing"""
         import hashlib
-        import random
 
         # Create a deterministic but varied response based on prompt
         prompt_hash = hashlib.md5(prompt.encode()).hexdigest()[:8]
