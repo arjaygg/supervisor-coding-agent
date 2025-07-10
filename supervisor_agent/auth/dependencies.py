@@ -13,7 +13,7 @@ from supervisor_agent.auth.models import (
     User,
     UserSession,
 )
-from supervisor_agent.auth.schemas import TokenType, UserResponse
+from supervisor_agent.auth.schemas import TokenType
 from supervisor_agent.db.database import get_db
 from supervisor_agent.utils.logger import get_logger
 

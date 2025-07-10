@@ -10,21 +10,15 @@ problem solving across multi-agent systems.
 import asyncio
 import json
 import uuid
-from collections import defaultdict, deque
+from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 import structlog
 
-from supervisor_agent.coordination.swarm_coordinator import (
-    AgentSpecialization,
-    AgentState,
-    CoordinationEvent,
-    CoordinationEventType,
-    SwarmAgent,
-)
+# Note: swarm_coordinator imports removed as unused
 from supervisor_agent.intelligence.workflow_synthesizer import (
     ClaudeAgentWrapper,
 )

@@ -19,7 +19,6 @@ from supervisor_agent.auth.dependencies import (
     log_security_event,
     require_admin,
     require_permissions,
-    require_user_or_admin,
 )
 from supervisor_agent.auth.jwt_handler import create_token_pair, jwt_handler
 from supervisor_agent.auth.models import SecurityAuditLog, User
@@ -27,14 +26,11 @@ from supervisor_agent.auth.schemas import (
     APIKeyCreate,
     APIKeyResponse,
     APIKeyWithSecret,
-    LoginRequest,
     PasswordChangeRequest,
     Permission,
-    PermissionCreate,
     RefreshTokenRequest,
     Role,
     RoleCreate,
-    RoleUpdate,
     SecurityAuditLogResponse,
     TokenResponse,
     UserCreate,

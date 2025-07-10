@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from supervisor_agent.config import settings
 from supervisor_agent.core.notifier import notification_manager
 from supervisor_agent.db import crud, schemas
-from supervisor_agent.db.database import engine, get_db
+from supervisor_agent.db.database import get_db
 from supervisor_agent.utils.logger import get_logger
 
 logger = get_logger(__name__)
