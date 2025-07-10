@@ -120,8 +120,9 @@ class TestCriticalUserFlows:
         response = test_client.get("/api/v1/health/detailed")
         assert response.status_code == 200
         detailed_health = response.json()
-        assert "database" in detailed_health
-        assert "redis" in detailed_health
+        assert "components" in detailed_health
+        assert "database" in detailed_health["components"]
+        assert "redis" in detailed_health["components"]
 
     def test_agent_endpoints(self, test_client: TestClient):
         """Test agent-related endpoints"""

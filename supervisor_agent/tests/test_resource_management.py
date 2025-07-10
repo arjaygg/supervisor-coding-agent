@@ -25,6 +25,7 @@ from supervisor_agent.core.resource_allocation_engine import (
     ScalingAction,
     ScalingRecommendation,
 )
+from supervisor_agent.db.models import Task as DBTask
 from supervisor_agent.models.task import Task
 
 
@@ -39,9 +40,9 @@ class TestDynamicResourceAllocator:
     @pytest.fixture
     def sample_task(self):
         """Create a sample task for testing."""
-        return Task(
-            id="test_task_001",
-            config={
+        return DBTask(
+            type="CODE_ANALYSIS",
+            payload={
                 "description": "Analyze data and optimize machine learning models for performance",
                 "complexity": "high",
             },
@@ -541,8 +542,8 @@ class TestResourceConflictResolver:
 
     def test_calculate_priority_score(self, resolver):
         """Test priority score calculation."""
-        high_priority_task = Task(id="high", priority=1)
-        low_priority_task = Task(id="low", priority=8)
+        high_priority_task = Task(id="high", config={})
+        low_priority_task = Task(id="low", config={})
 
         high_score = resolver._calculate_priority_score(high_priority_task, 1, 2.0)
         low_score = resolver._calculate_priority_score(low_priority_task, 8, 1.0)

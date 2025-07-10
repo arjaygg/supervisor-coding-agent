@@ -349,7 +349,7 @@ class TestAgentCollaborationEngine:
         mock_agent = Mock()
         mock_agent.execute_task = AsyncMock(
             return_value={
-                "result": '{"objectives": ["test_objective"], "roles": {"agent1": "reviewer"}, "workflow": ["step1", "step2"], "communication_plan": {"method": "direct"}}'
+                "result": '{"task_breakdown": [{"subtask": "test_subtask", "assigned_to": "agent_1"}], "agent_assignments": {"agent_1": ["test_subtask"]}, "coordination_plan": {"method": "direct"}, "objectives": ["test_objective"], "roles": {"agent1": "reviewer"}, "workflow": ["step1", "step2"], "communication_plan": {"method": "direct"}}'
             }
         )
         return mock_agent

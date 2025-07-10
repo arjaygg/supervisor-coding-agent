@@ -66,10 +66,27 @@ class ProviderCapabilities:
     def supports_task(self, task_type: Union[str, TaskCapability]) -> bool:
         """Check if provider supports a specific task type."""
         if isinstance(task_type, str):
-            try:
-                task_type = TaskCapability(task_type)
-            except ValueError:
-                return False
+            # Handle common task type mappings
+            task_mappings = {
+                "PR_REVIEW": TaskCapability.CODE_REVIEW,
+                "CODE_REVIEW": TaskCapability.CODE_REVIEW,
+                "BUG_FIX": TaskCapability.BUG_FIX,
+                "CODE_ANALYSIS": TaskCapability.CODE_ANALYSIS,
+                "REFACTORING": TaskCapability.REFACTORING,
+                "DOCUMENTATION": TaskCapability.DOCUMENTATION,
+                "TESTING": TaskCapability.TESTING,
+                "SECURITY_ANALYSIS": TaskCapability.SECURITY_ANALYSIS,
+                "PERFORMANCE_OPTIMIZATION": TaskCapability.PERFORMANCE_OPTIMIZATION,
+                "FEATURE_DEVELOPMENT": TaskCapability.FEATURE_DEVELOPMENT,
+                "GENERAL_CODING": TaskCapability.GENERAL_CODING,
+            }
+            
+            task_type = task_mappings.get(task_type)
+            if task_type is None:
+                try:
+                    task_type = TaskCapability(task_type)
+                except ValueError:
+                    return False
         return task_type in self.supported_tasks
 
     def can_handle_request_size(self, estimated_tokens: int) -> bool:

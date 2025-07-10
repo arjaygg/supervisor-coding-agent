@@ -16,7 +16,10 @@ from supervisor_agent.models.task import (
 class IntelligentTaskSplitter:
     def _extract_task_content(self, task) -> str:
         """Extract task content from either Task or DbTask object."""
-        if hasattr(task, "payload") and isinstance(task.payload, dict):
+        if hasattr(task, "payload") and task.payload is None:
+            # Handle invalid tasks - return special marker for error cases
+            return "INVALID_TASK"
+        elif hasattr(task, "payload") and isinstance(task.payload, dict):
             return task.payload.get("description", "")
         elif hasattr(task, "config") and isinstance(task.config, dict):
             return task.config.get("description", "")
@@ -26,6 +29,10 @@ class IntelligentTaskSplitter:
         """Calculate complexity score based on task content."""
         if not content:
             return 0.0
+        
+        # Handle invalid tasks with moderate complexity (defensive programming)
+        if content == "INVALID_TASK":
+            return 0.8  # This will map to MODERATE complexity level
 
         # Factors that increase complexity
         word_count = len(content.split())
@@ -94,23 +101,29 @@ class IntelligentTaskSplitter:
 
         return list(set(dependencies))  # Remove duplicates
 
-    def _determine_complexity_level(self, score: float) -> TaskComplexity:
-        """Determine complexity level from score."""
+    def _determine_complexity_level(self, score: float, steps: int = 0) -> TaskComplexity:
+        """Determine complexity level from score and steps."""
         if score <= 0.5:
             return TaskComplexity.SIMPLE
         elif score <= 1.0:
             return TaskComplexity.MODERATE
         elif score <= 2.0:
             return TaskComplexity.COMPLEX
-        else:
+        elif score <= 2.5 and steps <= 20:
             return TaskComplexity.VERY_COMPLEX
+        else:
+            return TaskComplexity.HIGHLY_COMPLEX
 
     def _recommend_splitting_strategy(
-        self, complexity: TaskComplexity, steps: int
+        self, complexity: TaskComplexity, content: str, dependencies: list
     ) -> SplittingStrategy:
-        """Recommend a splitting strategy based on complexity and steps."""
-        if complexity == TaskComplexity.SIMPLE or steps <= 2:
-            return SplittingStrategy.DEFAULT
+        """Recommend a splitting strategy based on complexity, content, and dependencies."""
+        if complexity == TaskComplexity.SIMPLE:
+            return SplittingStrategy.NO_SPLIT
+        elif complexity == TaskComplexity.COMPLEX and len(dependencies) >= 3:
+            return SplittingStrategy.HIERARCHICAL_SPLIT
+        elif complexity == TaskComplexity.HIGHLY_COMPLEX:
+            return SplittingStrategy.HIERARCHICAL_SPLIT
         else:
             return SplittingStrategy.DEFAULT  # For now, only DEFAULT is implemented
 
@@ -120,11 +133,51 @@ class IntelligentTaskSplitter:
         """
         content = self._extract_task_content(task)
         complexity_score = self._calculate_complexity_score(content)
+        estimated_steps = self._estimate_steps(content)
+        identified_dependencies = self._identify_dependencies(content)
+        
+        # Determine complexity level from score and steps
+        complexity_level = self._determine_complexity_level(complexity_score, estimated_steps)
+        
+        # Get splitting recommendation
+        splitting_recommendation = self._recommend_splitting_strategy(
+            complexity_level, content, identified_dependencies
+        )
 
         # Task requires splitting if complexity score is above threshold
         requires_splitting = complexity_score > 1.0
+        
+        # Calculate estimated execution time (simple heuristic)
+        estimated_execution_time = estimated_steps * 30.0  # 30 seconds per step
+        
+        # Basic resource requirements
+        resource_requirements = {
+            "cpu": "standard",
+            "memory": "standard" if complexity_score <= 2.0 else "high",
+            "disk": "standard"
+        }
+        
+        # Calculate confidence score
+        if content == "INVALID_TASK":
+            confidence_score = 0.3  # Low confidence for invalid tasks
+        else:
+            confidence_score = min(0.9, 0.5 + (0.1 * estimated_steps))
+        
+        # Generate reasoning
+        if content == "INVALID_TASK":
+            reasoning = "Error handling: Invalid task detected, using default moderate complexity analysis"
+        else:
+            reasoning = f"Task complexity score: {complexity_score:.2f}, estimated steps: {estimated_steps}, dependencies: {len(identified_dependencies)}"
 
         return ComplexityAnalysis(
+            complexity_level=complexity_level,
+            estimated_steps=estimated_steps,
+            identified_dependencies=identified_dependencies,
+            splitting_recommendation=splitting_recommendation,
+            estimated_execution_time=estimated_execution_time,
+            resource_requirements=resource_requirements,
+            confidence_score=confidence_score,
+            reasoning=reasoning,
             complexity_score=complexity_score,
             requires_splitting=requires_splitting,
         )

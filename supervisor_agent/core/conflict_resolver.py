@@ -527,7 +527,7 @@ class ResourceConflictResolver:
             complexity = sum(
                 1 for keyword in complexity_keywords if keyword in description
             )
-            return min(3.0, complexity * 0.5)
+            return max(1.0, min(3.0, complexity * 0.5))
         return 1.0
 
     def _calculate_priority_score(

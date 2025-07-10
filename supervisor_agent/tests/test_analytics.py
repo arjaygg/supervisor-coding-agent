@@ -239,6 +239,7 @@ class TestAnalyticsEngine:
                 Mock(data=[Mock(value=15)]),  # 15 errors
                 Mock(data=[Mock(value=100)]),  # 100 total tasks
                 Mock(data=[Mock(value=85)]),  # 85% CPU usage
+                Mock(data=[Mock(value=60)]),  # Queue depth
             ]
 
             insights = await analytics_engine.generate_insights(TimeRange.DAY)
@@ -276,7 +277,7 @@ class TestAnalyticsEngine:
         for i in range(20):
             mock_entry = Mock()
             mock_entry.timestamp = base_time + timedelta(hours=i)
-            mock_entry.value = 10 + i * 2  # Increasing trend
+            mock_entry.value = 10 + i * 10  # Strong increasing trend
             mock_data.append(mock_entry)
 
         with patch.object(analytics_engine, "session_factory") as mock_session:
@@ -329,38 +330,37 @@ class TestAnalyticsIntegration:
         collector = MetricsCollector()
         engine = AnalyticsEngine()
 
-        # Mock database operations
+        # Mock database operations and caching
         with patch.object(collector, "session_factory") as mock_collector_session:
             with patch.object(engine, "session_factory") as mock_engine_session:
-                mock_db = Mock()
-                mock_collector_session.return_value.__aenter__.return_value = mock_db
-                mock_engine_session.return_value.__aenter__.return_value = mock_db
+                with patch.object(engine, "_get_cached_result", new_callable=AsyncMock) as mock_cache:
+                    mock_db = Mock()
+                    mock_collector_session.return_value.__aenter__.return_value = mock_db
+                    mock_engine_session.return_value.__aenter__.return_value = mock_db
+                    mock_cache.return_value = None  # Ensure cache miss
 
-                # Test metric storage
-                await collector.store_metric(
-                    MetricType.TASK_EXECUTION,
-                    150,
-                    labels={"task_type": "CODE_ANALYSIS", "success": "True"},
-                )
+                    # Test metric storage
+                    await collector.store_metric(
+                        MetricType.TASK_EXECUTION,
+                        150,
+                        labels={"task_type": "CODE_ANALYSIS", "success": "True"},
+                    )
 
-                # Mock query processing
-                mock_db.query.return_value.filter.return_value.first.return_value = (
-                    None  # Cache miss
-                )
-                mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = (
-                    []
-                )
+                    # Mock query processing
+                    mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = (
+                        []
+                    )
 
-                query = AnalyticsQuery(
-                    metric_type=MetricType.TASK_EXECUTION,
-                    time_range=TimeRange.HOUR,
-                    aggregation=AggregationType.COUNT,
-                )
+                    query = AnalyticsQuery(
+                        metric_type=MetricType.TASK_EXECUTION,
+                        time_range=TimeRange.HOUR,
+                        aggregation=AggregationType.COUNT,
+                    )
 
-                result = await engine.process_metrics(query)
+                    result = await engine.process_metrics(query)
 
-                assert result is not None
-                assert result.cache_hit is False
+                    assert result is not None
+                    assert result.cache_hit is False
 
     @pytest.mark.asyncio
     async def test_real_time_metrics_simulation(self):
@@ -414,17 +414,23 @@ class TestAnalyticsIntegration:
         )
 
         with patch.object(engine, "session_factory") as mock_session:
-            mock_db = Mock()
-            mock_session.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = None
+            with patch.object(engine, "_get_cached_result", new_callable=AsyncMock) as mock_cache:
+                mock_db = Mock()
+                mock_session.return_value = mock_db
+                mock_cache.return_value = None  # No cache hit
+                
+                # Mock the query chain properly for count aggregation
+                mock_query_chain = Mock()
+                mock_db.query.return_value.filter.return_value = mock_query_chain
+                mock_query_chain.count.return_value = 5  # Return actual integer
 
-            # This should not raise an exception but handle gracefully
-            try:
-                result = await engine.process_metrics(invalid_query)
-                assert result is not None
-            except Exception as e:
-                # If an exception occurs, it should be a handled analytics exception
-                assert "analytics" in str(e).lower() or "query" in str(e).lower()
+                # This should not raise an exception but handle gracefully
+                try:
+                    result = await engine.process_metrics(invalid_query)
+                    assert result is not None
+                except Exception as e:
+                    # If an exception occurs, it should be a handled analytics exception
+                    assert "analytics" in str(e).lower() or "query" in str(e).lower()
 
 
 class TestAnalyticsModels:

@@ -9,6 +9,12 @@ from sqlalchemy.orm import Session, sessionmaker
 from supervisor_agent.api.main import app
 from supervisor_agent.config import settings
 
+# Configure settings for tests
+settings.security_enabled = False
+settings.celery_required = False
+settings.claude_api_keys = "test-key-1,test-key-2"
+settings.claude_cli_path = "/usr/local/bin/claude"
+
 # Import models to register them with Base
 from supervisor_agent.db import models
 from supervisor_agent.db.database import Base, get_db
@@ -77,8 +83,8 @@ def test_client(test_engine):
 
     # Create client with better error handling
     try:
-        client = TestClient(app)
-        yield client
+        with TestClient(app) as client:
+            yield client
     finally:
         app.dependency_overrides.clear()
 

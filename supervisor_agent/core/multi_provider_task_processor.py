@@ -437,11 +437,7 @@ class MultiProviderTaskProcessor:
                 },
                 response=response.result,
                 execution_time=execution_time,
-                cost_usd=(
-                    float(response.cost_estimate.total_cost_usd)
-                    if response.cost_estimate
-                    else 0.0
-                ),
+                cost_usd=response.cost_usd,
                 success=True,
             )
 
@@ -458,11 +454,7 @@ class MultiProviderTaskProcessor:
                 "result": response.result,
                 "execution_time": execution_time,
                 "provider_id": provider_id,
-                "cost_usd": (
-                    float(response.cost_estimate.total_cost_usd)
-                    if response.cost_estimate
-                    else 0.0
-                ),
+                "cost_usd": response.cost_usd,
                 "tokens_used": response.tokens_used,
                 "metadata": response.metadata,
             }
